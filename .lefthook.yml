@@ -8,5 +8,10 @@ pre-commit:
     run: bun run test
 
 pre-push:
-  validate:
-    run: bun run validate
+  parallel: true
+  lint:
+    run: bun run lint
+  typecheck:
+    run: bun run typecheck
+  test:
+    run: bun run test
