@@ -86,6 +86,18 @@ All exported types, interfaces, and component props forming the public API MUST 
 - Add dependencies to the correct workspace `package.json`, not root
 - Root `package.json` is exclusively for monorepo management tools
 
+## Validation Protocol
+
+**After every change**, run the full validation pipeline:
+
+```bash
+bun run validate
+```
+
+This executes in order: `lint → typecheck → test`
+
+Never skip steps. Never commit without a green validation.
+
 ## Scope Discipline
 
 - No over-engineering
