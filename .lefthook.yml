@@ -1,7 +1,8 @@
 pre-commit:
   parallel: true
   lint:
-    run: bun run lint:fix && git add .
+    run: bun run lint:fix
+    stage_fixed: true
   typecheck:
     run: bun run typecheck
   test:
