@@ -4,8 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "wxt build",
-    "dev": "wxt dev",
+    "build": "wxt build -b chrome --mv3 && wxt build -b firefox --mv3",
+    "build:chrome": "wxt build -b chrome --mv3",
+    "build:firefox": "wxt build -b firefox --mv3",
+    "dev": "wxt dev --mv3",
+    "dev:firefox": "wxt dev -b firefox --mv3",
     "test": "echo 'No extension tests yet'",
     "typecheck": "tsc --noEmit"
   },
