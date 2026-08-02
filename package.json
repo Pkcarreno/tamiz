@@ -13,7 +13,8 @@
     "lint": "ultracite check",
     "lint:fix": "ultracite check --write",
     "prepare": "lefthook install",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "latest",
