@@ -12,8 +12,6 @@
   },
   "scripts": {
     "build": "tsdown",
-    "lint": "ultracite check .",
-    "lint:fix": "ultracite check --write .",
     "test": "bun test"
   },
   "devDependencies": {
