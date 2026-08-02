@@ -16,10 +16,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "latest",
-    "@types/bun": "latest",
     "lefthook": "latest",
     "turbo": "latest",
-    "typescript": "latest",
     "ultracite": "latest"
   }
 }
