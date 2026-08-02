@@ -1,22 +1,21 @@
 import { defineConfig } from "wxt";
 
 export default defineConfig({
-  manifest: ({ browser }) => ({
-    action: {
-      default_title: "Tamiz - Select & Convert",
-    },
-    permissions: ["activeTab", "scripting"],
-    ...(browser === "firefox"
-      ? {
-          browser_specific_settings: {
-            gecko: {
-              id: "tamiz@pkcarreno.dev",
-              strict_min_version: "109.0",
-            },
+  hooks: {
+    "build:manifestGenerated": (wxt, manifest) => {
+      if (wxt.config.browser === "firefox") {
+        manifest.browser_specific_settings = {
+          gecko: {
+            id: "tamiz@pkcarreno.dev",
+            strict_min_version: "109.0",
           },
-        }
-      : {}),
-  }),
+        };
+      }
+    },
+  },
+  manifest: {
+    permissions: ["activeTab", "scripting"],
+  },
   modules: ["@wxt-dev/module-solid"],
   srcDir: "src",
   suppressWarnings: {
