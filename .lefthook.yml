@@ -1,0 +1,3 @@
+pre-commit:
+  lint:
+    run: bunx ultracite check --write

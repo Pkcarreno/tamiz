@@ -1,0 +1,25 @@
+{
+  "name": "tamiz",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "format": "ultracite format",
+    "lint": "ultracite check",
+    "lint:fix": "ultracite check --write",
+    "prepare": "lefthook install",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "latest",
+    "@types/bun": "latest",
+    "lefthook": "latest",
+    "turbo": "latest",
+    "typescript": "latest",
+    "ultracite": "latest"
+  }
+}
