@@ -1,3 +1,12 @@
 pre-commit:
+  parallel: true
   lint:
-    run: bunx ultracite check --write
+    run: bun run lint:fix && git add .
+  typecheck:
+    run: bun run typecheck
+  test:
+    run: bun run test
+
+pre-push:
+  validate:
+    run: bun run validate
