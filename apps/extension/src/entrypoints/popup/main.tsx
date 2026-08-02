@@ -5,6 +5,7 @@ import { browser } from "@wxt-dev/browser";
 import { onMount } from "solid-js";
 import { render } from "solid-js/web";
 import { ActionBar } from "../../components/action-bar";
+import "../../styles/content.css";
 
 /**
  * Send INVOKE_PICKER to the active tab's content script.

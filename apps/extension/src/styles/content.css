@@ -1,6 +1,1 @@
-/* biome-ignore lint/suspicious/noUnknownAtRules: TailwindCSS directives */
-@tailwind base;
-/* biome-ignore lint/suspicious/noUnknownAtRules: TailwindCSS directives */
-@tailwind components;
-/* biome-ignore lint/suspicious/noUnknownAtRules: TailwindCSS directives */
-@tailwind utilities;
+@import "tailwindcss";
