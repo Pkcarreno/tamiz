@@ -9,7 +9,7 @@
     "build:firefox": "wxt build -b firefox --mv3",
     "dev": "wxt dev --mv3",
     "dev:firefox": "wxt dev -b firefox --mv3",
-    "test": "echo 'No extension tests yet'",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,12 +17,19 @@
     "@wxt-dev/browser": "^0.2.5"
   },
   "devDependencies": {
+    "@solidjs/testing-library": "^0.8.10",
     "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.0",
     "@types/bun": "^1.3.14",
     "@wxt-dev/module-solid": "^1.1.4",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^30.0.1",
+    "linkedom": "^0.18.13",
     "solid-js": "^1.9.14",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
+    "vite-plugin-solid": "^2.11.14",
+    "vitest": "^4.1.10",
     "wxt": "^0.21.3"
   }
 }

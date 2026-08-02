@@ -6,8 +6,7 @@ import { type Browser, browser } from "@wxt-dev/browser";
  * @public
  */
 export type Message =
-  | { type: "INVOKE_PICKER" }
-  | { type: "ELEMENT_SELECTED"; html: string }
+  | { type: "INVOKE_PICKER"; format?: "markdown" | "raw" }
   | { type: "COPY_TO_CLIPBOARD"; content: string }
   | { type: "DOWNLOAD_FILE"; content: string; filename: string };
 
