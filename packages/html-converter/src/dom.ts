@@ -1,4 +1,4 @@
-import type { DomParser } from "./types";
+import type { DomParser } from "./types.ts";
 
 /**
  * DOM node type codes from the WHATWG Living Standard.

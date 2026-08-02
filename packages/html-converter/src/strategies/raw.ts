@@ -1,6 +1,6 @@
-import { SEMANTIC_ATTRIBUTES, stripNonSemanticAttributes } from "../cleaner";
-import { getContentNodes, isStructuralElement, NODE_TYPE } from "../dom";
-import type { ConversionStrategy } from "../types";
+import { SEMANTIC_ATTRIBUTES, stripNonSemanticAttributes } from "../cleaner.ts";
+import { getContentNodes, isStructuralElement, NODE_TYPE } from "../dom.ts";
+import type { ConversionStrategy } from "../types.ts";
 
 /**
  * Void HTML elements that never have a closing tag.

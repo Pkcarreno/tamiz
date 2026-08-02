@@ -1,5 +1,5 @@
 import { defineBackground } from "wxt/utils/define-background";
-import { onMessage } from "../lib/messaging";
+import { onMessage } from "../lib/messaging.ts";
 
 /**
  * Background script entry point.

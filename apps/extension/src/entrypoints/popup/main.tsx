@@ -4,7 +4,7 @@ import { rawStrategy } from "@tamiz/html-converter/strategies/raw";
 import { browser } from "@wxt-dev/browser";
 import { onMount } from "solid-js";
 import { render } from "solid-js/web";
-import { ActionBar } from "../../components/action-bar";
+import { ActionBar } from "../../components/action-bar.tsx";
 import "../../styles/content.css";
 
 /**

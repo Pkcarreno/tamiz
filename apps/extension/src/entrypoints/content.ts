@@ -1,7 +1,7 @@
 import { browser } from "@wxt-dev/browser";
 import { defineContentScript } from "wxt/utils/define-content-script";
-import { sendMessage } from "../lib/messaging";
-import { PickerStateMachine } from "../lib/picker";
+import { sendMessage } from "../lib/messaging.ts";
+import { PickerStateMachine } from "../lib/picker.ts";
 
 /** CSS class applied to highlighted elements */
 const HIGHLIGHT_CLASS = "tamiz-highlight";

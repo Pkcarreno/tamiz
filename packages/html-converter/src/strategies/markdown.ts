@@ -1,5 +1,5 @@
-import { getContentNodes, isStructuralElement, NODE_TYPE } from "../dom";
-import type { ConversionStrategy } from "../types";
+import { getContentNodes, isStructuralElement, NODE_TYPE } from "../dom.ts";
+import type { ConversionStrategy } from "../types.ts";
 
 /**
  * Regex of characters that have special meaning in CommonMark.

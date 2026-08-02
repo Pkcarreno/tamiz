@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
-import { getDomParser } from "../../src/dom";
-import { markdownStrategy } from "../../src/strategies/markdown";
+import { getDomParser } from "../../src/dom.ts";
+import { markdownStrategy } from "../../src/strategies/markdown.ts";
 
 describe("markdownStrategy — headings", () => {
   test("converts h1 to #", () => {

@@ -6,7 +6,7 @@ import {
   getDomParser,
   NODE_TYPE,
   serialize,
-} from "../src/dom";
+} from "../src/dom.ts";
 
 describe("NODE_TYPE constants", () => {
   test("exposes expected DOM node type codes", () => {

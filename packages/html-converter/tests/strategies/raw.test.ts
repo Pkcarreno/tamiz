@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
-import { getDomParser } from "../../src/dom";
-import { rawStrategy } from "../../src/strategies/raw";
+import { getDomParser } from "../../src/dom.ts";
+import { rawStrategy } from "../../src/strategies/raw.ts";
 
 describe("rawStrategy", () => {
   test("returns HTML with only semantic attributes", () => {

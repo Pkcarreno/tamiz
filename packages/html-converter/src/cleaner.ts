@@ -3,8 +3,8 @@ import {
   getDomParser,
   NODE_TYPE,
   serializeContent,
-} from "./dom";
-import type { DomParser } from "./types";
+} from "./dom.ts";
+import type { DomParser } from "./types.ts";
 
 /** Tags whose removal eliminates non-content regions entirely */
 const UNWANTED_TAGS: ReadonlySet<string> = new Set([

@@ -1,0 +1,16 @@
+{
+  "root": false,
+  "extends": [
+    "../../biome.jsonc",
+    "ultracite/biome/core",
+    "ultracite/biome/type-aware",
+    "ultracite/biome/solid"
+  ],
+  "linter": {
+    "rules": {
+      "correctness": {
+        "noUnresolvedImports": "off"
+      }
+    }
+  }
+}

@@ -5,7 +5,7 @@ import {
   cleanHtml,
   SEMANTIC_ATTRIBUTES,
   stripNonSemanticAttributes,
-} from "../src/cleaner";
+} from "../src/cleaner.ts";
 
 describe("cleanHtml", () => {
   test("removes script tags and their content", () => {

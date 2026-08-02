@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-import { convert } from "../src/converter";
-import { getDomParser } from "../src/dom";
-import { markdownStrategy } from "../src/strategies/markdown";
-import { rawStrategy } from "../src/strategies/raw";
+import { convert } from "../src/converter.ts";
+import { getDomParser } from "../src/dom.ts";
+import { markdownStrategy } from "../src/strategies/markdown.ts";
+import { rawStrategy } from "../src/strategies/raw.ts";
 
 describe("convert", () => {
   test("converts HTML to Markdown (default clean: true)", async () => {
