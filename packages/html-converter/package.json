@@ -1,0 +1,25 @@
+{
+  "name": "@tamiz/html-converter",
+  "version": "0.1.0",
+  "description": "Isomorphic HTML-to-text converter toolkit for the Tamiz browser extension",
+  "type": "module",
+  "exports": {
+    ".": "./src/converter.ts",
+    "./dom": "./src/dom.ts",
+    "./cleaner": "./src/cleaner.ts",
+    "./strategies/raw": "./src/strategies/raw.ts",
+    "./strategies/markdown": "./src/strategies/markdown.ts"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint": "ultracite check .",
+    "lint:fix": "ultracite check --write .",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "linkedom": "^0.18.13",
+    "tsdown": "^0.22.14",
+    "typescript": "^7.0.2"
+  }
+}
