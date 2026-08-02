@@ -4,11 +4,26 @@
   "description": "Isomorphic HTML-to-text converter toolkit for the Tamiz browser extension",
   "type": "module",
   "exports": {
-    ".": "./src/converter.ts",
-    "./dom": "./src/dom.ts",
-    "./cleaner": "./src/cleaner.ts",
-    "./strategies/raw": "./src/strategies/raw.ts",
-    "./strategies/markdown": "./src/strategies/markdown.ts"
+    ".": {
+      "types": "./dist/converter.d.mts",
+      "default": "./dist/converter.js"
+    },
+    "./dom": {
+      "types": "./dist/dom.d.mts",
+      "default": "./dist/dom.js"
+    },
+    "./cleaner": {
+      "types": "./dist/cleaner.d.mts",
+      "default": "./dist/cleaner.js"
+    },
+    "./strategies/raw": {
+      "types": "./dist/strategies/raw.d.mts",
+      "default": "./dist/strategies/raw.js"
+    },
+    "./strategies/markdown": {
+      "types": "./dist/strategies/markdown.d.mts",
+      "default": "./dist/strategies/markdown.js"
+    }
   },
   "scripts": {
     "build": "tsdown",

@@ -1,0 +1,26 @@
+{
+  "name": "@tamiz/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wxt build",
+    "dev": "wxt dev",
+    "test": "echo 'No extension tests yet'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tamiz/html-converter": "workspace:*",
+    "@wxt-dev/browser": "^0.2.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@wxt-dev/module-solid": "latest",
+    "autoprefixer": "latest",
+    "postcss": "latest",
+    "solid-js": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest",
+    "wxt": "latest"
+  }
+}
