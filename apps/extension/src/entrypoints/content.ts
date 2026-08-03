@@ -20,7 +20,7 @@ import { PickerStateMachine } from "../lib/picker.ts";
  * avoid WXT's SSR-like build evaluation triggering server-side errors.
  */
 export default defineContentScript({
-  async main() {
+  async main(ctx) {
     const [{ createSignal }, { render }, { ContentApp }] = await Promise.all([
       import("solid-js"),
       import("solid-js/web"),
@@ -44,53 +44,8 @@ export default defineContentScript({
     // Toast API reference
     let showToast: ((message: string) => void) | null = null;
 
-    // Create shadow root UI for the floating bar and toasts
-    const _ui = createShadowRootUi({
-      isolateEvents: ["click", "mousemove", "keydown"],
-      onMount: (container) => {
-        // Mount SolidJS app into shadow root
-        render(
-          () =>
-            ContentApp({
-              element: selectedElement,
-              format: barFormat,
-              onCancel: () => {
-                machine.dispatch({ type: "DISMISS" });
-              },
-              onCopy: async () => {
-                const el = selectedElement();
-                if (!el) {
-                  return;
-                }
-                const { content } = await convertElement(el, barFormat());
-                await sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
-                showToast?.("Copied to clipboard");
-              },
-              onDownload: async () => {
-                const el = selectedElement();
-                if (!el) {
-                  return;
-                }
-                const { content, filename } = await convertElement(
-                  el,
-                  barFormat()
-                );
-                await sendMessage({ content, filename, type: "DOWNLOAD_FILE" });
-                showToast?.("Element downloaded");
-              },
-              onFormatChange: setBarFormat,
-              onIgnore: () => {
-                // Placeholder — no action assigned yet
-              },
-              visible: barVisible,
-            }),
-          container
-        );
-      },
-      position: "overlay",
-    });
-
-    // State machine
+    // State machine — created before the shadow root UI so that onMount can
+    // capture `machine` in its closure.
     let lastHoveredElement: Element | null = null;
 
     const machine = new PickerStateMachine({
@@ -128,6 +83,69 @@ export default defineContentScript({
       },
     });
 
+    // Create shadow root UI for the floating bar and toasts.
+    //
+    // WXT's createShadowRootUi returns a Promise that resolves to a UI object
+    // with a `mount()` method. The onMount callback receives the container
+    // div inside the shadow root and is responsible for rendering the SolidJS
+    // app into it. The returned disposer is stored via onRemove for cleanup.
+    //
+    // "click" is intentionally excluded from isolateEvents: SolidJS uses
+    // document-level event delegation for onClick, and stopPropagation on the
+    // shadow root would prevent bar button clicks from reaching the delegated
+    // listener. Click isolation is still handled by checking the machine state
+    // (only HIGHLIGHTING processes clicks) and the shadow host being 0×0
+    // during that state.
+    const ui = await createShadowRootUi(ctx, {
+      isolateEvents: ["mousemove", "keydown"],
+      name: "tamiz-picker",
+      onMount: (container) => {
+        return render(
+          () =>
+            ContentApp({
+              element: selectedElement,
+              format: barFormat,
+              onCancel: () => {
+                machine.dispatch({ type: "DISMISS" });
+              },
+              onCopy: async () => {
+                const el = selectedElement();
+                if (!el) {
+                  return;
+                }
+                const { content } = await convertElement(el, barFormat());
+                await sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
+                showToast?.("Copied to clipboard");
+              },
+              onDownload: async () => {
+                const el = selectedElement();
+                if (!el) {
+                  return;
+                }
+                const { content, filename } = await convertElement(
+                  el,
+                  barFormat()
+                );
+                await sendMessage({ content, filename, type: "DOWNLOAD_FILE" });
+                showToast?.("Element downloaded");
+              },
+              onFormatChange: setBarFormat,
+              onIgnore: () => {
+                // Placeholder — no action assigned yet
+              },
+              visible: barVisible,
+            }),
+          container
+        );
+      },
+      onRemove: (dispose) => {
+        dispose?.();
+      },
+      position: "overlay",
+    });
+
+    ui.mount();
+
     // Keyboard shortcut to dismiss picker
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
@@ -145,21 +163,13 @@ export default defineContentScript({
       }
     });
 
+    // Click events for element selection — only during HIGHLIGHTING.
+    // SELECTED is excluded so clicking elsewhere does NOT re-select
+    // (capture lock: first click is definitive; re-invoke to select again).
     document.addEventListener("click", (e) => {
-      if (
-        machine.getState() === "HIGHLIGHTING" ||
-        machine.getState() === "SELECTED"
-      ) {
+      if (machine.getState() === "HIGHLIGHTING") {
         const target = e.target as Element;
         if (target && target !== document.documentElement) {
-          // Check if click is inside the shadow root (bar buttons)
-          const path = e.composedPath();
-          const isInsideShadow = path.some(
-            (node) => node instanceof ShadowRoot
-          );
-          if (isInsideShadow) {
-            return; // Let shadow root handle the click
-          }
           e.preventDefault();
           e.stopPropagation();
           machine.dispatch({ target, type: "CLICK" });

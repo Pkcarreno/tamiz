@@ -139,16 +139,13 @@ export class PickerStateMachine {
       this.onDownload?.(content, filename);
     } else if (event.type === "FORMAT_CHANGE") {
       this.format = event.format;
-    } else if (event.type === "CLICK") {
-      // Re-select a different element and reposition the bar.
-      this.selectedElement = event.target;
-      this.onElementSelected?.(event.target);
-      this.onReposition?.();
     } else if (event.type === "SCROLL" || event.type === "RESIZE") {
       this.onReposition?.();
     } else if (event.type === "DISMISS") {
       this.transition("IDLE");
     }
+    // CLICK events in SELECTED state are intentionally ignored.
+    // The first click is definitive; re-invoke capture mode to select a new element.
   }
 
   private transition(newState: PickerState): void {

@@ -236,8 +236,8 @@ describe("PickerStateMachine", () => {
     });
   });
 
-  describe("CLICK in SELECTED — re-select and reposition", () => {
-    it("re-selects a new element and triggers reposition", () => {
+  describe("CLICK in SELECTED — capture lock", () => {
+    it("ignores CLICK and does not re-select or reposition", () => {
       const elementA = document.createElement("div");
       const elementB = document.createElement("section");
       const onReposition = vi.fn();
@@ -251,9 +251,10 @@ describe("PickerStateMachine", () => {
       machine.dispatch({ target: elementB, type: "CLICK" });
 
       expect(machine.getState()).toBe("SELECTED");
-      expect(machine.getSelectedElement()).toBe(elementB);
-      expect(onElementSelected).toHaveBeenLastCalledWith(elementB);
-      expect(onReposition).toHaveBeenCalledTimes(1);
+      expect(machine.getSelectedElement()).toBe(elementA);
+      expect(onElementSelected).toHaveBeenCalledTimes(1);
+      expect(onElementSelected).toHaveBeenLastCalledWith(elementA);
+      expect(onReposition).not.toHaveBeenCalled();
     });
   });
 
