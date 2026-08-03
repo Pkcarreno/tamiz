@@ -13,11 +13,15 @@ import type {
   ShadowRootContentScriptUiOptions,
 } from "wxt/utils/content-script-ui/shadow-root";
 
+/** Minimal type for isolated-world content script definitions. */
+interface TamizContentScriptDefinition {
+  cssInjectionMode?: "manifest" | "manual" | "ui";
+  main: (ctx: ContentScriptContext) => void | Promise<void>;
+  matches?: string[];
+}
+
 declare global {
-  function defineContentScript(definition: {
-    main: (ctx: ContentScriptContext) => void | Promise<void>;
-    matches: string[];
-  }): void;
+  function defineContentScript(definition: TamizContentScriptDefinition): void;
 
   function createShadowRootUi<TMounted>(
     ctx: ContentScriptContext,

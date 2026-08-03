@@ -20,6 +20,7 @@ import { PickerStateMachine } from "../lib/picker.ts";
  * avoid WXT's SSR-like build evaluation triggering server-side errors.
  */
 export default defineContentScript({
+  cssInjectionMode: "ui",
   async main(ctx) {
     const [{ createSignal }, { render }, { ContentApp }] = await Promise.all([
       import("solid-js"),
