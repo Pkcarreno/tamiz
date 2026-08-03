@@ -1,62 +1,115 @@
-import "../styles/content.css";
 import { browser } from "@wxt-dev/browser";
-import { defineContentScript } from "wxt/utils/define-content-script";
+import {
+  clearHighlights,
+  convertElement,
+  highlight,
+} from "../lib/content-callbacks.ts";
 import { sendMessage } from "../lib/messaging.ts";
 import { PickerStateMachine } from "../lib/picker.ts";
-
-/** CSS class applied to highlighted elements */
-const HIGHLIGHT_CLASS = "tamiz-highlight";
-
-/**
- * Highlight an element.
- */
-function highlight(element: Element): void {
-  element.classList.add(HIGHLIGHT_CLASS);
-}
-
-/**
- * Unhighlight an element.
- */
-function _unhighlight(element: Element): void {
-  element.classList.remove(HIGHLIGHT_CLASS);
-}
-
-/**
- * Clear all highlights.
- */
-function clearHighlights(): void {
-  for (const el of document.querySelectorAll(`.${HIGHLIGHT_CLASS}`)) {
-    el.classList.remove(HIGHLIGHT_CLASS);
-  }
-}
 
 /**
  * Content script entry point.
  *
- * Implements the element picker state machine and communicates
- * with the background script for clipboard/file operations.
+ * Implements the element picker state machine with a floating action bar
+ * rendered inside a Shadow DOM for style and event isolation.
+ *
+ * All SolidJS and client-only imports are deferred inside {@link main} to
+ * avoid WXT's SSR-like build evaluation triggering server-side errors.
  */
 export default defineContentScript({
-  main() {
+  async main() {
+    const [{ createSignal }, { render }, { ContentApp }] = await Promise.all([
+      import("solid-js"),
+      import("solid-js/web"),
+      import("../components/content-ui.tsx"),
+    ]);
+
+    await import("../styles/content.css");
+
+    // State for the floating bar
+    const [selectedElement, setSelectedElement] = createSignal<Element | null>(
+      null
+    );
+    const [barFormat, setBarFormat] = createSignal<"markdown" | "raw">(
+      "markdown"
+    );
+    const [barVisible, setBarVisible] = createSignal(false);
+
+    // Toast API reference
+    let showToast: ((message: string) => void) | null = null;
+
+    // Create shadow root UI for the floating bar and toasts
+    const _ui = createShadowRootUi({
+      isolateEvents: ["click", "mousemove", "keydown"],
+      onMount: (container) => {
+        // Mount SolidJS app into shadow root
+        render(
+          () =>
+            ContentApp({
+              element: selectedElement,
+              format: barFormat,
+              onCancel: () => {
+                machine.dispatch({ type: "DISMISS" });
+              },
+              onCopy: async () => {
+                const el = selectedElement();
+                if (!el) {
+                  return;
+                }
+                const { content } = await convertElement(el, barFormat());
+                await sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
+                showToast?.("Copied to clipboard");
+              },
+              onDownload: async () => {
+                const el = selectedElement();
+                if (!el) {
+                  return;
+                }
+                const { content, filename } = await convertElement(
+                  el,
+                  barFormat()
+                );
+                await sendMessage({ content, filename, type: "DOWNLOAD_FILE" });
+                showToast?.("Element downloaded");
+              },
+              onFormatChange: setBarFormat,
+              onIgnore: () => {
+                // Placeholder — no action assigned yet
+              },
+              visible: barVisible,
+            }),
+          container
+        );
+      },
+      position: "overlay",
+    });
+
+    // State machine
     const machine = new PickerStateMachine({
       onCopy: async (content) => {
         await sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
+        showToast?.("Copied to clipboard");
       },
       onDownload: (content, filename) => {
         sendMessage({ content, filename, type: "DOWNLOAD_FILE" });
+        showToast?.("Element downloaded");
       },
       onElementSelected: (element) => {
         clearHighlights();
         highlight(element);
+        setSelectedElement(element);
+        setBarVisible(true);
       },
       onStateChange: (state) => {
         if (state === "IDLE") {
           clearHighlights();
+          setBarVisible(false);
+          setSelectedElement(null);
         }
       },
     });
 
-    // Keyboard shortcut to invoke picker
+    // Keyboard shortcut to dismiss picker
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         machine.dispatch({ type: "DISMISS" });
@@ -80,6 +133,14 @@ export default defineContentScript({
       ) {
         const target = e.target as Element;
         if (target && target !== document.documentElement) {
+          // Check if click is inside the shadow root (bar buttons)
+          const path = e.composedPath();
+          const isInsideShadow = path.some(
+            (node) => node instanceof ShadowRoot
+          );
+          if (isInsideShadow) {
+            return; // Let shadow root handle the click
+          }
           e.preventDefault();
           e.stopPropagation();
           machine.dispatch({ target, type: "CLICK" });
@@ -87,13 +148,44 @@ export default defineContentScript({
       }
     });
 
+    // Scroll/resize repositioning
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (machine.getState() === "SELECTED") {
+          machine.dispatch({ type: "SCROLL" });
+        }
+      },
+      { passive: true }
+    );
+
+    window.addEventListener(
+      "resize",
+      () => {
+        if (machine.getState() === "SELECTED") {
+          machine.dispatch({ type: "RESIZE" });
+        }
+      },
+      { passive: true }
+    );
+
     // Listen for messages from popup/background
     browser.runtime.onMessage.addListener((message: unknown) => {
-      const msg = message as { type: string };
+      const msg = message as { type: string; format?: "markdown" | "raw" };
       if (msg.type === "INVOKE_PICKER") {
+        if (msg.format) {
+          setBarFormat(msg.format);
+        }
         machine.dispatch({ type: "INVOKE" });
       }
     });
+
+    // Capture toast API after mount
+    setTimeout(() => {
+      showToast = (globalThis as Record<string, unknown>).__tamizShowToast as (
+        msg: string
+      ) => void;
+    }, 100);
   },
   matches: ["<all_urls>"],
 });

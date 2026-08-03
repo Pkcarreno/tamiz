@@ -1,0 +1,120 @@
+import { convert } from "@tamiz/html-converter";
+import { markdownStrategy } from "@tamiz/html-converter/strategies/markdown";
+import { rawStrategy } from "@tamiz/html-converter/strategies/raw";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  clearHighlights,
+  convertElement,
+  highlight,
+} from "./content-callbacks.ts";
+
+vi.mock("@tamiz/html-converter", () => ({
+  convert: vi.fn(),
+}));
+
+const MARKDOWN_FILENAME_REGEX = /^article-\d+\.md$/;
+const RAW_FILENAME_REGEX = /^section-\d+\.html$/;
+
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.restoreAllMocks();
+});
+
+describe("highlight", () => {
+  it("adds the tamiz-highlight class to the given element", () => {
+    const element = document.createElement("div");
+    highlight(element);
+    expect(element.classList.contains("tamiz-highlight")).toBe(true);
+  });
+});
+
+describe("clearHighlights", () => {
+  it("removes the tamiz-highlight class from all elements on the page", () => {
+    const el1 = document.createElement("div");
+    const el2 = document.createElement("p");
+    document.body.append(el1, el2);
+
+    highlight(el1);
+    highlight(el2);
+    expect(el1.classList.contains("tamiz-highlight")).toBe(true);
+    expect(el2.classList.contains("tamiz-highlight")).toBe(true);
+
+    clearHighlights();
+
+    expect(el1.classList.contains("tamiz-highlight")).toBe(false);
+    expect(el2.classList.contains("tamiz-highlight")).toBe(false);
+  });
+
+  it("is a no-op when no elements have the highlight class", () => {
+    expect(() => clearHighlights()).not.toThrow();
+  });
+});
+
+describe("convertElement", () => {
+  it("extracts content from the element and converts with markdown strategy", async () => {
+    vi.mocked(convert).mockResolvedValue("# Hello world");
+
+    const element = document.createElement("article");
+    element.innerHTML = "<p>Hello world</p>";
+
+    const result = await convertElement(element, "markdown");
+
+    expect(convert).toHaveBeenCalledWith(
+      expect.stringContaining("Hello world"),
+      { strategy: markdownStrategy }
+    );
+    expect(result.content).toBe("# Hello world");
+  });
+
+  it("uses raw strategy when format is raw", async () => {
+    vi.mocked(convert).mockResolvedValue("<article>Hello</article>");
+
+    const element = document.createElement("section");
+    const result = await convertElement(element, "raw");
+
+    expect(convert).toHaveBeenCalledWith(expect.any(String), {
+      strategy: rawStrategy,
+    });
+    expect(result.content).toBe("<article>Hello</article>");
+  });
+
+  it("generates a filename with tag, timestamp, and .md extension for markdown", async () => {
+    vi.mocked(convert).mockResolvedValue("content");
+
+    const element = document.createElement("article");
+    const result = await convertElement(element, "markdown");
+
+    expect(result.filename).toMatch(MARKDOWN_FILENAME_REGEX);
+  });
+
+  it("generates a filename with .html extension for raw format", async () => {
+    vi.mocked(convert).mockResolvedValue("content");
+
+    const element = document.createElement("section");
+    const result = await convertElement(element, "raw");
+
+    expect(result.filename).toMatch(RAW_FILENAME_REGEX);
+  });
+
+  it("does not mutate the source element during extraction", async () => {
+    vi.mocked(convert).mockResolvedValue("content");
+
+    const element = document.createElement("div");
+    element.innerHTML = "<p>test</p>";
+    const originalHTML = element.outerHTML;
+
+    await convertElement(element, "markdown");
+
+    expect(element.outerHTML).toBe(originalHTML);
+  });
+
+  it("includes the correct strategy object (not just the name)", async () => {
+    vi.mocked(convert).mockResolvedValue("converted");
+
+    const element = document.createElement("p");
+    await convertElement(element, "markdown");
+
+    const [, options] = vi.mocked(convert).mock.calls[0];
+    expect(options.strategy).toBe(markdownStrategy);
+  });
+});

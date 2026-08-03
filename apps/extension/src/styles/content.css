@@ -202,3 +202,36 @@
   gap: var(--tz-space-1);
   align-items: center;
 }
+
+/* ===== Popup ===== */
+.tz-popup {
+  width: 320px;
+  padding: var(--tz-space-4);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.tz-popup__title {
+  margin: 0 0 var(--tz-space-2);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--tz-text);
+}
+.tz-popup__description {
+  margin: 0 0 var(--tz-space-4);
+  font-size: var(--tz-font-size-sm);
+  line-height: 1.5;
+  color: var(--tz-text-muted);
+}
+.tz-popup__field {
+  margin-bottom: var(--tz-space-4);
+}
+.tz-popup__label {
+  display: block;
+  margin-bottom: var(--tz-space-2);
+  font-size: var(--tz-font-size-sm);
+  font-weight: 500;
+  color: var(--tz-text);
+}
+.tz-popup__capture-btn {
+  width: 100%;
+}

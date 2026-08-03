@@ -1,125 +1,62 @@
-import { convert } from "@tamiz/html-converter";
-import { markdownStrategy } from "@tamiz/html-converter/strategies/markdown";
-import { rawStrategy } from "@tamiz/html-converter/strategies/raw";
 import { browser } from "@wxt-dev/browser";
-import { onMount } from "solid-js";
+import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { ActionBar } from "../../components/action-bar.tsx";
+import { Button } from "../../components/ui/button.tsx";
+import { Select } from "../../components/ui/select.tsx";
 import "../../styles/content.css";
 
+const FORMAT_OPTIONS = [
+  { label: "Markdown", value: "markdown" },
+  { label: "Raw HTML", value: "raw" },
+];
+
 /**
- * Send INVOKE_PICKER to the active tab's content script.
+ * Send INVOKE_PICKER to the active tab's content script via background relay.
  */
-async function invokePicker(): Promise<void> {
-  const [tab] = await browser.tabs.query({
-    active: true,
-    currentWindow: true,
-  });
-  if (!tab?.id) {
-    return;
-  }
-  await browser.tabs.sendMessage(tab.id, { type: "INVOKE_PICKER" });
+async function invokePicker(format: "markdown" | "raw"): Promise<void> {
+  await browser.runtime.sendMessage({ format, type: "INVOKE_PICKER" });
 }
 
 /**
  * Popup entry point.
  *
- * Provides the action bar UI for format selection and copy/download.
+ * Provides format configuration and a Capture button.
+ * The Capture button sends INVOKE_PICKER through the background relay
+ * and closes the popup.
  */
 function App() {
-  let selectedFormat: "markdown" | "raw" = "markdown";
+  const [format, setFormat] = createSignal<"markdown" | "raw">("markdown");
 
-  // Auto-invoke the picker when popup opens
-  onMount(() => {
-    invokePicker();
-  });
-
-  const handleCopy = async () => {
-    const [tab] = await browser.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    if (!tab?.id) {
-      return;
-    }
-
-    const results = await browser.scripting.executeScript({
-      func: () => {
-        const el = document.querySelector(".tamiz-highlight");
-        return el?.outerHTML ?? "";
-      },
-      target: { tabId: tab.id },
-    });
-
-    const html = results[0]?.result as string;
-    if (!html) {
-      return;
-    }
-
-    const strategy =
-      selectedFormat === "markdown" ? markdownStrategy : rawStrategy;
-    const content = await convert(html, { strategy });
-
-    await navigator.clipboard.writeText(content);
-  };
-
-  const handleDownload = async () => {
-    const [tab] = await browser.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    if (!tab?.id) {
-      return;
-    }
-
-    const results = await browser.scripting.executeScript({
-      func: () => {
-        const el = document.querySelector(".tamiz-highlight");
-        return el?.outerHTML ?? "";
-      },
-      target: { tabId: tab.id },
-    });
-
-    const html = results[0]?.result as string;
-    if (!html) {
-      return;
-    }
-
-    const strategy =
-      selectedFormat === "markdown" ? markdownStrategy : rawStrategy;
-    const content = await convert(html, { strategy });
-
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `content.${selectedFormat === "markdown" ? "md" : "html"}`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleFormatChange = (format: "markdown" | "raw") => {
-    selectedFormat = format;
-  };
-
-  const handleDismiss = () => {
+  const handleCapture = async () => {
+    await invokePicker(format());
     window.close();
   };
 
-  const actionBarProps = {
-    onCopy: handleCopy,
-    onDismiss: handleDismiss,
-    onDownload: handleDownload,
-    onFormatChange: handleFormatChange,
-  };
-
   return (
-    <div class="p-4">
-      <h1 class="mb-4 font-bold text-lg">Tamiz</h1>
-      <p class="mb-2 text-gray-500 text-sm">
-        Select an element on the page, then copy or download.
+    <div class="tz-popup">
+      <h1 class="tz-popup__title">Tamiz</h1>
+      <p class="tz-popup__description">
+        Configure your capture settings, then click Capture to select an
+        element.
       </p>
-      <ActionBar {...actionBarProps} />
+
+      <div class="tz-popup__field">
+        <label class="tz-popup__label" for="format-select">
+          Output format
+        </label>
+        <Select
+          id="format-select"
+          // biome-ignore lint/performance/noJsxPropsBind: popup renders once
+          onChange={(value) => setFormat(value as "markdown" | "raw")}
+          options={FORMAT_OPTIONS}
+          value={format()}
+        />
+      </div>
+
+      {/* biome-ignore lint/performance/noJsxPropsBind: popup renders once */}
+      <Button class="tz-popup__capture-btn" onClick={handleCapture}>
+        Capture
+      </Button>
     </div>
   );
 }

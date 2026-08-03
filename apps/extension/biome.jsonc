@@ -6,6 +6,9 @@
     "ultracite/biome/type-aware",
     "ultracite/biome/solid"
   ],
+  "javascript": {
+    "globals": ["defineContentScript", "createShadowRootUi"]
+  },
   "linter": {
     "rules": {
       "correctness": {

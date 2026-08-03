@@ -8,7 +8,8 @@ import { type Browser, browser } from "@wxt-dev/browser";
 export type Message =
   | { type: "INVOKE_PICKER"; format?: "markdown" | "raw" }
   | { type: "COPY_TO_CLIPBOARD"; content: string }
-  | { type: "DOWNLOAD_FILE"; content: string; filename: string };
+  | { type: "DOWNLOAD_FILE"; content: string; filename: string }
+  | { type: "TOAST"; message: string };
 
 /**
  * Send a message from content script to background.

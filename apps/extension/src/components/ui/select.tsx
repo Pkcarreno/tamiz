@@ -25,6 +25,8 @@ export type SelectSize = "sm" | "md";
 export interface SelectProps {
   /** Additional CSS class for the container. */
   class?: string;
+  /** HTML id attribute for the container. */
+  id?: string;
   /** Callback invoked with the new value when an option is selected. */
   onChange: (value: string) => void;
   /** The available options to choose from. */
@@ -47,6 +49,7 @@ export function Select(props: SelectProps) {
   return (
     <div
       class={`tz-select tz-select-${props.size ?? "md"} ${props.class ?? ""}`.trim()}
+      id={props.id}
     >
       <For each={props.options}>
         {(option) => (
