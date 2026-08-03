@@ -183,3 +183,22 @@
   border-radius: var(--tz-radius-md);
   box-shadow: var(--tz-shadow);
 }
+
+/* ===== Floating Bar ===== */
+.tz-floating-bar {
+  position: fixed;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tz-space-1);
+  padding: var(--tz-space-2);
+  background-color: var(--tz-bg);
+  border: 1px solid var(--tz-border);
+  border-radius: var(--tz-radius-md);
+  box-shadow: var(--tz-shadow);
+}
+.tz-floating-bar__row {
+  display: flex;
+  gap: var(--tz-space-1);
+  align-items: center;
+}

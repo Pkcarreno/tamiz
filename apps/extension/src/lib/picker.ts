@@ -2,11 +2,14 @@
  * Element picker state machine.
  *
  * Manages the lifecycle of visual element selection:
- * IDLE → HIGHLIGHTING → SELECTED → ACTION
+ * IDLE → HIGHLIGHTING → SELECTED
+ *
+ * Copy, download, scroll, and resize are handled inline without leaving the
+ * SELECTED state. DISMISS from any state returns to IDLE with full teardown.
  *
  * @public
  */
-export type PickerState = "IDLE" | "HIGHLIGHTING" | "SELECTED" | "ACTION";
+export type PickerState = "IDLE" | "HIGHLIGHTING" | "SELECTED";
 
 /**
  * Events that trigger state transitions.
@@ -14,13 +17,15 @@ export type PickerState = "IDLE" | "HIGHLIGHTING" | "SELECTED" | "ACTION";
  * @public
  */
 export type PickerEvent =
-  | { type: "INVOKE" }
+  | { type: "INVOKE"; format?: "markdown" | "raw" }
   | { type: "MOUSEMOVE"; target: Element }
   | { type: "CLICK"; target: Element }
   | { type: "COPY" }
   | { type: "DOWNLOAD" }
+  | { type: "FORMAT_CHANGE"; format: "markdown" | "raw" }
   | { type: "DISMISS" }
-  | { type: "FORMAT_CHANGE"; format: "markdown" | "raw" };
+  | { type: "SCROLL" }
+  | { type: "RESIZE" };
 
 /**
  * State machine for the element picker.
@@ -36,6 +41,8 @@ export class PickerStateMachine {
   private readonly onElementSelected?: (element: Element) => void;
   private readonly onCopy?: (content: string) => void;
   private readonly onDownload?: (content: string, filename: string) => void;
+  private readonly onReposition?: () => void;
+  private readonly onTeardown?: () => void;
 
   constructor(
     callbacks: {
@@ -43,12 +50,16 @@ export class PickerStateMachine {
       onElementSelected?: (element: Element) => void;
       onCopy?: (content: string) => void;
       onDownload?: (content: string, filename: string) => void;
+      onReposition?: () => void;
+      onTeardown?: () => void;
     } = {}
   ) {
     this.onStateChange = callbacks.onStateChange;
     this.onElementSelected = callbacks.onElementSelected;
     this.onCopy = callbacks.onCopy;
     this.onDownload = callbacks.onDownload;
+    this.onReposition = callbacks.onReposition;
+    this.onTeardown = callbacks.onTeardown;
   }
 
   /**
@@ -80,56 +91,75 @@ export class PickerStateMachine {
   dispatch(event: PickerEvent): void {
     switch (this.state) {
       case "IDLE":
-        if (event.type === "INVOKE") {
-          this.transition("HIGHLIGHTING");
-        }
+        this.handleIdle(event);
         break;
-
       case "HIGHLIGHTING":
-        if (event.type === "CLICK") {
-          this.selectedElement = event.target;
-          this.transition("SELECTED");
-          this.onElementSelected?.(event.target);
-        } else if (event.type === "DISMISS") {
-          this.transition("IDLE");
-        }
+        this.handleHighlighting(event);
         break;
-
       case "SELECTED":
-        if (event.type === "COPY") {
-          this.transition("ACTION");
-          this.onCopy?.(this.getSelectedContent());
-          this.transition("SELECTED");
-        } else if (event.type === "DOWNLOAD") {
-          this.transition("ACTION");
-          const content = this.getSelectedContent();
-          const filename = this.generateFilename();
-          this.onDownload?.(content, filename);
-          this.transition("SELECTED");
-        } else if (event.type === "FORMAT_CHANGE") {
-          this.format = event.format;
-        } else if (event.type === "DISMISS") {
-          this.transition("IDLE");
-        } else if (event.type === "CLICK") {
-          // Re-select different element
-          this.selectedElement = event.target;
-          this.onElementSelected?.(event.target);
-        }
+        this.handleSelected(event);
         break;
-
-      case "ACTION":
-        // Auto-return to SELECTED after action
-        this.transition("SELECTED");
-        break;
-
       default:
         break;
     }
   }
 
+  private handleIdle(event: PickerEvent): void {
+    if (event.type === "INVOKE") {
+      this.format = event.format ?? "markdown";
+      this.transition("HIGHLIGHTING");
+    } else if (event.type === "DISMISS") {
+      // Already idle — still tear down any residual resources.
+      this.teardown();
+    }
+  }
+
+  private handleHighlighting(event: PickerEvent): void {
+    if (event.type === "CLICK") {
+      this.selectedElement = event.target;
+      this.transition("SELECTED");
+      this.onElementSelected?.(event.target);
+    } else if (event.type === "DISMISS") {
+      this.transition("IDLE");
+    }
+  }
+
+  private handleSelected(event: PickerEvent): void {
+    if (event.type === "COPY") {
+      this.onCopy?.(this.getSelectedContent());
+    } else if (event.type === "DOWNLOAD") {
+      const content = this.getSelectedContent();
+      const filename = this.generateFilename();
+      this.onDownload?.(content, filename);
+    } else if (event.type === "FORMAT_CHANGE") {
+      this.format = event.format;
+    } else if (event.type === "CLICK") {
+      // Re-select a different element and reposition the bar.
+      this.selectedElement = event.target;
+      this.onElementSelected?.(event.target);
+      this.onReposition?.();
+    } else if (event.type === "SCROLL" || event.type === "RESIZE") {
+      this.onReposition?.();
+    } else if (event.type === "DISMISS") {
+      this.transition("IDLE");
+    }
+  }
+
   private transition(newState: PickerState): void {
     this.state = newState;
+    if (newState === "IDLE") {
+      this.teardown();
+    }
     this.onStateChange?.(newState);
+  }
+
+  /**
+   * Clear the selected element and invoke the teardown callback, used when
+   * transitioning to IDLE (whether from DISMISS or a state change).
+   */
+  private teardown(): void {
+    this.selectedElement = null;
+    this.onTeardown?.();
   }
 
   private getSelectedContent(): string {
