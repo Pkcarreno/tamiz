@@ -1,1 +1,185 @@
 @import "tailwindcss";
+
+:root {
+  /* Colors */
+  --tz-primary: #3b82f6;
+  --tz-primary-hover: #2563eb;
+  --tz-secondary: #1e40af;
+  --tz-secondary-hover: #1d4ed8;
+  --tz-ghost: #f3f4f6;
+  --tz-ghost-hover: #e5e7eb;
+  --tz-text: #111827;
+  --tz-text-muted: #6b7280;
+  --tz-bg: #ffffff;
+  --tz-bg-elevated: #f9fafb;
+  --tz-border: #d1d5db;
+  --tz-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+  /* Spacing */
+  --tz-space-1: 4px;
+  --tz-space-2: 8px;
+  --tz-space-3: 12px;
+  --tz-space-4: 16px;
+
+  /* Radius */
+  --tz-radius-sm: 4px;
+  --tz-radius-md: 8px;
+  --tz-radius-lg: 12px;
+
+  /* Typography */
+  --tz-font-size-xs: 11px;
+  --tz-font-size-sm: 13px;
+  --tz-font-size-md: 15px;
+}
+
+/* Highlight styles (migrated from content.ts inline injection) */
+.tamiz-highlight {
+  outline: 2px solid var(--tz-primary) !important;
+  outline-offset: 2px !important;
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* ===== Button component ===== */
+.tz-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: var(--tz-radius-md);
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.tz-btn-primary {
+  color: var(--tz-bg);
+  background-color: var(--tz-primary);
+  border-color: var(--tz-primary);
+}
+.tz-btn-primary:hover:not(:disabled) {
+  background-color: var(--tz-primary-hover);
+  border-color: var(--tz-primary-hover);
+}
+.tz-btn-secondary {
+  color: var(--tz-secondary);
+  background: transparent;
+  border-color: var(--tz-secondary);
+}
+.tz-btn-secondary:hover:not(:disabled) {
+  background-color: var(--tz-ghost);
+}
+.tz-btn-ghost {
+  color: var(--tz-text);
+  background: transparent;
+  border-color: transparent;
+}
+.tz-btn-ghost:hover:not(:disabled) {
+  background-color: var(--tz-ghost);
+}
+.tz-btn-sm {
+  height: 28px;
+  padding: 0 var(--tz-space-2);
+  font-size: var(--tz-font-size-sm);
+  border-radius: var(--tz-radius-sm);
+}
+.tz-btn-md {
+  height: 32px;
+  padding: 0 var(--tz-space-3);
+  font-size: var(--tz-font-size-md);
+  border-radius: var(--tz-radius-md);
+}
+.tz-btn-icon {
+  padding: 0 !important;
+}
+.tz-btn-icon-sm {
+  width: 28px;
+  height: 28px;
+}
+.tz-btn-icon-md {
+  width: 32px;
+  height: 32px;
+}
+.tz-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ===== Select component ===== */
+.tz-select {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--tz-border);
+  border-radius: var(--tz-radius-md);
+}
+.tz-select-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 var(--tz-space-3);
+  font-family: inherit;
+  font-size: var(--tz-font-size-sm);
+  font-weight: 500;
+  color: var(--tz-text);
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.tz-select-option--active {
+  color: var(--tz-bg);
+  background-color: var(--tz-primary);
+}
+.tz-select-option:hover:not(.tz-select-option--active):not(:disabled) {
+  background-color: var(--tz-ghost);
+}
+.tz-select-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.tz-select-option:not(:last-child) {
+  border-right: 1px solid var(--tz-border);
+}
+.tz-select-option:first-child {
+  border-radius: var(--tz-radius-md) 0 0 var(--tz-radius-md);
+}
+.tz-select-option:last-child {
+  border-radius: 0 var(--tz-radius-md) var(--tz-radius-md) 0;
+}
+.tz-select-sm .tz-select-option {
+  height: 28px;
+  padding: 0 var(--tz-space-2);
+}
+
+/* ===== Toast component ===== */
+.tz-toast-container {
+  position: fixed;
+  bottom: var(--tz-space-4);
+  left: 50%;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tz-space-2);
+  align-items: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+.tz-toast {
+  min-width: 200px;
+  padding: var(--tz-space-3) var(--tz-space-4);
+  font-size: var(--tz-font-size-sm);
+  color: var(--tz-text);
+  text-align: center;
+  pointer-events: auto;
+  background-color: var(--tz-bg-elevated);
+  border: 1px solid var(--tz-border);
+  border-radius: var(--tz-radius-md);
+  box-shadow: var(--tz-shadow);
+}

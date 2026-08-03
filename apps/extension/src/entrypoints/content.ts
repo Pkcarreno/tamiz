@@ -1,3 +1,4 @@
+import "../styles/content.css";
 import { browser } from "@wxt-dev/browser";
 import { defineContentScript } from "wxt/utils/define-content-script";
 import { sendMessage } from "../lib/messaging.ts";
@@ -5,36 +6,6 @@ import { PickerStateMachine } from "../lib/picker.ts";
 
 /** CSS class applied to highlighted elements */
 const HIGHLIGHT_CLASS = "tamiz-highlight";
-
-/** Style element for highlight CSS */
-let styleElement: HTMLStyleElement | null = null;
-
-/**
- * Inject highlight styles into the page.
- */
-function injectStyles(): void {
-  if (styleElement) {
-    return;
-  }
-
-  styleElement = document.createElement("style");
-  styleElement.textContent = `
-    .${HIGHLIGHT_CLASS} {
-      outline: 2px solid #3b82f6 !important;
-      outline-offset: 2px !important;
-      background-color: rgba(59, 130, 246, 0.1) !important;
-    }
-  `;
-  document.head.appendChild(styleElement);
-}
-
-/**
- * Remove highlight styles from the page.
- */
-function _removeStyles(): void {
-  styleElement?.remove();
-  styleElement = null;
-}
 
 /**
  * Highlight an element.
@@ -67,8 +38,6 @@ function clearHighlights(): void {
  */
 export default defineContentScript({
   main() {
-    injectStyles();
-
     const machine = new PickerStateMachine({
       onCopy: async (content) => {
         await sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
