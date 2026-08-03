@@ -46,7 +46,6 @@ export function ToastMount(props: {
  * @public
  */
 export function ContentApp(props: ContentAppProps): JSX.Element {
-  const element = props.element();
   return (
     <ToastProvider>
       <ToastMount
@@ -57,9 +56,9 @@ export function ContentApp(props: ContentAppProps): JSX.Element {
             api.showToast;
         }}
       />
-      {props.visible() && element && (
+      {props.visible() && props.element() && (
         <FloatingActionBar
-          element={element}
+          element={props.element}
           format={props.format()}
           onCancel={props.onCancel}
           onCopy={props.onCopy}

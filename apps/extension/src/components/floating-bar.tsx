@@ -1,4 +1,4 @@
-import { createMemo } from "solid-js";
+import { type Accessor, createMemo } from "solid-js";
 
 import { computeBarPosition } from "../lib/position.ts";
 import { Button } from "./ui/button.tsx";
@@ -23,7 +23,7 @@ const FORMAT_OPTIONS: SelectOption[] = [
  */
 export interface FloatingActionBarProps {
   /** The selected DOM element the bar is anchored to. */
-  element: Element;
+  element: Accessor<Element | null>;
   /** Currently selected output format. */
   format: "markdown" | "raw";
   /** Called when the user clicks Cancel. */
@@ -52,7 +52,11 @@ export interface FloatingActionBarProps {
  */
 export function FloatingActionBar(props: FloatingActionBarProps) {
   const position = createMemo(() => {
-    const rect = props.element.getBoundingClientRect();
+    const el = props.element();
+    if (!el) {
+      return { left: 0, top: 0 };
+    }
+    const rect = el.getBoundingClientRect();
     return computeBarPosition(
       rect,
       BAR_WIDTH,

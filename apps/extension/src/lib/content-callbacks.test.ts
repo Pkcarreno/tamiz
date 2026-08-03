@@ -4,8 +4,11 @@ import { rawStrategy } from "@tamiz/html-converter/strategies/raw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearHighlights,
+  clearHoverHighlight,
   convertElement,
   highlight,
+  hoverHighlight,
+  injectHighlightStyles,
 } from "./content-callbacks.ts";
 
 vi.mock("@tamiz/html-converter", () => ({
@@ -116,5 +119,42 @@ describe("convertElement", () => {
 
     const [, options] = vi.mocked(convert).mock.calls[0];
     expect(options.strategy).toBe(markdownStrategy);
+  });
+});
+
+describe("hoverHighlight", () => {
+  it("adds the tamiz-hover class to the given element", () => {
+    const element = document.createElement("div");
+    hoverHighlight(element);
+    expect(element.classList.contains("tamiz-hover")).toBe(true);
+  });
+});
+
+describe("clearHoverHighlight", () => {
+  it("removes the tamiz-hover class from the given element", () => {
+    const element = document.createElement("div");
+    element.classList.add("tamiz-hover");
+    clearHoverHighlight(element);
+    expect(element.classList.contains("tamiz-hover")).toBe(false);
+  });
+
+  it("handles null element gracefully", () => {
+    expect(() => clearHoverHighlight(null)).not.toThrow();
+  });
+});
+
+describe("injectHighlightStyles", () => {
+  it("injects a style element into the document head", () => {
+    injectHighlightStyles();
+    const style = document.getElementById("tamiz-highlight-styles");
+    expect(style).not.toBeNull();
+    expect(style?.tagName).toBe("STYLE");
+  });
+
+  it("does not duplicate the style element on repeated calls", () => {
+    injectHighlightStyles();
+    injectHighlightStyles();
+    const styles = document.querySelectorAll("#tamiz-highlight-styles");
+    expect(styles.length).toBe(1);
   });
 });

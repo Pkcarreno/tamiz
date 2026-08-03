@@ -1,8 +1,11 @@
 import { browser } from "@wxt-dev/browser";
 import {
   clearHighlights,
+  clearHoverHighlight,
   convertElement,
   highlight,
+  hoverHighlight,
+  injectHighlightStyles,
 } from "../lib/content-callbacks.ts";
 import { sendMessage } from "../lib/messaging.ts";
 import { PickerStateMachine } from "../lib/picker.ts";
@@ -25,6 +28,9 @@ export default defineContentScript({
     ]);
 
     await import("../styles/content.css");
+
+    // Inject highlight styles into the main document (shadow DOM CSS won't reach it)
+    injectHighlightStyles();
 
     // State for the floating bar
     const [selectedElement, setSelectedElement] = createSignal<Element | null>(
@@ -85,6 +91,8 @@ export default defineContentScript({
     });
 
     // State machine
+    let lastHoveredElement: Element | null = null;
+
     const machine = new PickerStateMachine({
       onCopy: async (content) => {
         await sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
@@ -96,13 +104,24 @@ export default defineContentScript({
       },
       onElementSelected: (element) => {
         clearHighlights();
+        clearHoverHighlight(lastHoveredElement);
+        lastHoveredElement = null;
         highlight(element);
         setSelectedElement(element);
         setBarVisible(true);
       },
+      onHover: (element) => {
+        clearHoverHighlight(lastHoveredElement);
+        if (element) {
+          hoverHighlight(element);
+        }
+        lastHoveredElement = element;
+      },
       onStateChange: (state) => {
         if (state === "IDLE") {
           clearHighlights();
+          clearHoverHighlight(lastHoveredElement);
+          lastHoveredElement = null;
           setBarVisible(false);
           setSelectedElement(null);
         }

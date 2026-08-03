@@ -39,6 +39,7 @@ export class PickerStateMachine {
 
   private readonly onStateChange?: (state: PickerState) => void;
   private readonly onElementSelected?: (element: Element) => void;
+  private readonly onHover?: (element: Element | null) => void;
   private readonly onCopy?: (content: string) => void;
   private readonly onDownload?: (content: string, filename: string) => void;
   private readonly onReposition?: () => void;
@@ -48,6 +49,7 @@ export class PickerStateMachine {
     callbacks: {
       onStateChange?: (state: PickerState) => void;
       onElementSelected?: (element: Element) => void;
+      onHover?: (element: Element | null) => void;
       onCopy?: (content: string) => void;
       onDownload?: (content: string, filename: string) => void;
       onReposition?: () => void;
@@ -56,6 +58,7 @@ export class PickerStateMachine {
   ) {
     this.onStateChange = callbacks.onStateChange;
     this.onElementSelected = callbacks.onElementSelected;
+    this.onHover = callbacks.onHover;
     this.onCopy = callbacks.onCopy;
     this.onDownload = callbacks.onDownload;
     this.onReposition = callbacks.onReposition;
@@ -119,7 +122,10 @@ export class PickerStateMachine {
       this.selectedElement = event.target;
       this.transition("SELECTED");
       this.onElementSelected?.(event.target);
+    } else if (event.type === "MOUSEMOVE") {
+      this.onHover?.(event.target);
     } else if (event.type === "DISMISS") {
+      this.onHover?.(null);
       this.transition("IDLE");
     }
   }

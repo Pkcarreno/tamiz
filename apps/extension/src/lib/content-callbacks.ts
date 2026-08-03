@@ -7,6 +7,9 @@ import { extractContent } from "./extract-content.ts";
 /** CSS class applied to highlighted elements in the page. */
 export const HIGHLIGHT_CLASS = "tamiz-highlight";
 
+/** CSS class applied to hovered elements during HIGHLIGHTING state. */
+export const HOVER_CLASS = "tamiz-hover";
+
 /**
  * Highlight an element by applying the tamiz highlight class.
  *
@@ -25,6 +28,55 @@ export function clearHighlights(): void {
   for (const el of document.querySelectorAll(`.${HIGHLIGHT_CLASS}`)) {
     el.classList.remove(HIGHLIGHT_CLASS);
   }
+}
+
+/**
+ * Apply a hover preview style to an element.
+ *
+ * @public
+ */
+export function hoverHighlight(element: Element): void {
+  element.classList.add(HOVER_CLASS);
+}
+
+/**
+ * Remove the hover preview style from an element.
+ *
+ * @public
+ */
+export function clearHoverHighlight(element: Element | null): void {
+  if (element) {
+    element.classList.remove(HOVER_CLASS);
+  }
+}
+
+/**
+ * Inject highlight and hover CSS into the main document.
+ *
+ * Shadow DOM styles don't reach the host document, so we need to inject
+ * the highlight classes directly into the page's `<head>`.
+ *
+ * @public
+ */
+export function injectHighlightStyles(): void {
+  if (document.getElementById("tamiz-highlight-styles")) {
+    return;
+  }
+  const style = document.createElement("style");
+  style.id = "tamiz-highlight-styles";
+  style.textContent = `
+    .tamiz-highlight {
+      outline: 2px solid #3b82f6 !important;
+      outline-offset: 2px !important;
+      background-color: rgba(59, 130, 246, 0.1) !important;
+    }
+    .tamiz-hover {
+      outline: 2px dashed #93c5fd !important;
+      outline-offset: 1px !important;
+      background-color: rgba(147, 197, 253, 0.08) !important;
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 /** Strategy objects keyed by format name. */

@@ -203,6 +203,39 @@ describe("PickerStateMachine", () => {
     });
   });
 
+  describe("HIGHLIGHTING — MOUSEMOVE hover feedback", () => {
+    it("calls onHover with the target element on MOUSEMOVE", () => {
+      const onHover = vi.fn();
+      const machine = new PickerStateMachine({ onHover });
+
+      machine.dispatch({ type: "INVOKE" });
+      const element = document.createElement("div");
+      machine.dispatch({ target: element, type: "MOUSEMOVE" });
+
+      expect(onHover).toHaveBeenCalledWith(element);
+    });
+
+    it("calls onHover with null on DISMISS to clear hover", () => {
+      const onHover = vi.fn();
+      const machine = new PickerStateMachine({ onHover });
+
+      machine.dispatch({ type: "INVOKE" });
+      machine.dispatch({ type: "DISMISS" });
+
+      expect(onHover).toHaveBeenCalledWith(null);
+    });
+
+    it("does not call onHover in IDLE state", () => {
+      const onHover = vi.fn();
+      const machine = new PickerStateMachine({ onHover });
+
+      const element = document.createElement("div");
+      machine.dispatch({ target: element, type: "MOUSEMOVE" });
+
+      expect(onHover).not.toHaveBeenCalled();
+    });
+  });
+
   describe("CLICK in SELECTED — re-select and reposition", () => {
     it("re-selects a new element and triggers reposition", () => {
       const elementA = document.createElement("div");

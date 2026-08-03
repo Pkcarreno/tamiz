@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
+import { type Accessor, createSignal } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FloatingActionBar } from "./floating-bar.tsx";
@@ -20,8 +21,9 @@ function makeElement(rect: {
 
 /** Shared props with sensible defaults for every test. */
 function makeProps(overrides: Record<string, unknown> = {}) {
+  const el = makeElement({ height: 50, left: 100, top: 200, width: 200 });
   return {
-    element: makeElement({ height: 50, left: 100, top: 200, width: 200 }),
+    element: (() => el) as Accessor<Element | null>,
     format: "markdown" as const,
     onCancel: vi.fn(),
     onCopy: vi.fn(),
@@ -133,10 +135,11 @@ describe("FloatingActionBar", () => {
         top: 200,
         width: 200,
       });
+      const [elementAccessor] = createSignal<Element | null>(element);
 
       render(() => (
         <FloatingActionBar
-          element={element}
+          element={elementAccessor}
           format="markdown"
           onCancel={vi.fn()}
           onCopy={vi.fn()}
@@ -163,9 +166,19 @@ describe("FloatingActionBar", () => {
         top: 200,
         width: 200,
       });
-      const props = makeProps({ element: elementA });
+      const [element, setElement] = createSignal<Element | null>(elementA);
 
-      const { unmount } = render(() => <FloatingActionBar {...props} />);
+      const { unmount } = render(() => (
+        <FloatingActionBar
+          element={element}
+          format="markdown"
+          onCancel={vi.fn()}
+          onCopy={vi.fn()}
+          onDownload={vi.fn()}
+          onFormatChange={vi.fn()}
+          onIgnore={vi.fn()}
+        />
+      ));
 
       const bar = screen
         .getByText("Copy")
@@ -180,9 +193,10 @@ describe("FloatingActionBar", () => {
         top: 500,
         width: 200,
       });
+      setElement(elementB);
       render(() => (
         <FloatingActionBar
-          element={elementB}
+          element={element}
           format="markdown"
           onCancel={vi.fn()}
           onCopy={vi.fn()}
