@@ -114,21 +114,37 @@ export default defineContentScript({
                 if (!el) {
                   return;
                 }
-                const { content } = await convertElement(el, barFormat());
-                await sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
-                showToast?.("Copied to clipboard");
+                try {
+                  const { content } = await convertElement(el, barFormat());
+                  await navigator.clipboard.writeText(content);
+                  showToast?.("Copied to clipboard");
+                } catch (err) {
+                  console.error("Tamiz: copy failed", err);
+                  showToast?.("Copy failed");
+                }
+                machine.dispatch({ type: "DISMISS" });
               },
               onDownload: async () => {
                 const el = selectedElement();
                 if (!el) {
                   return;
                 }
-                const { content, filename } = await convertElement(
-                  el,
-                  barFormat()
-                );
-                await sendMessage({ content, filename, type: "DOWNLOAD_FILE" });
-                showToast?.("Element downloaded");
+                try {
+                  const { content, filename } = await convertElement(
+                    el,
+                    barFormat()
+                  );
+                  await sendMessage({
+                    content,
+                    filename,
+                    type: "DOWNLOAD_FILE",
+                  });
+                  showToast?.("Element downloaded");
+                } catch (err) {
+                  console.error("Tamiz: download failed", err);
+                  showToast?.("Download failed");
+                }
+                machine.dispatch({ type: "DISMISS" });
               },
               onFormatChange: setBarFormat,
               onIgnore: () => {
