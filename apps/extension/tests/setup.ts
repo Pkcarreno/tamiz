@@ -17,6 +17,9 @@ vi.mock("@wxt-dev/browser", () => ({
       create: vi.fn(),
       onClicked: { addListener: vi.fn() },
     },
+    downloads: {
+      download: vi.fn(),
+    },
     runtime: {
       id: undefined,
       onMessage: { addListener: vi.fn() },

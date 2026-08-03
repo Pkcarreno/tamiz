@@ -84,16 +84,17 @@ export async function copyToClipboard(content: string): Promise<void> {
 /**
  * Trigger a file download for the given content and filename.
  *
+ * Uses the `browser.downloads` API which works in MV3 background
+ * contexts (service workers) where `document` is unavailable.
+ *
  * @public
  */
 export function downloadFile(content: string, filename: string): void {
   const blob = new Blob([content], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  browser.downloads.download({ filename, url }).then(() => {
+    URL.revokeObjectURL(url);
+  });
 }
 
 /**

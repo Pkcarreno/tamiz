@@ -23,14 +23,19 @@ export async function sendMessage(message: Message): Promise<void> {
 /**
  * Listen for messages in background script.
  *
+ * Returns the Promise from the callback so Firefox's promise-based
+ * `browser` API keeps the message channel open.
+ *
  * @public
  */
 export function onMessage(
-  callback: (message: Message, sender: Browser.runtime.MessageSender) => void
+  callback: (
+    message: Message,
+    sender: Browser.runtime.MessageSender
+  ) => Promise<void>
 ): void {
   browser.runtime.onMessage.addListener(
-    (message: Message, sender: Browser.runtime.MessageSender) => {
-      callback(message, sender);
-    }
+    (message: Message, sender: Browser.runtime.MessageSender) =>
+      callback(message, sender)
   );
 }

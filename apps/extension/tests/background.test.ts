@@ -154,30 +154,29 @@ describe("copyToClipboard", () => {
 });
 
 describe("downloadFile", () => {
-  it("creates an anchor with the correct download filename and blob href", () => {
-    const createElementSpy = vi.spyOn(document, "createElement");
-    const createObjectURLSpy = vi
-      .spyOn(URL, "createObjectURL")
-      .mockReturnValue("blob:fake-url");
+  it("calls browser.downloads.download with the correct filename and blob URL", () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     downloadFile("file content", "article-123.md");
 
-    const anchor = createElementSpy.mock.results
-      .map((r) => r.value)
-      .find((el: unknown) => (el as HTMLElement)?.tagName === "A");
-    expect(anchor).toBeDefined();
-    expect((anchor as HTMLAnchorElement).download).toBe("article-123.md");
-    expect((anchor as HTMLAnchorElement).href).toContain("blob:");
-    expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
+    expect(browser.downloads.download).toHaveBeenCalledWith({
+      filename: "article-123.md",
+      url: "blob:fake-url",
+    });
   });
 
-  it("revokes the blob URL after download", () => {
+  it("revokes the blob URL after download completes", async () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
     const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
 
     downloadFile("data", "test.txt");
 
-    expect(revokeSpy).toHaveBeenCalledTimes(1);
+    // Wait for the promise chain to resolve
+    await vi.waitFor(() => {
+      expect(revokeSpy).toHaveBeenCalledWith("blob:fake-url");
+    });
   });
 });
 
@@ -240,11 +239,11 @@ describe("handleBackgroundMessage", () => {
     );
   });
 
-  it("triggers a file download on DOWNLOAD_FILE", () => {
-    const createElementSpy = vi.spyOn(document, "createElement");
+  it("triggers a file download on DOWNLOAD_FILE", async () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
-    handleBackgroundMessage(
+    await handleBackgroundMessage(
       {
         content: "download me",
         filename: "content.md",
@@ -253,10 +252,10 @@ describe("handleBackgroundMessage", () => {
       {} as unknown as Browser.runtime.MessageSender
     );
 
-    const anchor = createElementSpy.mock.results
-      .map((r) => r.value)
-      .find((el: unknown) => (el as HTMLElement)?.tagName === "A");
-    expect((anchor as HTMLAnchorElement).download).toBe("content.md");
+    expect(browser.downloads.download).toHaveBeenCalledWith({
+      filename: "content.md",
+      url: "blob:fake-url",
+    });
   });
 
   it("forwards TOAST messages to the popup via runtime.sendMessage", async () => {

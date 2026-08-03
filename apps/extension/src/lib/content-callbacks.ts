@@ -1,7 +1,3 @@
-import { convert } from "@tamiz/html-converter";
-import { markdownStrategy } from "@tamiz/html-converter/strategies/markdown";
-import { rawStrategy } from "@tamiz/html-converter/strategies/raw";
-
 import { extractContent } from "./extract-content.ts";
 
 /** CSS class applied to highlighted elements in the page. */
@@ -79,12 +75,6 @@ export function injectHighlightStyles(): void {
   document.head.appendChild(style);
 }
 
-/** Strategy objects keyed by format name. */
-const STRATEGIES = {
-  markdown: markdownStrategy,
-  raw: rawStrategy,
-} as const;
-
 /** File extension (including the dot) used for each output format. */
 const FORMAT_EXTENSION: Record<"markdown" | "raw", string> = {
   markdown: "md",
@@ -103,6 +93,9 @@ export interface ConvertedContent {
  * Extract, convert, and package a selected element into content ready for
  * clipboard copy or file download.
  *
+ * The converter package is loaded dynamically to avoid bundling
+ * `import.meta.require("linkedom")` into the content script IIFE bundle.
+ *
  * @param element - The selected DOM element.
  * @param format  - Target output format.
  * @returns The converted content and a generated filename.
@@ -114,7 +107,15 @@ export async function convertElement(
   format: "markdown" | "raw"
 ): Promise<ConvertedContent> {
   const html = extractContent(element);
-  const strategy = STRATEGIES[format];
+
+  const [{ convert }, { markdownStrategy }, { rawStrategy }] =
+    await Promise.all([
+      import("@tamiz/html-converter"),
+      import("@tamiz/html-converter/strategies/markdown"),
+      import("@tamiz/html-converter/strategies/raw"),
+    ]);
+
+  const strategy = format === "markdown" ? markdownStrategy : rawStrategy;
   const content = await convert(html, { strategy });
 
   const tag = element.tagName.toLowerCase();
