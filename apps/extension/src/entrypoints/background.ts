@@ -92,9 +92,16 @@ export async function copyToClipboard(content: string): Promise<void> {
 export function downloadFile(content: string, filename: string): void {
   const blob = new Blob([content], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
-  browser.downloads.download({ filename, url }).then(() => {
-    URL.revokeObjectURL(url);
-  });
+  browser.downloads.download({ filename, url }).then(
+    () => {
+      // Delay revocation so the browser can finish reading the blob
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
+    (err) => {
+      console.error("Tamiz: downloads.download failed", err);
+      URL.revokeObjectURL(url);
+    }
+  );
 }
 
 /**

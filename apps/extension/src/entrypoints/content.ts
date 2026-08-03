@@ -42,7 +42,7 @@ export default defineContentScript({
     );
     const [barVisible, setBarVisible] = createSignal(false);
 
-    // Toast API reference
+    // Toast API reference — set via ContentApp's onToastReady callback
     let showToast: ((message: string) => void) | null = null;
 
     // State machine — created before the shadow root UI so that onMount can
@@ -100,8 +100,8 @@ export default defineContentScript({
     const ui = await createShadowRootUi(ctx, {
       isolateEvents: ["mousemove", "keydown"],
       name: "tamiz-picker",
-      onMount: (container) => {
-        return render(
+      onMount: (container) =>
+        render(
           () =>
             ContentApp({
               element: selectedElement,
@@ -147,14 +147,13 @@ export default defineContentScript({
                 machine.dispatch({ type: "DISMISS" });
               },
               onFormatChange: setBarFormat,
-              onIgnore: () => {
-                // Placeholder — no action assigned yet
+              onToastReady: (api) => {
+                showToast = api;
               },
               visible: barVisible,
             }),
           container
-        );
-      },
+        ),
       onRemove: (dispose) => {
         dispose?.();
       },
@@ -225,13 +224,6 @@ export default defineContentScript({
         machine.dispatch({ type: "INVOKE" });
       }
     });
-
-    // Capture toast API after mount
-    setTimeout(() => {
-      showToast = (globalThis as Record<string, unknown>).__tamizShowToast as (
-        msg: string
-      ) => void;
-    }, 100);
   },
   matches: ["<all_urls>"],
 });

@@ -25,7 +25,7 @@ export interface FloatingActionBarProps {
   /** The selected DOM element the bar is anchored to. */
   element: Accessor<Element | null>;
   /** Currently selected output format. */
-  format: "markdown" | "raw";
+  format: Accessor<"markdown" | "raw">;
   /** Called when the user clicks Cancel. */
   onCancel: () => void;
   /** Called when the user clicks Copy. */
@@ -34,8 +34,6 @@ export interface FloatingActionBarProps {
   onDownload: () => void;
   /** Called when the user selects a different format. */
   onFormatChange: (format: "markdown" | "raw") => void;
-  /** Called when the user clicks Ignore (placeholder — button is disabled). */
-  onIgnore: () => void;
 }
 
 /**
@@ -84,16 +82,13 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
           // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
           onChange={handleFormatChange}
           options={FORMAT_OPTIONS}
-          value={props.format}
+          value={props.format()}
         />
         <Button disabled variant="secondary">
           Preview
         </Button>
       </div>
       <div class="tz-floating-bar__row">
-        <Button aria-label="Ignore" disabled variant="icon">
-          ⊘
-        </Button>
         <Button onClick={props.onCopy}>Copy</Button>
         <Button onClick={props.onDownload}>Download</Button>
         <Button onClick={props.onCancel} variant="secondary">

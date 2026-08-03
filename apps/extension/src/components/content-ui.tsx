@@ -20,8 +20,8 @@ export interface ContentAppProps {
   onDownload: () => void;
   /** Callback when format changes. */
   onFormatChange: (format: "markdown" | "raw") => void;
-  /** Callback when ignore is clicked (placeholder). */
-  onIgnore: () => void;
+  /** Called when the toast API is ready. */
+  onToastReady: (showToast: (msg: string) => void) => void;
   /** Whether the floating bar is visible. */
   visible: Accessor<boolean>;
 }
@@ -51,20 +51,17 @@ export function ContentApp(props: ContentAppProps): JSX.Element {
       <ToastMount
         // biome-ignore lint/performance/noJsxPropsBind: mounted once in shadow root
         onReady={(api) => {
-          // Expose toast API to parent scope
-          (globalThis as Record<string, unknown>).__tamizShowToast =
-            api.showToast;
+          props.onToastReady(api.showToast);
         }}
       />
       {props.visible() && props.element() && (
         <FloatingActionBar
           element={props.element}
-          format={props.format()}
+          format={props.format}
           onCancel={props.onCancel}
           onCopy={props.onCopy}
           onDownload={props.onDownload}
           onFormatChange={props.onFormatChange}
-          onIgnore={props.onIgnore}
         />
       )}
     </ToastProvider>

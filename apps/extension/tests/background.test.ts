@@ -167,16 +167,24 @@ describe("downloadFile", () => {
   });
 
   it("revokes the blob URL after download completes", async () => {
+    vi.useFakeTimers();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
     const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
 
     downloadFile("data", "test.txt");
 
-    // Wait for the promise chain to resolve
-    await vi.waitFor(() => {
-      expect(revokeSpy).toHaveBeenCalledWith("blob:fake-url");
-    });
+    // Wait for the download promise to resolve
+    await vi.advanceTimersByTimeAsync(0);
+
+    // URL should NOT be revoked yet (60s delay)
+    expect(revokeSpy).not.toHaveBeenCalled();
+
+    // After 60s delay, it should be revoked
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(revokeSpy).toHaveBeenCalledWith("blob:fake-url");
+
+    vi.useRealTimers();
   });
 });
 

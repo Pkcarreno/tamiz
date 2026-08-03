@@ -22,14 +22,14 @@ function makeElement(rect: {
 /** Shared props with sensible defaults for every test. */
 function makeProps(overrides: Record<string, unknown> = {}) {
   const el = makeElement({ height: 50, left: 100, top: 200, width: 200 });
+  const [format] = createSignal<"markdown" | "raw">("markdown");
   return {
     element: (() => el) as Accessor<Element | null>,
-    format: "markdown" as const,
+    format,
     onCancel: vi.fn(),
     onCopy: vi.fn(),
     onDownload: vi.fn(),
     onFormatChange: vi.fn(),
-    onIgnore: vi.fn(),
     ...overrides,
   };
 }
@@ -46,14 +46,15 @@ describe("FloatingActionBar", () => {
       expect(screen.getByText("Raw HTML")).toBeTruthy();
       expect(screen.getByText("Preview")).toBeTruthy();
 
-      // Row 2: Ignore + Copy + Download + Cancel
+      // Row 2: Copy + Download + Cancel
       expect(screen.getByText("Copy")).toBeTruthy();
       expect(screen.getByText("Download")).toBeTruthy();
       expect(screen.getByText("Cancel")).toBeTruthy();
     });
 
     it("marks the active format option based on the format prop", () => {
-      render(() => <FloatingActionBar {...makeProps({ format: "raw" })} />);
+      const [format] = createSignal<"markdown" | "raw">("raw");
+      render(() => <FloatingActionBar {...makeProps({ format })} />);
 
       const rawBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
       const mdBtn = screen.getByText("Markdown") as HTMLButtonElement;
@@ -65,14 +66,6 @@ describe("FloatingActionBar", () => {
       render(() => <FloatingActionBar {...makeProps()} />);
       const previewBtn = screen.getByText("Preview") as HTMLButtonElement;
       expect(previewBtn.disabled).toBe(true);
-    });
-
-    it("Ignore button is disabled", () => {
-      render(() => <FloatingActionBar {...makeProps()} />);
-      const ignoreBtn = screen.getByRole("button", {
-        name: "Ignore",
-      }) as HTMLButtonElement;
-      expect(ignoreBtn.disabled).toBe(true);
     });
 
     it("root element has data-tamiz-bar attribute for extraction stripping", () => {
@@ -112,18 +105,11 @@ describe("FloatingActionBar", () => {
     });
 
     it("calls onFormatChange with 'markdown' when Markdown option is clicked (from raw)", () => {
-      const props = makeProps({ format: "raw" });
-      render(() => <FloatingActionBar {...props} />);
+      const props = makeProps();
+      const [format] = createSignal<"markdown" | "raw">("raw");
+      render(() => <FloatingActionBar {...props} format={format} />);
       fireEvent.click(screen.getByText("Markdown") as HTMLButtonElement);
       expect(props.onFormatChange).toHaveBeenCalledWith("markdown");
-    });
-
-    it("does not call onIgnore when disabled Ignore button is clicked", () => {
-      const props = makeProps();
-      render(() => <FloatingActionBar {...props} />);
-      const ignoreBtn = screen.getByRole("button", { name: "Ignore" });
-      fireEvent.click(ignoreBtn);
-      expect(props.onIgnore).not.toHaveBeenCalled();
     });
   });
 
@@ -136,16 +122,16 @@ describe("FloatingActionBar", () => {
         width: 200,
       });
       const [elementAccessor] = createSignal<Element | null>(element);
+      const [format] = createSignal<"markdown" | "raw">("markdown");
 
       render(() => (
         <FloatingActionBar
           element={elementAccessor}
-          format="markdown"
+          format={format}
           onCancel={vi.fn()}
           onCopy={vi.fn()}
           onDownload={vi.fn()}
           onFormatChange={vi.fn()}
-          onIgnore={vi.fn()}
         />
       ));
 
@@ -167,16 +153,16 @@ describe("FloatingActionBar", () => {
         width: 200,
       });
       const [element, setElement] = createSignal<Element | null>(elementA);
+      const [format] = createSignal<"markdown" | "raw">("markdown");
 
       const { unmount } = render(() => (
         <FloatingActionBar
           element={element}
-          format="markdown"
+          format={format}
           onCancel={vi.fn()}
           onCopy={vi.fn()}
           onDownload={vi.fn()}
           onFormatChange={vi.fn()}
-          onIgnore={vi.fn()}
         />
       ));
 
@@ -197,12 +183,11 @@ describe("FloatingActionBar", () => {
       render(() => (
         <FloatingActionBar
           element={element}
-          format="markdown"
+          format={format}
           onCancel={vi.fn()}
           onCopy={vi.fn()}
           onDownload={vi.fn()}
           onFormatChange={vi.fn()}
-          onIgnore={vi.fn()}
         />
       ));
 
