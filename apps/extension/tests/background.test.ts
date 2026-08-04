@@ -8,6 +8,10 @@ vi.mock("wxt/utils/define-background", () => ({
   defineBackground: (def: unknown) => def,
 }));
 
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { type Browser, browser } from "@wxt-dev/browser";
 import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 
@@ -16,6 +20,7 @@ import {
   CONTEXT_MENU_TITLE,
   copyToClipboard,
   downloadFile,
+  getMimeType,
   handleBackgroundMessage,
   registerContextMenu,
   relayInvokePicker,
@@ -153,16 +158,58 @@ describe("copyToClipboard", () => {
   });
 });
 
+describe("getMimeType", () => {
+  it("returns 'text/html' for .html filenames", () => {
+    expect(getMimeType("article.html")).toBe("text/html");
+  });
+
+  it("returns 'text/plain' for .md filenames", () => {
+    expect(getMimeType("article.md")).toBe("text/plain");
+  });
+
+  it("returns 'text/plain' for .txt filenames", () => {
+    expect(getMimeType("notes.txt")).toBe("text/plain");
+  });
+
+  it("returns 'text/plain' for filenames without extension", () => {
+    expect(getMimeType("README")).toBe("text/plain");
+  });
+});
+
 describe("downloadFile", () => {
-  it("calls browser.downloads.download with the correct filename and blob URL", () => {
+  it("calls browser.downloads.download with the correct filename and blob URL", async () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
-    downloadFile("file content", "article-123.md");
+    await downloadFile("file content", "article-123.md");
 
     expect(browser.downloads.download).toHaveBeenCalledWith({
       filename: "article-123.md",
       url: "blob:fake-url",
+    });
+  });
+
+  it("uses text/html MIME type for .html filenames", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
+    const blobSpy = vi.spyOn(globalThis, "Blob");
+
+    await downloadFile("<h1>Hello</h1>", "page.html");
+
+    expect(blobSpy).toHaveBeenCalledWith(["<h1>Hello</h1>"], {
+      type: "text/html",
+    });
+  });
+
+  it("uses text/plain MIME type for .md filenames", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
+    const blobSpy = vi.spyOn(globalThis, "Blob");
+
+    await downloadFile("content", "article.md");
+
+    expect(blobSpy).toHaveBeenCalledWith(["content"], {
+      type: "text/plain",
     });
   });
 
@@ -172,15 +219,34 @@ describe("downloadFile", () => {
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
     const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
 
-    downloadFile("data", "test.txt");
-
-    // Wait for the download promise to resolve
-    await vi.advanceTimersByTimeAsync(0);
+    await downloadFile("data", "test.txt");
 
     // URL should NOT be revoked yet (60s delay)
     expect(revokeSpy).not.toHaveBeenCalled();
 
     // After 60s delay, it should be revoked
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(revokeSpy).toHaveBeenCalledWith("blob:fake-url");
+
+    vi.useRealTimers();
+  });
+
+  it("rethrows download errors and revokes the blob URL after delay", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+    vi.mocked(browser.downloads.download).mockRejectedValue(
+      new Error("download failed")
+    );
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    await expect(downloadFile("data", "test.txt")).rejects.toThrow(
+      "download failed"
+    );
+
+    // URL should NOT be revoked yet (60s delay in finally block)
+    expect(revokeSpy).not.toHaveBeenCalled();
+
+    // After 60s delay, revoke happens even on error
     await vi.advanceTimersByTimeAsync(60_000);
     expect(revokeSpy).toHaveBeenCalledWith("blob:fake-url");
 
@@ -266,6 +332,24 @@ describe("handleBackgroundMessage", () => {
     });
   });
 
+  it("rejects when download fails on DOWNLOAD_FILE", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+    vi.mocked(browser.downloads.download).mockRejectedValue(
+      new Error("download failed")
+    );
+
+    await expect(
+      handleBackgroundMessage(
+        {
+          content: "download me",
+          filename: "content.md",
+          type: "DOWNLOAD_FILE",
+        },
+        {} as unknown as Browser.runtime.MessageSender
+      )
+    ).rejects.toThrow("download failed");
+  });
+
   it("forwards TOAST messages to the popup via runtime.sendMessage", async () => {
     vi.mocked(browser.runtime.sendMessage).mockResolvedValue(undefined);
 
@@ -279,4 +363,26 @@ describe("handleBackgroundMessage", () => {
       type: "TOAST",
     });
   });
+});
+
+describe("manifest permissions", () => {
+  it("includes 'downloads' permission in chrome-mv3 manifest", () => {
+    const extensionDir = process.cwd();
+    const wxtBin = path.join(extensionDir, "node_modules", ".bin", "wxt");
+
+    execSync(`${wxtBin} build -b chrome --mv3`, {
+      cwd: extensionDir,
+      stdio: "pipe",
+    });
+
+    const manifestPath = path.join(
+      extensionDir,
+      ".output",
+      "chrome-mv3",
+      "manifest.json"
+    );
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+
+    expect(manifest.permissions).toContain("downloads");
+  }, 120_000);
 });

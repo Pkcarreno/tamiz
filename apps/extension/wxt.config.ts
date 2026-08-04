@@ -15,7 +15,7 @@ export default defineConfig({
     },
   },
   manifest: {
-    permissions: ["activeTab", "contextMenus", "scripting"],
+    permissions: ["activeTab", "contextMenus", "scripting", "downloads"],
   },
   modules: ["@wxt-dev/module-solid"],
   srcDir: "src",

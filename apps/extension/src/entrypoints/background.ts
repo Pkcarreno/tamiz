@@ -82,26 +82,38 @@ export async function copyToClipboard(content: string): Promise<void> {
 }
 
 /**
+ * Determine the MIME type for a filename based on its extension.
+ *
+ * Returns `text/html` for `.html` files and `text/plain` for everything else.
+ *
+ * @public
+ */
+export function getMimeType(filename: string): string {
+  return filename.endsWith(".html") ? "text/html" : "text/plain";
+}
+
+/**
  * Trigger a file download for the given content and filename.
  *
  * Uses the `browser.downloads` API which works in MV3 background
  * contexts (service workers) where `document` is unavailable.
+ * Errors are re-thrown so callers can surface download failures
+ * to the user instead of silently succeeding.
  *
  * @public
  */
-export function downloadFile(content: string, filename: string): void {
-  const blob = new Blob([content], { type: "text/plain" });
+export async function downloadFile(
+  content: string,
+  filename: string
+): Promise<void> {
+  const blob = new Blob([content], { type: getMimeType(filename) });
   const url = URL.createObjectURL(blob);
-  browser.downloads.download({ filename, url }).then(
-    () => {
-      // Delay revocation so the browser can finish reading the blob
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    },
-    (err) => {
-      console.error("Tamiz: downloads.download failed", err);
-      URL.revokeObjectURL(url);
-    }
-  );
+  try {
+    await browser.downloads.download({ filename, url });
+  } finally {
+    // Delay revocation so the browser can finish reading the blob
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
 }
 
 /**
@@ -139,7 +151,7 @@ export async function handleBackgroundMessage(
       await copyToClipboard(message.content);
       break;
     case "DOWNLOAD_FILE":
-      downloadFile(message.content, message.filename);
+      await downloadFile(message.content, message.filename);
       break;
     case "TOAST":
       await browser.runtime.sendMessage(message).catch(() => {
