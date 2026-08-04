@@ -163,8 +163,12 @@ describe("getMimeType", () => {
     expect(getMimeType("article.html")).toBe("text/html");
   });
 
-  it("returns 'text/plain' for .md filenames", () => {
-    expect(getMimeType("article.md")).toBe("text/plain");
+  it("returns 'text/markdown' for .md filenames", () => {
+    expect(getMimeType("article.md")).toBe("text/markdown");
+  });
+
+  it("returns 'text/markdown' for .md filenames with different names", () => {
+    expect(getMimeType("README.md")).toBe("text/markdown");
   });
 
   it("returns 'text/plain' for .txt filenames", () => {
@@ -182,7 +186,7 @@ describe("downloadFile", () => {
 
     await downloadFile("file content", "article-123.md");
 
-    const expectedUrl = `data:text/plain;charset=utf-8,${encodeURIComponent("file content")}`;
+    const expectedUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent("file content")}`;
     expect(browser.downloads.download).toHaveBeenCalledWith({
       filename: "article-123.md",
       url: expectedUrl,
@@ -201,12 +205,12 @@ describe("downloadFile", () => {
     });
   });
 
-  it("uses text/plain MIME type in the data URL for .md filenames", async () => {
+  it("uses text/markdown MIME type in the data URL for .md filenames", async () => {
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("content", "article.md");
 
-    const expectedUrl = `data:text/plain;charset=utf-8,${encodeURIComponent("content")}`;
+    const expectedUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent("content")}`;
     expect(browser.downloads.download).toHaveBeenCalledWith({
       filename: "article.md",
       url: expectedUrl,
@@ -321,7 +325,7 @@ describe("handleBackgroundMessage", () => {
       {} as unknown as Browser.runtime.MessageSender
     );
 
-    const expectedUrl = `data:text/plain;charset=utf-8,${encodeURIComponent("download me")}`;
+    const expectedUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent("download me")}`;
     expect(browser.downloads.download).toHaveBeenCalledWith({
       filename: "content.md",
       url: expectedUrl,

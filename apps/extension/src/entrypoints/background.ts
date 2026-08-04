@@ -84,12 +84,19 @@ export async function copyToClipboard(content: string): Promise<void> {
 /**
  * Determine the MIME type for a filename based on its extension.
  *
- * Returns `text/html` for `.html` files and `text/plain` for everything else.
+ * Returns `text/html` for `.html` files, `text/markdown` for `.md` files,
+ * and `text/plain` as a fallback for any other extension.
  *
  * @public
  */
 export function getMimeType(filename: string): string {
-  return filename.endsWith(".html") ? "text/html" : "text/plain";
+  if (filename.endsWith(".html")) {
+    return "text/html";
+  }
+  if (filename.endsWith(".md")) {
+    return "text/markdown";
+  }
+  return "text/plain";
 }
 
 /**
