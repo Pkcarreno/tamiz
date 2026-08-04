@@ -177,63 +177,66 @@ describe("getMimeType", () => {
 });
 
 describe("downloadFile", () => {
-  it("calls browser.downloads.download with the correct filename and blob URL", async () => {
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+  it("calls browser.downloads.download with a data URL containing encoded content", async () => {
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("file content", "article-123.md");
 
+    const expectedUrl = `data:text/plain;charset=utf-8,${encodeURIComponent("file content")}`;
     expect(browser.downloads.download).toHaveBeenCalledWith({
       filename: "article-123.md",
-      url: "blob:fake-url",
+      url: expectedUrl,
     });
   });
 
-  it("uses text/html MIME type for .html filenames", async () => {
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+  it("uses text/html MIME type in the data URL for .html filenames", async () => {
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
-    const blobSpy = vi.spyOn(globalThis, "Blob");
 
     await downloadFile("<h1>Hello</h1>", "page.html");
 
-    expect(blobSpy).toHaveBeenCalledWith(["<h1>Hello</h1>"], {
-      type: "text/html",
+    const expectedUrl = `data:text/html;charset=utf-8,${encodeURIComponent("<h1>Hello</h1>")}`;
+    expect(browser.downloads.download).toHaveBeenCalledWith({
+      filename: "page.html",
+      url: expectedUrl,
     });
   });
 
-  it("uses text/plain MIME type for .md filenames", async () => {
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+  it("uses text/plain MIME type in the data URL for .md filenames", async () => {
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
-    const blobSpy = vi.spyOn(globalThis, "Blob");
 
     await downloadFile("content", "article.md");
 
-    expect(blobSpy).toHaveBeenCalledWith(["content"], {
-      type: "text/plain",
+    const expectedUrl = `data:text/plain;charset=utf-8,${encodeURIComponent("content")}`;
+    expect(browser.downloads.download).toHaveBeenCalledWith({
+      filename: "article.md",
+      url: expectedUrl,
     });
   });
 
-  it("revokes the blob URL after download completes", async () => {
-    vi.useFakeTimers();
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+  it("uses text/plain MIME type in the data URL for .txt filenames", async () => {
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
-    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    await downloadFile("hello world", "notes.txt");
+
+    const expectedUrl = `data:text/plain;charset=utf-8,${encodeURIComponent("hello world")}`;
+    expect(browser.downloads.download).toHaveBeenCalledWith({
+      filename: "notes.txt",
+      url: expectedUrl,
+    });
+  });
+
+  it("does not use URL.createObjectURL or URL.revokeObjectURL (MV3-safe)", async () => {
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
+    const createObjectURLSpy = vi.spyOn(URL, "createObjectURL");
+    const revokeObjectURLSpy = vi.spyOn(URL, "revokeObjectURL");
 
     await downloadFile("data", "test.txt");
 
-    // URL should NOT be revoked yet (60s delay)
-    expect(revokeSpy).not.toHaveBeenCalled();
-
-    // After 60s delay, it should be revoked
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(revokeSpy).toHaveBeenCalledWith("blob:fake-url");
-
-    vi.useRealTimers();
+    expect(createObjectURLSpy).not.toHaveBeenCalled();
+    expect(revokeObjectURLSpy).not.toHaveBeenCalled();
   });
 
-  it("rethrows download errors and revokes the blob URL after delay", async () => {
-    vi.useFakeTimers();
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+  it("rethrows download errors without revoking any URL", async () => {
     vi.mocked(browser.downloads.download).mockRejectedValue(
       new Error("download failed")
     );
@@ -243,14 +246,7 @@ describe("downloadFile", () => {
       "download failed"
     );
 
-    // URL should NOT be revoked yet (60s delay in finally block)
     expect(revokeSpy).not.toHaveBeenCalled();
-
-    // After 60s delay, revoke happens even on error
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(revokeSpy).toHaveBeenCalledWith("blob:fake-url");
-
-    vi.useRealTimers();
   });
 });
 
@@ -314,7 +310,6 @@ describe("handleBackgroundMessage", () => {
   });
 
   it("triggers a file download on DOWNLOAD_FILE", async () => {
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await handleBackgroundMessage(
@@ -326,14 +321,14 @@ describe("handleBackgroundMessage", () => {
       {} as unknown as Browser.runtime.MessageSender
     );
 
+    const expectedUrl = `data:text/plain;charset=utf-8,${encodeURIComponent("download me")}`;
     expect(browser.downloads.download).toHaveBeenCalledWith({
       filename: "content.md",
-      url: "blob:fake-url",
+      url: expectedUrl,
     });
   });
 
   it("rejects when download fails on DOWNLOAD_FILE", async () => {
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
     vi.mocked(browser.downloads.download).mockRejectedValue(
       new Error("download failed")
     );

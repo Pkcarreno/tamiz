@@ -95,10 +95,14 @@ export function getMimeType(filename: string): string {
 /**
  * Trigger a file download for the given content and filename.
  *
- * Uses the `browser.downloads` API which works in MV3 background
- * contexts (service workers) where `document` is unavailable.
- * Errors are re-thrown so callers can surface download failures
- * to the user instead of silently succeeding.
+ * Constructs a `data:` URL from the content and the filename's MIME type,
+ * then passes it to `browser.downloads.download`. Using a data URL instead
+ * of `URL.createObjectURL` keeps the function compatible with Chrome MV3
+ * service workers — where `createObjectURL` is unavailable — and Firefox
+ * MV3 event pages.
+ *
+ * Errors are re-thrown so callers can surface download failures to the
+ * user instead of silently succeeding.
  *
  * @public
  */
@@ -106,14 +110,8 @@ export async function downloadFile(
   content: string,
   filename: string
 ): Promise<void> {
-  const blob = new Blob([content], { type: getMimeType(filename) });
-  const url = URL.createObjectURL(blob);
-  try {
-    await browser.downloads.download({ filename, url });
-  } finally {
-    // Delay revocation so the browser can finish reading the blob
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  }
+  const url = `data:${getMimeType(filename)};charset=utf-8,${encodeURIComponent(content)}`;
+  await browser.downloads.download({ filename, url });
 }
 
 /**
