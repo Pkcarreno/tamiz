@@ -98,4 +98,41 @@ describe("onMessage", () => {
     expect(callback).toHaveBeenCalled();
     expect(sendResponse).toHaveBeenCalled();
   });
+
+  it("calls sendResponse and logs the error when the callback rejects", async () => {
+    const { onMessage } = await import("./messaging.ts");
+    const error = new Error("handler failure");
+    const callback = vi.fn().mockRejectedValue(error);
+    const sendResponse = vi.fn();
+    // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional spy no-op
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    onMessage(callback);
+
+    const addListenerMock = browser.runtime.onMessage.addListener as any;
+    // Use the most recent registration to avoid picking up the previous test's handler
+    const {
+      mock: { calls },
+    } = addListenerMock;
+    const [[handler]] = calls.slice(-1);
+
+    const result = handler(
+      { message: "test", type: "TOAST" },
+      {},
+      sendResponse
+    );
+    expect(result).toBe(true);
+
+    // Wait for the rejection to propagate through .catch()
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(sendResponse).toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[tamiz] message handler error:",
+      error
+    );
+
+    consoleSpy.mockRestore();
+  });
 });
