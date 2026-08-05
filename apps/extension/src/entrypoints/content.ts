@@ -163,16 +163,16 @@ export default defineContentScript({
     ui.mount();
 
     // Keyboard shortcut to dismiss picker
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
+    ctx.addEventListener(document, "keydown", (e) => {
+      if ((e as KeyboardEvent).key === "Escape") {
         machine.dispatch({ type: "DISMISS" });
       }
     });
 
     // Mouse events for element selection
-    document.addEventListener("mousemove", (e) => {
+    ctx.addEventListener(document, "mousemove", (e) => {
       if (machine.getState() === "HIGHLIGHTING") {
-        const target = e.target as Element;
+        const target = (e as MouseEvent).target as Element;
         if (target && target !== document.documentElement) {
           machine.dispatch({ target, type: "MOUSEMOVE" });
         }
@@ -182,9 +182,9 @@ export default defineContentScript({
     // Click events for element selection — only during HIGHLIGHTING.
     // SELECTED is excluded so clicking elsewhere does NOT re-select
     // (capture lock: first click is definitive; re-invoke to select again).
-    document.addEventListener("click", (e) => {
+    ctx.addEventListener(document, "click", (e) => {
       if (machine.getState() === "HIGHLIGHTING") {
-        const target = e.target as Element;
+        const target = (e as MouseEvent).target as Element;
         if (target && target !== document.documentElement) {
           e.preventDefault();
           e.stopPropagation();
@@ -194,7 +194,8 @@ export default defineContentScript({
     });
 
     // Scroll/resize repositioning
-    window.addEventListener(
+    ctx.addEventListener(
+      window,
       "scroll",
       () => {
         if (machine.getState() === "SELECTED") {
@@ -204,7 +205,8 @@ export default defineContentScript({
       { passive: true }
     );
 
-    window.addEventListener(
+    ctx.addEventListener(
+      window,
       "resize",
       () => {
         if (machine.getState() === "SELECTED") {
