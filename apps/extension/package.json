@@ -4,12 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "wxt build -b chrome --mv3 && wxt build -b firefox --mv3",
-    "build:chrome": "wxt build -b chrome --mv3",
-    "build:firefox": "wxt build -b firefox --mv3",
-    "dev": "wxt dev --mv3",
-    "dev:firefox": "wxt dev -b firefox --mv3",
+    "build": "wxt build -b chrome && wxt build -b firefox",
+    "build:chrome": "wxt build -b chrome",
+    "build:firefox": "wxt build -b firefox",
+    "dev:chrome": "wxt dev -b chrome",
+    "dev:firefox": "wxt dev -b firefox",
+    "zip": "wxt zip -b chrome && wxt zip -b firefox",
+    "zip:chrome": "wxt zip -b chrome",
+    "zip:firefox": "wxt zip -b firefox",
     "test": "vitest run",
+    "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
