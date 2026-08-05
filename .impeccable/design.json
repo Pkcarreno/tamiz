@@ -8,37 +8,91 @@
         "role": "neutral",
         "displayName": "Deep Graphite",
         "canonical": "#0f0f17",
-        "tonalRamp": ["#08080d", "#0c0c14", "#0f0f17", "#141420", "#1a1a28", "#222232", "#2c2c3c", "#3a3a4c"]
+        "tonalRamp": [
+          "#08080d",
+          "#0c0c14",
+          "#0f0f17",
+          "#141420",
+          "#1a1a28",
+          "#222232",
+          "#2c2c3c",
+          "#3a3a4c"
+        ]
       },
       "ground-raised": {
         "role": "neutral",
         "displayName": "Raised Surface",
         "canonical": "#16161f",
-        "tonalRamp": ["#0e0e15", "#121219", "#16161f", "#1c1c28", "#242430", "#2e2e3c", "#3a3a4a", "#484858"]
+        "tonalRamp": [
+          "#0e0e15",
+          "#121219",
+          "#16161f",
+          "#1c1c28",
+          "#242430",
+          "#2e2e3c",
+          "#3a3a4a",
+          "#484858"
+        ]
       },
       "ground-elevated": {
         "role": "neutral",
         "displayName": "Elevated Surface",
         "canonical": "#1c1c28",
-        "tonalRamp": ["#121219", "#16161f", "#1c1c28", "#242430", "#2e2e3c", "#3a3a4a", "#484858", "#58586a"]
+        "tonalRamp": [
+          "#121219",
+          "#16161f",
+          "#1c1c28",
+          "#242430",
+          "#2e2e3c",
+          "#3a3a4a",
+          "#484858",
+          "#58586a"
+        ]
       },
       "focus": {
         "role": "primary",
         "displayName": "Focus Cyan",
         "canonical": "#00d4ff",
-        "tonalRamp": ["#004d60", "#007a96", "#00a8cc", "#00d4ff", "#33dfff", "#66e8ff", "#99f0ff", "#ccf8ff"]
+        "tonalRamp": [
+          "#004d60",
+          "#007a96",
+          "#00a8cc",
+          "#00d4ff",
+          "#33dfff",
+          "#66e8ff",
+          "#99f0ff",
+          "#ccf8ff"
+        ]
       },
       "text": {
         "role": "neutral",
         "displayName": "Fog White",
         "canonical": "#e8e8f0",
-        "tonalRamp": ["#b0b0c0", "#c0c0d0", "#d0d0e0", "#e0e0ea", "#e8e8f0", "#f0f0f5", "#f5f5fa", "#fafaff"]
+        "tonalRamp": [
+          "#b0b0c0",
+          "#c0c0d0",
+          "#d0d0e0",
+          "#e0e0ea",
+          "#e8e8f0",
+          "#f0f0f5",
+          "#f5f5fa",
+          "#fafaff"
+        ]
       },
       "text-secondary": {
         "role": "neutral",
         "displayName": "Mist",
         "canonical": "#9898a8",
-        "tonalRamp": ["#606070", "#707080", "#808090", "#909098", "#9898a8", "#a8a8b8", "#b8b8c8", "#c8c8d8"]
+        "tonalRamp": [
+          "#606070",
+          "#707080",
+          "#808090",
+          "#909098",
+          "#9898a8",
+          "#a8a8b8",
+          "#b8b8c8",
+          "#c8c8d8"
+        ]
       }
     },
     "typographyMeta": {
@@ -60,17 +114,53 @@
       }
     },
     "shadows": [
-      { "name": "small", "value": "0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15)", "purpose": "Subtle lift for buttons and small elements." },
-      { "name": "medium", "value": "0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2)", "purpose": "Floating bar, elevated panels." },
-      { "name": "large", "value": "0 8px 32px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.25)", "purpose": "Toast notifications, overlays." },
-      { "name": "focus-glow", "value": "0 0 0 2px rgba(0,212,255,0.15), 0 0 20px rgba(0,212,255,0.25)", "purpose": "Primary button hover glow." }
+      {
+        "name": "small",
+        "value": "0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15)",
+        "purpose": "Subtle lift for buttons and small elements."
+      },
+      {
+        "name": "medium",
+        "value": "0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2)",
+        "purpose": "Floating bar, elevated panels."
+      },
+      {
+        "name": "large",
+        "value": "0 8px 32px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.25)",
+        "purpose": "Toast notifications, overlays."
+      },
+      {
+        "name": "focus-glow",
+        "value": "0 0 0 2px rgba(0,212,255,0.15), 0 0 20px rgba(0,212,255,0.25)",
+        "purpose": "Primary button hover glow."
+      }
     ],
     "motion": [
-      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Entrance animations, state transitions." },
-      { "name": "ease-in-out", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Hover and focus transitions." },
-      { "name": "duration-fast", "value": "120ms", "purpose": "Hover state changes." },
-      { "name": "duration-normal", "value": "200ms", "purpose": "Focus transitions, toasts." },
-      { "name": "duration-slow", "value": "350ms", "purpose": "Floating bar entrance." }
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Entrance animations, state transitions."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Hover and focus transitions."
+      },
+      {
+        "name": "duration-fast",
+        "value": "120ms",
+        "purpose": "Hover state changes."
+      },
+      {
+        "name": "duration-normal",
+        "value": "200ms",
+        "purpose": "Focus transitions, toasts."
+      },
+      {
+        "name": "duration-slow",
+        "value": "350ms",
+        "purpose": "Floating bar entrance."
+      }
     ],
     "breakpoints": []
   },
@@ -127,10 +217,26 @@
       "Minimal chrome, maximum signal"
     ],
     "rules": [
-      { "name": "The Focus Rarity Rule", "body": "The cyan accent appears on ≤15% of any given surface. Its rarity is the point.", "section": "colors" },
-      { "name": "The Ground Purity Rule", "body": "Never use colored overlays or tinted backgrounds on the ground surfaces.", "section": "colors" },
-      { "name": "The System Stack Rule", "body": "Never import custom fonts. The system stack is the point.", "section": "typography" },
-      { "name": "The Glass Layer Rule", "body": "Surfaces that float above the page use backdrop-filter blur with semi-transparent backgrounds.", "section": "elevation" }
+      {
+        "name": "The Focus Rarity Rule",
+        "body": "The cyan accent appears on ≤15% of any given surface. Its rarity is the point.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ground Purity Rule",
+        "body": "Never use colored overlays or tinted backgrounds on the ground surfaces.",
+        "section": "colors"
+      },
+      {
+        "name": "The System Stack Rule",
+        "body": "Never import custom fonts. The system stack is the point.",
+        "section": "typography"
+      },
+      {
+        "name": "The Glass Layer Rule",
+        "body": "Surfaces that float above the page use backdrop-filter blur with semi-transparent backgrounds.",
+        "section": "elevation"
+      }
     ],
     "dos": [
       "Do use the cyan accent only for active focus states",
