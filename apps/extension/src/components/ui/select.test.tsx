@@ -1,136 +1,333 @@
-import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
-import { createSignal } from "solid-js";
+import { cleanup, fireEvent, render } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { SelectOption } from "./select.tsx";
-import { Select } from "./select.tsx";
+
+import {
+  getChevronClasses,
+  getVariantClasses,
+  Select,
+  type SelectOption,
+} from "./select.tsx";
 
 const options: SelectOption[] = [
   { label: "Markdown", value: "markdown" },
   { label: "Raw HTML", value: "raw" },
 ];
 
-describe("Select", () => {
-  afterEach(() => cleanup());
-
-  it("renders all options as buttons", () => {
-    render(() => (
-      <Select onChange={vi.fn()} options={options} value="markdown" />
-    ));
-    expect(screen.getByText("Markdown")).toBeTruthy();
-    expect(screen.getByText("Raw HTML")).toBeTruthy();
-  });
-
-  it("calls onChange with the selected value", () => {
-    const onChange = vi.fn();
-    render(() => (
-      <Select onChange={onChange} options={options} value="markdown" />
-    ));
-    fireEvent.click(screen.getByText("Raw HTML") as HTMLButtonElement);
-    expect(onChange).toHaveBeenCalledWith("raw", expect.any(Event));
-    expect(onChange).toHaveBeenCalledTimes(1);
-  });
-
-  it("marks the active option with active background", () => {
-    render(() => (
-      <Select onChange={vi.fn()} options={options} value="markdown" />
-    ));
-    const activeBtn = screen.getByText("Markdown") as HTMLButtonElement;
-    const inactiveBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
-    expect(activeBtn.classList.contains("bg-focus")).toBe(true);
-    expect(activeBtn.classList.contains("text-text-on-focus")).toBe(true);
-    expect(inactiveBtn.classList.contains("bg-focus")).toBe(false);
-  });
-
-  it("updates active state when value changes", () => {
-    function SelectWithState() {
-      const [value, setValue] = createSignal("markdown");
-      const handleChange = setValue;
-      const handleClick = () => {
-        setValue("raw");
-      };
-      return (
-        <div>
-          <Select onChange={handleChange} options={options} value={value()} />
-          {/* biome-ignore lint/performance/noJsxPropsBind: test helper, rendered once */}
-          <button onClick={handleClick} type="button">
-            Change
-          </button>
-        </div>
-      );
-    }
-
-    render(() => <SelectWithState />);
-
-    const markdownBtn = screen.getByText("Markdown") as HTMLButtonElement;
-    expect(markdownBtn.classList.contains("bg-focus")).toBe(true);
-
-    fireEvent.click(screen.getByText("Change") as HTMLButtonElement);
-
-    const rawBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
-    expect(rawBtn.classList.contains("bg-focus")).toBe(true);
-    expect(markdownBtn.classList.contains("bg-focus")).toBe(false);
-  });
-
-  it("applies sm size styles to option buttons", () => {
-    render(() => (
-      <Select onChange={vi.fn()} options={options} size="sm" value="markdown" />
-    ));
-    const btn = screen.getByText("Markdown") as HTMLButtonElement;
-    expect(btn.classList.contains("h-[28px]")).toBe(true);
-    expect(btn.classList.contains("px-2")).toBe(true);
-    expect(btn.classList.contains("text-xs")).toBe(true);
-  });
-
-  it("uses md size styles by default", () => {
-    render(() => (
-      <Select onChange={vi.fn()} options={options} value="markdown" />
-    ));
-    const btn = screen.getByText("Markdown") as HTMLButtonElement;
-    expect(btn.classList.contains("h-[34px]")).toBe(true);
-    expect(btn.classList.contains("px-3")).toBe(true);
-  });
-
-  it("applies structural classes based on option position", () => {
-    render(() => (
-      <Select onChange={vi.fn()} options={options} value="markdown" />
-    ));
-    const mdBtn = screen.getByText("Markdown") as HTMLButtonElement;
-    const rawBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
-    // First option gets left rounded corner
-    expect(mdBtn.classList.contains("rounded-l-md")).toBe(true);
-    // Last option gets right rounded corner
-    expect(rawBtn.classList.contains("rounded-r-md")).toBe(true);
-    // First (non-last) option gets right border
-    expect(mdBtn.classList.contains("border-r")).toBe(true);
-    // Last option does not get right border
-    expect(rawBtn.classList.contains("border-r")).toBe(false);
-  });
-
-  it("excludes hover utilities from active options", () => {
-    render(() => (
-      <Select onChange={vi.fn()} options={options} value="markdown" />
-    ));
-    const activeBtn = screen.getByText("Markdown") as HTMLButtonElement;
-    const inactiveBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
-    expect(activeBtn.classList.contains("hover:enabled:text-text")).toBe(false);
-    expect(inactiveBtn.classList.contains("hover:enabled:text-text")).toBe(
-      true
+describe("getVariantClasses", () => {
+  it("returns subtle variant classes", () => {
+    expect(getVariantClasses("subtle")).toBe(
+      "h-[28px] px-2 text-xs text-text-secondary bg-transparent rounded-sm border-border/50 hover:enabled:bg-surface-glass-hover"
     );
   });
 
-  it("merges custom class with default classes", () => {
-    render(() => (
+  it("returns standard variant classes", () => {
+    expect(getVariantClasses("standard")).toBe(
+      "h-[40px] px-3 text-sm text-text bg-ground-elevated w-full hover:enabled:bg-ground-raised"
+    );
+  });
+
+  it("returns different classes for each variant", () => {
+    expect(getVariantClasses("subtle")).not.toBe(getVariantClasses("standard"));
+  });
+});
+
+describe("getChevronClasses", () => {
+  it("returns subtle chevron classes", () => {
+    expect(getChevronClasses("subtle")).toBe("size-[12px] text-text-tertiary");
+  });
+
+  it("returns standard chevron classes", () => {
+    expect(getChevronClasses("standard")).toBe(
+      "size-[14px] text-text-tertiary"
+    );
+  });
+
+  it("returns different classes for each variant", () => {
+    expect(getChevronClasses("subtle")).not.toBe(getChevronClasses("standard"));
+  });
+});
+
+describe("Select", () => {
+  afterEach(() => cleanup());
+
+  it("renders all options inside a native select element", () => {
+    const { container } = render(() => (
       <Select
-        class="custom-select"
         onChange={vi.fn()}
         options={options}
         value="markdown"
+        variant="standard"
       />
     ));
-    const container = screen
-      .getByText("Markdown")
-      .closest("[data-tamiz-select]") as HTMLElement;
-    expect(container.classList.contains("custom-select")).toBe(true);
-    expect(container.classList.contains("inline-flex")).toBe(true);
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select).not.toBeNull();
+    expect(select.options).toHaveLength(2);
+    expect(select.options[0].value).toBe("markdown");
+    expect(select.options[0].textContent).toBe("Markdown");
+    expect(select.options[1].value).toBe("raw");
+    expect(select.options[1].textContent).toBe("Raw HTML");
+  });
+
+  it("renders a single option correctly", () => {
+    const singleOptions: SelectOption[] = [{ label: "Only", value: "only" }];
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={singleOptions}
+        value="only"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.options).toHaveLength(1);
+    expect(select.options[0].value).toBe("only");
+    expect(select.options[0].textContent).toBe("Only");
+  });
+
+  it("calls onChange with the selected value when an option is chosen", () => {
+    const onChange = vi.fn();
+    const { container } = render(() => (
+      <Select
+        onChange={onChange}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "raw" } });
+    expect(onChange).toHaveBeenCalledWith("raw");
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onChange with markdown when switching back from raw", () => {
+    const onChange = vi.fn();
+    const { container } = render(() => (
+      <Select
+        onChange={onChange}
+        options={options}
+        value="raw"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "markdown" } });
+    expect(onChange).toHaveBeenCalledWith("markdown");
+  });
+
+  it("reflects the current value via select.value and selected option", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="raw"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.value).toBe("raw");
+    expect(select.options[1].selected).toBe(true);
+  });
+
+  it("reflects markdown as the selected value", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.value).toBe("markdown");
+    expect(select.options[0].selected).toBe(true);
+  });
+
+  it("renders a chevron SVG that inherits text color via currentColor", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const svg = container.querySelector("[data-tamiz-select] svg");
+    expect(svg).not.toBeNull();
+    expect(svg?.getAttribute("fill")).toBe("currentColor");
+  });
+
+  it("renders both subtle and standard variants without errors", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="subtle"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.options).toHaveLength(2);
+    expect(select.value).toBe("markdown");
+  });
+
+  it("passes the id prop to the native select element", () => {
+    const { container } = render(() => (
+      <Select
+        id="format-select"
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.id).toBe("format-select");
+  });
+
+  it("does not set id when id prop is not provided", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.id).toBe("");
+  });
+
+  it("merges a custom class into the select element", () => {
+    const { container } = render(() => (
+      <Select
+        class="my-custom-class"
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.className).toContain("my-custom-class");
+  });
+
+  it("merges multiple custom classes into the select element", () => {
+    const { container } = render(() => (
+      <Select
+        class="class-a class-b"
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.className).toContain("class-a");
+    expect(select.className).toContain("class-b");
+  });
+
+  it("sets disabled attribute when disabled prop is true", () => {
+    const { container } = render(() => (
+      <Select
+        disabled
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.disabled).toBe(true);
+  });
+
+  it("is not disabled by default", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.disabled).toBe(false);
+  });
+
+  it("renders a path element inside the chevron SVG", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const path = container.querySelector("[data-tamiz-select] svg path");
+    expect(path).not.toBeNull();
+  });
+
+  it("preserves data-tamiz-select attribute on the container", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    expect(container.querySelector("[data-tamiz-select]")).not.toBeNull();
+  });
+
+  it("applies focus:shadow-focus class for focus ring", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.className).toContain("focus:shadow-focus");
+  });
+
+  it("renders an empty select when options array is empty", () => {
+    const { container } = render(() => (
+      <Select onChange={vi.fn()} options={[]} value="" variant="standard" />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select).not.toBeNull();
+    expect(select.options).toHaveLength(0);
   });
 });
