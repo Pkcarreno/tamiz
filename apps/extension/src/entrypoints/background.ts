@@ -1,5 +1,4 @@
 import { type Browser, browser } from "@wxt-dev/browser";
-import { defineBackground } from "wxt/utils/define-background";
 
 import { type Message, onMessage } from "../lib/messaging.ts";
 
@@ -176,7 +175,7 @@ export async function handleBackgroundMessage(
  */
 export default defineBackground({
   main() {
-    registerContextMenu();
+    browser.runtime.onInstalled.addListener(registerContextMenu);
     onMessage(async (message, sender) => {
       await handleBackgroundMessage(message, sender);
     });

@@ -7,7 +7,7 @@
     "ultracite/biome/solid"
   ],
   "javascript": {
-    "globals": ["defineContentScript", "createShadowRootUi"]
+    "globals": ["defineBackground", "defineContentScript", "createShadowRootUi"]
   },
   "linter": {
     "rules": {

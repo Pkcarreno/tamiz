@@ -20,7 +20,12 @@ interface TamizContentScriptDefinition {
   matches?: string[];
 }
 
+interface TamizBackgroundDefinition {
+  main: () => void | Promise<void>;
+}
+
 declare global {
+  function defineBackground(definition: TamizBackgroundDefinition): void;
   function defineContentScript(definition: TamizContentScriptDefinition): void;
 
   function createShadowRootUi<TMounted>(

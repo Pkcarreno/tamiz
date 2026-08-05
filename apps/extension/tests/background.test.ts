@@ -4,9 +4,6 @@
  * Mocks `defineBackground` (a no-op identity in WXT) so the module loads
  * without requiring the WXT runtime, then exercises each exported handler.
  */
-vi.mock("wxt/utils/define-background", () => ({
-  defineBackground: (def: unknown) => def,
-}));
 
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";

@@ -44,3 +44,4 @@ Object.defineProperty(navigator, "clipboard", {
   value: { writeText: vi.fn().mockResolvedValue(undefined) },
   writable: true,
 });
+globalThis.defineBackground = (def: unknown) => def;
