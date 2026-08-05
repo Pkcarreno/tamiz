@@ -70,3 +70,32 @@ describe("sendMessage", () => {
     vi.clearAllMocks();
   });
 });
+
+describe("onMessage", () => {
+  it("keeps the message channel open and calls sendResponse", async () => {
+    const { onMessage } = await import("./messaging.ts");
+    const callback = vi.fn().mockResolvedValue(undefined);
+    const sendResponse = vi.fn();
+
+    onMessage(callback);
+
+    const addListenerMock = browser.runtime.onMessage.addListener as any;
+    expect(addListenerMock).toHaveBeenCalled();
+
+    const [[handler]] = addListenerMock.mock.calls;
+
+    const result = handler(
+      { message: "test", type: "TOAST" },
+      {},
+      sendResponse
+    );
+    expect(result).toBe(true);
+
+    // Wait for promise to resolve
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(callback).toHaveBeenCalled();
+    expect(sendResponse).toHaveBeenCalled();
+  });
+});

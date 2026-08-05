@@ -35,7 +35,18 @@ export function onMessage(
   ) => Promise<void>
 ): void {
   browser.runtime.onMessage.addListener(
-    (message: Message, sender: Browser.runtime.MessageSender) =>
+    (
+      message: Message,
+      sender: Browser.runtime.MessageSender,
+      sendResponse: () => void
+    ) => {
       callback(message, sender)
+        .then(() => sendResponse())
+        .catch((err) => {
+          console.error("[tamiz] message handler error:", err);
+          sendResponse();
+        });
+      return true;
+    }
   );
 }
