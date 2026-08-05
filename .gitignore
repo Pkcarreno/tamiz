@@ -3,6 +3,16 @@ dist/
 .turbo/
 .wxt/
 .output/
-.agents/
 .atl/
 .codegraph/
+
+# AI related
+.opencode/
+.agents/
+
+# Impeccable
+.impeccable/config.local.json
+
+# OS
+.DS_Store
+Thumbs.db
