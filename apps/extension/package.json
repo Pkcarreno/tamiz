@@ -9,16 +9,18 @@
     "build:firefox": "wxt build -b firefox",
     "dev:chrome": "wxt dev -b chrome",
     "dev:firefox": "wxt dev -b firefox",
+    "postinstall": "wxt prepare",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "zip": "wxt zip -b chrome && wxt zip -b firefox",
     "zip:chrome": "wxt zip -b chrome",
-    "zip:firefox": "wxt zip -b firefox",
-    "test": "vitest run",
-    "postinstall": "wxt prepare",
-    "typecheck": "tsc --noEmit"
+    "zip:firefox": "wxt zip -b firefox"
   },
   "dependencies": {
     "@tamiz/html-converter": "workspace:*",
-    "@wxt-dev/browser": "^0.2.5"
+    "@wxt-dev/browser": "^0.2.5",
+    "class-variance-authority": "^0.7.1",
+    "cnfast": "^0.1.0"
   },
   "devDependencies": {
     "@solidjs/testing-library": "^0.8.10",
