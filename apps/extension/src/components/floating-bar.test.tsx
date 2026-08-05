@@ -52,14 +52,16 @@ describe("FloatingActionBar", () => {
       expect(screen.getByText("Cancel")).toBeTruthy();
     });
 
-    it("marks the active format option with active background", () => {
+    it("reflects the active format via select value", () => {
       const [format] = createSignal<"markdown" | "raw">("raw");
-      render(() => <FloatingActionBar {...makeProps({ format })} />);
+      const { container } = render(() => (
+        <FloatingActionBar {...makeProps({ format })} />
+      ));
 
-      const rawBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
-      const mdBtn = screen.getByText("Markdown") as HTMLButtonElement;
-      expect(rawBtn.classList.contains("bg-focus")).toBe(true);
-      expect(mdBtn.classList.contains("bg-focus")).toBe(false);
+      const select = container.querySelector(
+        "[data-tamiz-select] select"
+      ) as HTMLSelectElement;
+      expect(select.value).toBe("raw");
     });
 
     it("Preview button is disabled", () => {
@@ -97,18 +99,28 @@ describe("FloatingActionBar", () => {
       expect(props.onCancel).toHaveBeenCalledTimes(1);
     });
 
-    it("calls onFormatChange with 'raw' when Raw HTML option is clicked", () => {
+    it("calls onFormatChange with 'raw' when Raw HTML is selected", () => {
       const props = makeProps();
-      render(() => <FloatingActionBar {...props} />);
-      fireEvent.click(screen.getByText("Raw HTML") as HTMLButtonElement);
+      const { container } = render(() => <FloatingActionBar {...props} />);
+
+      const select = container.querySelector(
+        "[data-tamiz-select] select"
+      ) as HTMLSelectElement;
+      fireEvent.change(select, { target: { value: "raw" } });
       expect(props.onFormatChange).toHaveBeenCalledWith("raw");
     });
 
-    it("calls onFormatChange with 'markdown' when Markdown option is clicked (from raw)", () => {
+    it("calls onFormatChange with 'markdown' when Markdown is selected (from raw)", () => {
       const props = makeProps();
       const [format] = createSignal<"markdown" | "raw">("raw");
-      render(() => <FloatingActionBar {...props} format={format} />);
-      fireEvent.click(screen.getByText("Markdown") as HTMLButtonElement);
+      const { container } = render(() => (
+        <FloatingActionBar {...props} format={format} />
+      ));
+
+      const select = container.querySelector(
+        "[data-tamiz-select] select"
+      ) as HTMLSelectElement;
+      fireEvent.change(select, { target: { value: "markdown" } });
       expect(props.onFormatChange).toHaveBeenCalledWith("markdown");
     });
   });

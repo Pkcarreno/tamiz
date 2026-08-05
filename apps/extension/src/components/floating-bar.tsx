@@ -83,6 +83,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
           onChange={handleFormatChange}
           options={FORMAT_OPTIONS}
           value={props.format()}
+          variant="subtle"
         />
         <Button disabled variant="secondary">
           Preview

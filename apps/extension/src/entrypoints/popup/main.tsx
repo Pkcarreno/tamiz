@@ -55,6 +55,7 @@ function App() {
           onChange={(value) => setFormat(value as "markdown" | "raw")}
           options={FORMAT_OPTIONS}
           value={format()}
+          variant="standard"
         />
       </div>
 
