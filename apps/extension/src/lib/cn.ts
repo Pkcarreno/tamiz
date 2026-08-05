@@ -1,10 +1,11 @@
-import { cn as cnfast } from "cnfast";
+import { type ClassValue, cn as cnfast } from "cnfast";
 
 /**
- * Concatenates class names, filtering out falsy values.
+ * Concatenates class names with Tailwind conflict deduplication, filtering out
+ * falsy values and supporting object syntax `{ className: condition }`.
  *
  * @public
  */
-export function cn(...inputs: (string | undefined | null | false)[]): string {
+export function cn(...inputs: ClassValue[]): string {
   return cnfast(inputs);
 }

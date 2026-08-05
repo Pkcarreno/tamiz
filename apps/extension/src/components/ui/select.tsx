@@ -1,7 +1,6 @@
 import { For } from "solid-js";
 
 import { cn } from "../../lib/cn.ts";
-import { selectVariants } from "../../lib/variants.ts";
 
 /**
  * A single option in the Select component.
@@ -51,17 +50,39 @@ export interface SelectProps {
 export function Select(props: SelectProps) {
   return (
     <div
-      class={cn(selectVariants({ size: props.size }), props.class)}
+      class={cn(
+        "inline-flex overflow-hidden rounded-md border border-border bg-surface-glass",
+        props.class
+      )}
+      data-tamiz-select
       id={props.id}
     >
       <For each={props.options}>
-        {(option) => (
+        {(option, index) => (
           <button
-            class={
-              props.value === option.value
-                ? "tz-select-option tz-select-option--active"
-                : "tz-select-option"
-            }
+            class={cn(
+              // Base
+              "inline-flex cursor-pointer items-center justify-center whitespace-nowrap border-none bg-transparent font-medium font-sans text-sm text-text-secondary transition-[background-color,color] duration-fast ease-out",
+              // Size
+              {
+                "h-[28px] px-2 text-xs": props.size === "sm",
+                "h-[34px] px-3": props.size !== "sm",
+              },
+              // Active / hover (active excludes hover to preserve original CSS priority)
+              {
+                "bg-focus text-text-on-focus": props.value === option.value,
+                "hover:enabled:bg-surface-glass-hover hover:enabled:text-text":
+                  props.value !== option.value,
+              },
+              // Disabled
+              "disabled:cursor-not-allowed disabled:opacity-[0.35]",
+              // Structural (index-based to mirror :first-child / :last-child / :not(:last-child))
+              {
+                "border-border border-r": index() !== props.options.length - 1,
+                "rounded-l-md": index() === 0,
+                "rounded-r-md": index() === props.options.length - 1,
+              }
+            )}
             onClick={[props.onChange, option.value]}
             type="button"
           >

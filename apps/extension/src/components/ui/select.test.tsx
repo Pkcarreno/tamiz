@@ -30,16 +30,15 @@ describe("Select", () => {
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
-  it("marks the active option", () => {
+  it("marks the active option with active background", () => {
     render(() => (
       <Select onChange={vi.fn()} options={options} value="markdown" />
     ));
     const activeBtn = screen.getByText("Markdown") as HTMLButtonElement;
     const inactiveBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
-    expect(activeBtn.classList.contains("tz-select-option--active")).toBe(true);
-    expect(inactiveBtn.classList.contains("tz-select-option--active")).toBe(
-      false
-    );
+    expect(activeBtn.classList.contains("bg-focus")).toBe(true);
+    expect(activeBtn.classList.contains("text-text-on-focus")).toBe(true);
+    expect(inactiveBtn.classList.contains("bg-focus")).toBe(false);
   });
 
   it("updates active state when value changes", () => {
@@ -63,38 +62,60 @@ describe("Select", () => {
     render(() => <SelectWithState />);
 
     const markdownBtn = screen.getByText("Markdown") as HTMLButtonElement;
-    expect(markdownBtn.classList.contains("tz-select-option--active")).toBe(
-      true
-    );
+    expect(markdownBtn.classList.contains("bg-focus")).toBe(true);
 
     fireEvent.click(screen.getByText("Change") as HTMLButtonElement);
 
     const rawBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
-    expect(rawBtn.classList.contains("tz-select-option--active")).toBe(true);
-    expect(markdownBtn.classList.contains("tz-select-option--active")).toBe(
-      false
-    );
+    expect(rawBtn.classList.contains("bg-focus")).toBe(true);
+    expect(markdownBtn.classList.contains("bg-focus")).toBe(false);
   });
 
-  it("applies sm size class to container", () => {
+  it("applies sm size styles to option buttons", () => {
     render(() => (
       <Select onChange={vi.fn()} options={options} size="sm" value="markdown" />
     ));
-    const container = screen
-      .getByText("Markdown")
-      .closest(".tz-select") as HTMLElement;
-    expect(container.classList.contains("tz-select-sm")).toBe(true);
+    const btn = screen.getByText("Markdown") as HTMLButtonElement;
+    expect(btn.classList.contains("h-[28px]")).toBe(true);
+    expect(btn.classList.contains("px-2")).toBe(true);
+    expect(btn.classList.contains("text-xs")).toBe(true);
   });
 
-  it("applies no size modifier class by default (md is the base)", () => {
+  it("uses md size styles by default", () => {
     render(() => (
       <Select onChange={vi.fn()} options={options} value="markdown" />
     ));
-    const container = screen
-      .getByText("Markdown")
-      .closest(".tz-select") as HTMLElement;
-    expect(container.classList.contains("tz-select")).toBe(true);
-    expect(container.classList.contains("tz-select-sm")).toBe(false);
+    const btn = screen.getByText("Markdown") as HTMLButtonElement;
+    expect(btn.classList.contains("h-[34px]")).toBe(true);
+    expect(btn.classList.contains("px-3")).toBe(true);
+  });
+
+  it("applies structural classes based on option position", () => {
+    render(() => (
+      <Select onChange={vi.fn()} options={options} value="markdown" />
+    ));
+    const mdBtn = screen.getByText("Markdown") as HTMLButtonElement;
+    const rawBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
+    // First option gets left rounded corner
+    expect(mdBtn.classList.contains("rounded-l-md")).toBe(true);
+    // Last option gets right rounded corner
+    expect(rawBtn.classList.contains("rounded-r-md")).toBe(true);
+    // First (non-last) option gets right border
+    expect(mdBtn.classList.contains("border-r")).toBe(true);
+    // Last option does not get right border
+    expect(rawBtn.classList.contains("border-r")).toBe(false);
+  });
+
+  it("excludes hover utilities from active options", () => {
+    render(() => (
+      <Select onChange={vi.fn()} options={options} value="markdown" />
+    ));
+    const activeBtn = screen.getByText("Markdown") as HTMLButtonElement;
+    const inactiveBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
+    expect(activeBtn.classList.contains("hover:enabled:text-text")).toBe(false);
+    expect(inactiveBtn.classList.contains("hover:enabled:text-text")).toBe(
+      true
+    );
   });
 
   it("merges custom class with default classes", () => {
@@ -108,8 +129,8 @@ describe("Select", () => {
     ));
     const container = screen
       .getByText("Markdown")
-      .closest(".tz-select") as HTMLElement;
-    expect(container.classList.contains("tz-select")).toBe(true);
+      .closest("[data-tamiz-select]") as HTMLElement;
     expect(container.classList.contains("custom-select")).toBe(true);
+    expect(container.classList.contains("inline-flex")).toBe(true);
   });
 });

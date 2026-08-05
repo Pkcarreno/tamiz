@@ -33,15 +33,20 @@ function App() {
   };
 
   return (
-    <div class="tz-popup">
-      <h1 class="tz-popup__title">Tamiz</h1>
-      <p class="tz-popup__description">
+    <div class="w-[320px] bg-ground p-5 font-sans text-text">
+      <h1 class="mb-1 font-semibold text-[17px] text-text -tracking-[0.01em]">
+        Tamiz
+      </h1>
+      <p class="mb-5 text-sm text-text-secondary leading-[1.5]">
         Configure your capture settings, then click Capture to select an
         element.
       </p>
 
-      <div class="tz-popup__field">
-        <label class="tz-popup__label" for="format-select">
+      <div class="mb-4">
+        <label
+          class="mb-2 block font-medium text-text-tertiary text-xs uppercase tracking-[0.05em]"
+          for="format-select"
+        >
           Output format
         </label>
         <Select
@@ -54,7 +59,7 @@ function App() {
       </div>
 
       {/* biome-ignore lint/performance/noJsxPropsBind: popup renders once */}
-      <Button class="tz-popup__capture-btn" onClick={handleCapture}>
+      <Button class="w-full" onClick={handleCapture}>
         Capture
       </Button>
     </div>

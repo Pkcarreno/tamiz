@@ -70,14 +70,14 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
 
   return (
     <div
-      class="tz-floating-bar"
+      class="fixed z-[2147483647] flex flex-col gap-1 rounded-lg border border-border bg-ground-raised p-2 shadow-lg backdrop-blur-[16px] [animation:tz-lens-appear_var(--tz-duration-slow)_var(--tz-ease-out)]"
       data-tamiz-bar
       style={{
         left: `${position().left}px`,
         top: `${position().top}px`,
       }}
     >
-      <div class="tz-floating-bar__row">
+      <div class="flex items-center gap-1">
         <Select
           // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
           onChange={handleFormatChange}
@@ -88,7 +88,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
           Preview
         </Button>
       </div>
-      <div class="tz-floating-bar__row">
+      <div class="flex items-center gap-1">
         <Button onClick={props.onCopy}>Copy</Button>
         <Button onClick={props.onDownload}>Download</Button>
         <Button onClick={props.onCancel} variant="secondary">

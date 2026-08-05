@@ -19,7 +19,6 @@
   "dependencies": {
     "@tamiz/html-converter": "workspace:*",
     "@wxt-dev/browser": "^0.2.5",
-    "class-variance-authority": "^0.7.1",
     "cnfast": "^0.1.0"
   },
   "devDependencies": {

@@ -52,14 +52,14 @@ describe("FloatingActionBar", () => {
       expect(screen.getByText("Cancel")).toBeTruthy();
     });
 
-    it("marks the active format option based on the format prop", () => {
+    it("marks the active format option with active background", () => {
       const [format] = createSignal<"markdown" | "raw">("raw");
       render(() => <FloatingActionBar {...makeProps({ format })} />);
 
       const rawBtn = screen.getByText("Raw HTML") as HTMLButtonElement;
       const mdBtn = screen.getByText("Markdown") as HTMLButtonElement;
-      expect(rawBtn.classList.contains("tz-select-option--active")).toBe(true);
-      expect(mdBtn.classList.contains("tz-select-option--active")).toBe(false);
+      expect(rawBtn.classList.contains("bg-focus")).toBe(true);
+      expect(mdBtn.classList.contains("bg-focus")).toBe(false);
     });
 
     it("Preview button is disabled", () => {
@@ -206,19 +206,19 @@ describe("FloatingActionBar", () => {
   describe("formats layout", () => {
     it("renders row 1 with format selector before preview button", () => {
       render(() => <FloatingActionBar {...makeProps()} />);
-      const rows = screen
+      const bar = screen
         .getByText("Copy")
-        .closest("[data-tamiz-bar]")
-        ?.querySelectorAll(".tz-floating-bar__row");
+        .closest("[data-tamiz-bar]") as HTMLElement;
+      const rows = Array.from(bar.children);
 
-      expect(rows?.length).toBe(2);
+      expect(rows.length).toBe(2);
       // Row 1 should contain the Select (format options)
-      expect(rows?.[0].textContent).toContain("Markdown");
-      expect(rows?.[0].textContent).toContain("Preview");
+      expect(rows[0].textContent).toContain("Markdown");
+      expect(rows[0].textContent).toContain("Preview");
       // Row 2 should contain Copy/Download/Cancel
-      expect(rows?.[1].textContent).toContain("Copy");
-      expect(rows?.[1].textContent).toContain("Download");
-      expect(rows?.[1].textContent).toContain("Cancel");
+      expect(rows[1].textContent).toContain("Copy");
+      expect(rows[1].textContent).toContain("Download");
+      expect(rows[1].textContent).toContain("Cancel");
     });
   });
 });
