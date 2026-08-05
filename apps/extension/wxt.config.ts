@@ -15,6 +15,7 @@ export default defineConfig({
     },
   },
   manifest: {
+    name: "Tamiz",
     permissions: ["activeTab", "contextMenus", "scripting", "downloads"],
   },
   modules: ["@wxt-dev/module-solid"],
