@@ -84,17 +84,17 @@ describe("Select", () => {
       .getByText("Markdown")
       .closest(".tz-select") as HTMLElement;
     expect(container.classList.contains("tz-select-sm")).toBe(true);
-    expect(container.classList.contains("tz-select-md")).toBe(false);
   });
 
-  it("applies md size class to container by default", () => {
+  it("applies no size modifier class by default (md is the base)", () => {
     render(() => (
       <Select onChange={vi.fn()} options={options} value="markdown" />
     ));
     const container = screen
       .getByText("Markdown")
       .closest(".tz-select") as HTMLElement;
-    expect(container.classList.contains("tz-select-md")).toBe(true);
+    expect(container.classList.contains("tz-select")).toBe(true);
+    expect(container.classList.contains("tz-select-sm")).toBe(false);
   });
 
   it("merges custom class with default classes", () => {

@@ -7,6 +7,9 @@ import {
   useContext,
 } from "solid-js";
 
+import { cn } from "../../lib/cn.ts";
+import { toastVariants } from "../../lib/variants.ts";
+
 /**
  * A single toast notification item.
  *
@@ -78,7 +81,7 @@ export function ToastProvider(props: ToastProviderProps) {
       <div class="tz-toast-container">
         <For each={toasts()}>
           {(toast) => (
-            <div class="tz-toast" data-testid="tz-toast">
+            <div class={cn(toastVariants())} data-testid="tz-toast">
               {toast.message}
             </div>
           )}

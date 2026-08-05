@@ -1,5 +1,8 @@
 import type { JSX } from "solid-js";
-import { createMemo, splitProps } from "solid-js";
+import { splitProps } from "solid-js";
+
+import { cn } from "../../lib/cn.ts";
+import { buttonVariants } from "../../lib/variants.ts";
 
 /**
  * Button visual variants.
@@ -46,21 +49,15 @@ export function Button(props: ButtonProps) {
     "type",
   ]);
 
-  const classes = createMemo(() => {
-    const variant = local.variant ?? "primary";
-    const size = local.size ?? "md";
-    const isIcon = variant === "icon";
-
-    const variantClass = isIcon ? "tz-btn-primary" : `tz-btn-${variant}`;
-    const sizeClass = isIcon
-      ? `tz-btn-icon tz-btn-icon-${size}`
-      : `tz-btn-${size}`;
-
-    return `tz-btn ${variantClass} ${sizeClass} ${local.class ?? ""}`.trim();
-  });
-
   return (
-    <button class={classes()} type={local.type ?? "button"} {...rest}>
+    <button
+      class={cn(
+        buttonVariants({ size: local.size, variant: local.variant }),
+        local.class
+      )}
+      type={local.type ?? "button"}
+      {...rest}
+    >
       {local.children}
     </button>
   );

@@ -1,5 +1,8 @@
 import { For } from "solid-js";
 
+import { cn } from "../../lib/cn.ts";
+import { selectVariants } from "../../lib/variants.ts";
+
 /**
  * A single option in the Select component.
  *
@@ -48,7 +51,7 @@ export interface SelectProps {
 export function Select(props: SelectProps) {
   return (
     <div
-      class={`tz-select tz-select-${props.size ?? "md"} ${props.class ?? ""}`.trim()}
+      class={cn(selectVariants({ size: props.size }), props.class)}
       id={props.id}
     >
       <For each={props.options}>
