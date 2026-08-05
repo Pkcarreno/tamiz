@@ -60,16 +60,22 @@ export function injectHighlightStyles(): void {
   }
   const style = document.createElement("style");
   style.id = "tamiz-highlight-styles";
+  // Hex values are hardcoded because these styles are injected into the host
+  // page (not Shadow DOM), so CSS variables are unavailable. They are kept in
+  // sync with design tokens defined in content.css :root:
+  //   #00d4ff            — --tz-focus
+  //   rgba(0,212,255,.15) — --tz-focus-dim
+  //   #33dfff            — --tz-focus-bright
   style.textContent = `
     .tamiz-highlight {
-      outline: 2px solid #3b82f6 !important;
+      outline: 2px solid #00d4ff !important;
       outline-offset: 2px !important;
-      background-color: rgba(59, 130, 246, 0.1) !important;
+      background-color: rgba(0, 212, 255, 0.15) !important;
     }
     .tamiz-hover {
-      outline: 2px dashed #93c5fd !important;
+      outline: 2px dashed #33dfff !important;
       outline-offset: 1px !important;
-      background-color: rgba(147, 197, 253, 0.08) !important;
+      background-color: rgba(51, 223, 255, 0.08) !important;
     }
   `;
   document.head.appendChild(style);

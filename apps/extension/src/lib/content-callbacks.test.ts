@@ -157,4 +157,20 @@ describe("injectHighlightStyles", () => {
     const styles = document.querySelectorAll("#tamiz-highlight-styles");
     expect(styles.length).toBe(1);
   });
+
+  it("uses focus hex #00d4ff synced to --tz-focus design token", () => {
+    injectHighlightStyles();
+    const css =
+      document.getElementById("tamiz-highlight-styles")?.textContent ?? "";
+    expect(css).toContain("#00d4ff");
+    expect(css).not.toContain("#3b82f6");
+  });
+
+  it("uses focus-bright hex #33dfff synced to --tz-focus-bright design token", () => {
+    injectHighlightStyles();
+    const css =
+      document.getElementById("tamiz-highlight-styles")?.textContent ?? "";
+    expect(css).toContain("#33dfff");
+    expect(css).not.toContain("#93c5fd");
+  });
 });
