@@ -1,19 +1,19 @@
 /*
- * THESIS: Tamiz is a precision lens that brings exactly the content you need
- * into focus — the picker is a focusing system, not a toolbar.
+ * THESIS: Tamiz is a precision instrument for extracting signal from noise.
+ * The interface is stationery — warm, quiet, invisible until needed.
  *
- * OWN-WORLD: Deep graphite ground with glass surfaces, cyan focus accents,
- * fog-white text. System typography with monospace for data. Concentric
- * focus rings as the visual signature.
+ * OWN-WORLD: Warm paper ground with near-black ink text, burnt orange accent
+ * on active states only. System typography. Hairline separators. Ghost
+ * interactions. macOS-native density.
  *
  * STORY: The user hovers to focus, clicks to capture, and noise fades away.
- * Precision is the experience.
+ * The tool recedes; the content leads.
  *
- * FIRST VIEWPORT: (popup) Compact 320px panel — format selector at top,
- * large Capture button below, minimal chrome, glass surface on dark ground.
+ * FIRST VIEWPORT: (popup) Compact 320px panel — format selector, Capture
+ * button, minimal chrome, warm ground.
  *
- * FORM: The Deep Lens — microscope/telescope metaphor, assigned direction #7
- * from seed 098aaaba.
+ * FORM: Paper & Ink — stationery/restraint metaphor. User-pinned direction
+ * overriding concept-seed assignment.
  *
  * FINISH: unreviewed and undocumented is unfinished; this build ends with
  * the finish review, the verdict, and DESIGN.md.
@@ -95,34 +95,34 @@
 /* ===== DESIGN TOKENS: :root ===== */
 
 :root {
-  /* --- Color: Ground --- */
-  --tz-ground: #0f0f17;
-  --tz-ground-raised: #16161f;
-  --tz-ground-elevated: #1c1c28;
-  --tz-surface-glass: rgba(255, 255, 255, 0.04);
-  --tz-surface-glass-hover: rgba(255, 255, 255, 0.07);
-  --tz-surface-glass-active: rgba(255, 255, 255, 0.1);
+  /* --- Color: Ground (light) --- */
+  --tz-ground: #f5f5f7;
+  --tz-ground-raised: #ffffff;
+  --tz-ground-elevated: #ffffff;
+  --tz-surface-glass: rgba(0, 0, 0, 0.04);
+  --tz-surface-glass-hover: rgba(0, 0, 0, 0.07);
+  --tz-surface-glass-active: rgba(0, 0, 0, 0.1);
 
-  /* --- Color: Focus (the accent) --- */
-  --tz-focus: #00d4ff;
-  --tz-focus-dim: rgba(0, 212, 255, 0.15);
-  --tz-focus-glow: rgba(0, 212, 255, 0.25);
-  --tz-focus-bright: #33dfff;
+  /* --- Color: Focus (warm accent — burnt orange) --- */
+  --tz-focus: #c45d2e;
+  --tz-focus-dim: rgba(196, 93, 46, 0.12);
+  --tz-focus-glow: rgba(196, 93, 46, 0.2);
+  --tz-focus-bright: #d9723f;
 
   /* --- Color: Text --- */
-  --tz-text: #e8e8f0;
-  --tz-text-secondary: #9898a8;
-  --tz-text-tertiary: #5c5c6e;
-  --tz-text-on-focus: #0f0f17;
+  --tz-text: #1d1d1f;
+  --tz-text-secondary: #6e6e73;
+  --tz-text-tertiary: #aeaeb2;
+  --tz-text-on-focus: #ffffff;
 
   /* --- Color: State --- */
-  --tz-state-error: #ff4d6a;
-  --tz-state-success: #34d399;
-  --tz-state-warning: #fbbf24;
+  --tz-state-error: #d70015;
+  --tz-state-success: #34c759;
+  --tz-state-warning: #ff9f0a;
 
   /* --- Color: Border --- */
-  --tz-border: rgba(255, 255, 255, 0.08);
-  --tz-border-focus: rgba(0, 212, 255, 0.4);
+  --tz-border: rgba(0, 0, 0, 0.1);
+  --tz-border-focus: rgba(196, 93, 46, 0.4);
 
   /* --- Spacing --- */
   --tz-space-1: 4px;
@@ -133,9 +133,9 @@
   --tz-space-6: 24px;
 
   /* --- Radius --- */
-  --tz-radius-sm: 6px;
-  --tz-radius-md: 10px;
-  --tz-radius-lg: 14px;
+  --tz-radius-sm: 4px;
+  --tz-radius-md: 6px;
+  --tz-radius-lg: 8px;
   --tz-radius-pill: 999px;
 
   /* --- Typography --- */
@@ -145,26 +145,26 @@
   --tz-font-mono:
     "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
   --tz-font-size-xs: 11px;
-  --tz-font-size-sm: 13px;
-  --tz-font-size-md: 14px;
-  --tz-font-size-lg: 16px;
+  --tz-font-size-sm: 12px;
+  --tz-font-size-md: 13px;
+  --tz-font-size-lg: 15px;
   --tz-font-weight-normal: 400;
   --tz-font-weight-medium: 500;
   --tz-font-weight-semibold: 600;
 
-  /* --- Depth --- */
-  --tz-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.15);
-  --tz-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
-  --tz-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.25);
+  /* --- Depth (light ground — subtle shadows) --- */
+  --tz-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --tz-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --tz-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.04);
   --tz-shadow-focus:
-    0 0 0 2px var(--tz-focus-dim), 0 0 20px var(--tz-focus-glow);
+    0 0 0 2px var(--tz-focus-dim), 0 0 12px var(--tz-focus-glow);
 
   /* --- Motion --- */
   --tz-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --tz-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --tz-duration-fast: 120ms;
-  --tz-duration-normal: 200ms;
-  --tz-duration-slow: 350ms;
+  --tz-duration-fast: 100ms;
+  --tz-duration-normal: 160ms;
+  --tz-duration-slow: 280ms;
 }
 
 /* ===== COMPONENTS ===== */
@@ -172,7 +172,7 @@
 @keyframes tz-lens-appear {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(4px);
+    transform: scale(0.97) translateY(2px);
   }
   to {
     opacity: 1;

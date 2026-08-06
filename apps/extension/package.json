@@ -19,7 +19,8 @@
   "dependencies": {
     "@tamiz/html-converter": "workspace:*",
     "@wxt-dev/browser": "^0.2.5",
-    "cnfast": "^0.1.0"
+    "cnfast": "^0.1.0",
+    "lucide-solid": "^1.28.0"
   },
   "devDependencies": {
     "@solidjs/testing-library": "^0.8.10",

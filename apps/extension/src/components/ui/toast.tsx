@@ -79,7 +79,7 @@ export function ToastProvider(props: ToastProviderProps) {
         <For each={toasts()}>
           {(toast) => (
             <div
-              class="pointer-events-auto min-w-[180px] rounded-pill border border-border bg-ground-elevated px-4 py-2 text-center font-medium font-sans text-sm text-text shadow-lg backdrop-blur-[12px]"
+              class="pointer-events-auto min-w-[160px] rounded-pill border border-border bg-ground-raised px-3 py-1.5 text-center font-medium font-sans text-[12px] text-text shadow-md backdrop-blur-[8px]"
               data-testid="tz-toast"
             >
               {toast.message}

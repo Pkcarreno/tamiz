@@ -1,3 +1,6 @@
+import Copy from "lucide-solid/icons/copy";
+import Download from "lucide-solid/icons/download";
+import X from "lucide-solid/icons/x";
 import { type Accessor, createMemo } from "solid-js";
 
 import { computeBarPosition } from "../lib/position.ts";
@@ -5,10 +8,10 @@ import { Button } from "./ui/button.tsx";
 import { Select, type SelectOption } from "./ui/select.tsx";
 
 /** Estimated width of the floating bar used for viewport clamping. */
-const BAR_WIDTH = 280;
+const BAR_WIDTH = 260;
 
 /** Estimated height of the floating bar used for viewport clamping. */
-const BAR_HEIGHT = 100;
+const BAR_HEIGHT = 32;
 
 /** Format options presented in the bar's Select toggle. */
 const FORMAT_OPTIONS: SelectOption[] = [
@@ -37,14 +40,24 @@ export interface FloatingActionBarProps {
 }
 
 /**
+ * Thin vertical separator between interaction zones.
+ */
+function Separator() {
+  return (
+    <div
+      aria-hidden="true"
+      class="mx-0.5 h-3 w-px bg-border transition-colors duration-fast group-hover/bar:bg-text-tertiary"
+    />
+  );
+}
+
+/**
  * Floating action bar rendered inside a Shadow DOM host.
  *
- * Two-row layout anchored around the selected element via
- * {@link computeBarPosition}. All colors, spacing, and radii reference
- * Tamiz design tokens defined in `content.css`.
- *
- * The root element carries `data-tamiz-bar` so that {@link extractContent}
- * can strip it from cloned HTML during copy/download.
+ * Single-row, compact layout with no container gaps or padding.
+ * All buttons are ghost (text-only, hover changes text color).
+ * Thin vertical separators divide interaction zones.
+ * Format selector fills available width. macOS-native density.
  *
  * @public
  */
@@ -70,14 +83,15 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
 
   return (
     <div
-      class="fixed z-[2147483647] flex flex-col gap-1 rounded-lg border border-border bg-ground-raised p-2 shadow-lg backdrop-blur-[16px] [animation:tz-lens-appear_var(--tz-duration-slow)_var(--tz-ease-out)]"
+      class="group/bar fixed z-[2147483647] flex items-center rounded-md border border-border bg-ground-raised px-1 shadow-md backdrop-blur-[12px] [animation:tz-lens-appear_var(--tz-duration-slow)_var(--tz-ease-out)]"
       data-tamiz-bar
       style={{
         left: `${position().left}px`,
         top: `${position().top}px`,
       }}
     >
-      <div class="flex items-center gap-1">
+      {/* Format selector — fills available width */}
+      <div class="min-w-0 flex-1">
         <Select
           // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
           onChange={handleFormatChange}
@@ -85,17 +99,34 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
           value={props.format()}
           variant="subtle"
         />
-        <Button disabled variant="secondary">
-          Preview
-        </Button>
       </div>
-      <div class="flex items-center gap-1">
-        <Button onClick={props.onCopy}>Copy</Button>
-        <Button onClick={props.onDownload}>Download</Button>
-        <Button onClick={props.onCancel} variant="secondary">
-          Cancel
-        </Button>
-      </div>
+
+      <Separator />
+
+      {/* Action icons */}
+      <Button aria-label="Copy" onClick={props.onCopy} size="xs" variant="icon">
+        <Copy size={14} />
+      </Button>
+      <Button
+        aria-label="Download"
+        onClick={props.onDownload}
+        size="xs"
+        variant="icon"
+      >
+        <Download size={14} />
+      </Button>
+
+      <Separator />
+
+      {/* Cancel */}
+      <Button
+        aria-label="Cancel"
+        onClick={props.onCancel}
+        size="xs"
+        variant="ghost"
+      >
+        <X size={12} />
+      </Button>
     </div>
   );
 }

@@ -6,16 +6,19 @@ import { cn } from "../../lib/cn.ts";
 /**
  * Button visual variants.
  *
+ * - `ghost` — transparent, text-only. Hover changes text color (link-like).
+ * - `icon` — transparent, icon-only square. Hover changes icon color.
+ *
  * @public
  */
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "icon";
+export type ButtonVariant = "ghost" | "icon";
 
 /**
  * Button sizes.
  *
  * @public
  */
-export type ButtonSize = "sm" | "md";
+export type ButtonSize = "xs" | "sm";
 
 /**
  * Props for the {@link Button} component.
@@ -25,19 +28,18 @@ export type ButtonSize = "sm" | "md";
 export interface ButtonProps
   extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   children?: JSX.Element;
-  /** Height and padding of the button. @default "md" */
+  /** Height and padding of the button. @default "xs" */
   size?: ButtonSize;
-  /** Visual style of the button. @default "primary" */
+  /** Visual style of the button. @default "ghost" */
   variant?: ButtonVariant;
 }
 
 /**
- * Reusable button component with primary, secondary, ghost, and icon variants.
+ * Ghost-only button component for the Paper & Ink visual world.
  *
- * All colors, spacing, and radii reference Tamiz design tokens defined in
- * `content.css` via the `var(--tz-*)` custom properties. Variant logic that was
- * previously handled by CVA recipes is now expressed as conditional Tailwind
- * utility classes composed through {@link cn}.
+ * All buttons render as transparent surfaces with text/icon color hover
+ * (link-like behavior). No background emphasis, no border. macOS-native
+ * density: compact, accessible, not oversized.
  *
  * @public
  */
@@ -50,34 +52,30 @@ export function Button(props: ButtonProps) {
     "type",
   ]);
 
+  const variant = () => local.variant ?? "ghost";
+  const size = () => local.size ?? "xs";
+
   return (
     <button
       class={cn(
         // Base
-        "inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-md border border-transparent font-medium font-sans transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-out",
-        // Disabled + active + focus (apply to all variants)
-        "focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2 active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-[0.35]",
-        // Variants
-        {
-          "border-border bg-surface-glass text-text hover:enabled:border-[rgba(255,255,255,0.12)] hover:enabled:bg-surface-glass-hover hover:enabled:text-text":
-            local.variant === "secondary",
-          "border-focus bg-focus text-text-on-focus hover:enabled:border-focus-bright hover:enabled:bg-focus-bright hover:enabled:shadow-focus":
-            local.variant !== "secondary" && local.variant !== "ghost",
-          "border-transparent bg-transparent text-text-secondary hover:enabled:bg-surface-glass hover:enabled:text-text":
-            local.variant === "ghost",
-        },
+        "inline-flex cursor-pointer select-none items-center justify-center gap-1.5 border border-transparent font-medium font-sans transition-[color,box-shadow,transform] duration-fast ease-out",
+        // Focus + active (all variants)
+        "focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1 active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-[0.35]",
+        // Ghost: text-only, hover changes text color (link-like)
+        variant() === "ghost" &&
+          "bg-transparent text-text-secondary hover:enabled:text-focus",
+        // Icon: icon-only, hover changes icon color
+        variant() === "icon" &&
+          "bg-transparent p-0 text-text-tertiary hover:enabled:text-focus",
         // Sizes
-        {
-          "h-[28px] rounded-sm px-2 text-xs": local.size === "sm",
-          "h-[34px] px-4 text-sm": local.size !== "sm",
-        },
-        // Icon compound: resets padding, sets square dimensions
-        {
-          "h-[28px] w-[28px] p-0":
-            local.variant === "icon" && local.size === "sm",
-          "h-[34px] w-[34px] p-0":
-            local.variant === "icon" && local.size !== "sm",
-        },
+        size() === "xs" &&
+          variant() !== "icon" &&
+          "h-[24px] px-1.5 text-[11px]",
+        size() === "sm" && variant() !== "icon" && "h-[26px] px-2 text-[12px]",
+        // Icon sizes
+        size() === "xs" && variant() === "icon" && "size-[24px]",
+        size() === "sm" && variant() === "icon" && "size-[26px]",
         local.class
       )}
       type={local.type ?? "button"}

@@ -15,8 +15,8 @@ export interface SelectOption {
 /**
  * Visual style of the Select component.
  *
- * - `subtle` — compact, glass-surface appearance for dense toolbars
- * - `standard` — full-width, elevated appearance for form layouts
+ * - `subtle` — compact, borderless, full-width for toolbars (floating bar)
+ * - `standard` — bordered, for form layouts (popup)
  *
  * @public
  */
@@ -45,19 +45,15 @@ export interface SelectProps {
 }
 
 // Variant-specific classes for the native `<select>` element.
-// Extracted as a pure-data lookup so getVariantClasses can be unit-tested directly.
 const variantClasses: Record<SelectVariant, string> = {
   standard:
-    "h-[40px] px-3 text-sm text-text bg-ground-elevated w-full hover:enabled:bg-ground-raised",
+    "h-[28px] px-2 text-[12px] text-text bg-transparent w-full border-border/60 hover:enabled:bg-surface-glass-hover",
   subtle:
-    "h-[28px] px-2 text-xs text-text-secondary bg-transparent rounded-sm border-border/50 hover:enabled:bg-surface-glass-hover",
+    "h-[24px] px-1 text-[11px] text-text-secondary bg-transparent border-transparent hover:enabled:text-focus",
 };
 
 /**
  * Returns the variant-specific CSS classes for the native `<select>` element.
- *
- * Encapsulates the height, padding, typography, background, and hover
- * behavior so they can be unit-tested independently of rendering.
  *
  * @public
  */
@@ -65,18 +61,14 @@ export function getVariantClasses(variant: SelectVariant): string {
   return variantClasses[variant];
 }
 
-// Chevron icon classes (size + text color) per variant.
-// The SVG uses `currentColor` so the path inherits the color from text-utility.
+// Chevron icon classes per variant.
 const chevronClasses: Record<SelectVariant, string> = {
-  standard: "size-[14px] text-text-tertiary",
-  subtle: "size-[12px] text-text-tertiary",
+  standard: "size-[12px] text-text-tertiary",
+  subtle: "size-[10px] text-text-tertiary",
 };
 
 /**
- * Returns the chevron icon classes (size + text color) for a given variant.
- *
- * The SVG uses `currentColor` so the path inherits the color set by the
- * returned `text-*` utility.
+ * Returns the chevron icon classes for a given variant.
  *
  * @public
  */
@@ -85,22 +77,20 @@ export function getChevronClasses(variant: SelectVariant): string {
 }
 
 /**
- * Native `<select>` with an inline chevron indicator and two visual
- * variants.
+ * Native `<select>` with inline chevron indicator and two visual variants.
  *
- * All colors and spacing reference Tamiz design tokens. The component
- * forwards `id` and `disabled` to the native `<select>` and maps the
- * native `change` event to a typed string callback.
+ * Subtle variant: borderless, full-width, ghost-like for floating bar.
+ * Standard variant: minimal border, for popup/form layouts.
  *
  * @public
  */
 export function Select(props: SelectProps) {
   return (
-    <div class="relative inline-flex" data-tamiz-select>
+    <div class="relative inline-flex w-full" data-tamiz-select>
       <select
         class={cn(
           // Shared base
-          "color-scheme:dark relative appearance-none rounded-md border border-border pr-8 font-medium font-sans transition-[background-color,border-color,box-shadow] duration-fast ease-out focus:shadow-focus focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-[0.35]",
+          "color-scheme:light relative w-full appearance-none rounded-sm border border-transparent pr-6 font-medium font-sans transition-[color,border-color] duration-fast ease-out focus:shadow-focus focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-[0.35]",
           // Variant-specific
           getVariantClasses(props.variant),
           // User-supplied
@@ -122,7 +112,7 @@ export function Select(props: SelectProps) {
         aria-hidden="true"
         class={cn(
           getChevronClasses(props.variant),
-          "pointer-events-none absolute top-1/2 right-2 -translate-y-1/2"
+          "pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2"
         )}
         fill="currentColor"
         height="24"

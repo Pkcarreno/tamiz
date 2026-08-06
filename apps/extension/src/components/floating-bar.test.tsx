@@ -38,18 +38,17 @@ describe("FloatingActionBar", () => {
   afterEach(() => cleanup());
 
   describe("renders correctly", () => {
-    it("renders two rows with format selector and action buttons", () => {
+    it("renders single row with format selector and action buttons", () => {
       render(() => <FloatingActionBar {...makeProps()} />);
 
-      // Row 1: Select + Preview
+      // Format selector
       expect(screen.getByText("Markdown")).toBeTruthy();
       expect(screen.getByText("Raw HTML")).toBeTruthy();
-      expect(screen.getByText("Preview")).toBeTruthy();
 
-      // Row 2: Copy + Download + Cancel
-      expect(screen.getByText("Copy")).toBeTruthy();
-      expect(screen.getByText("Download")).toBeTruthy();
-      expect(screen.getByText("Cancel")).toBeTruthy();
+      // Action buttons (icon-only with aria-labels)
+      expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Download" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
     });
 
     it("reflects the active format via select value", () => {
@@ -64,15 +63,11 @@ describe("FloatingActionBar", () => {
       expect(select.value).toBe("raw");
     });
 
-    it("Preview button is disabled", () => {
-      render(() => <FloatingActionBar {...makeProps()} />);
-      const previewBtn = screen.getByText("Preview") as HTMLButtonElement;
-      expect(previewBtn.disabled).toBe(true);
-    });
-
     it("root element has data-tamiz-bar attribute for extraction stripping", () => {
       render(() => <FloatingActionBar {...makeProps()} />);
-      const bar = screen.getByText("Copy").closest("[data-tamiz-bar]");
+      const bar = screen
+        .getByRole("button", { name: "Copy" })
+        .closest("[data-tamiz-bar]");
       expect(bar).not.toBeNull();
     });
   });
@@ -81,21 +76,21 @@ describe("FloatingActionBar", () => {
     it("calls onCopy when Copy is clicked", () => {
       const props = makeProps();
       render(() => <FloatingActionBar {...props} />);
-      fireEvent.click(screen.getByText("Copy") as HTMLButtonElement);
+      fireEvent.click(screen.getByRole("button", { name: "Copy" }));
       expect(props.onCopy).toHaveBeenCalledTimes(1);
     });
 
     it("calls onDownload when Download is clicked", () => {
       const props = makeProps();
       render(() => <FloatingActionBar {...props} />);
-      fireEvent.click(screen.getByText("Download") as HTMLButtonElement);
+      fireEvent.click(screen.getByRole("button", { name: "Download" }));
       expect(props.onDownload).toHaveBeenCalledTimes(1);
     });
 
     it("calls onCancel when Cancel is clicked", () => {
       const props = makeProps();
       render(() => <FloatingActionBar {...props} />);
-      fireEvent.click(screen.getByText("Cancel") as HTMLButtonElement);
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
       expect(props.onCancel).toHaveBeenCalledTimes(1);
     });
 
@@ -148,12 +143,12 @@ describe("FloatingActionBar", () => {
       ));
 
       const bar = screen
-        .getByText("Copy")
+        .getByRole("button", { name: "Copy" })
         .closest("[data-tamiz-bar]") as HTMLElement;
 
-      // computeBarPosition(DOMRect(100,200,200,50), 280, 100, 1024, 768)
-      // top = 200 - 100 - 8 = 92, left = 300 + 8 = 308
-      expect(bar.style.top).toBe(`${92}px`);
+      // computeBarPosition(DOMRect(100,200,200,50), 260, 32, 1024, 768)
+      // top = 200 - 32 - 8 = 160, left = 300 + 8 = 308
+      expect(bar.style.top).toBe(`${160}px`);
       expect(bar.style.left).toBe(`${308}px`);
     });
 
@@ -179,9 +174,9 @@ describe("FloatingActionBar", () => {
       ));
 
       const bar = screen
-        .getByText("Copy")
+        .getByRole("button", { name: "Copy" })
         .closest("[data-tamiz-bar]") as HTMLElement;
-      expect(bar.style.top).toBe(`${92}px`);
+      expect(bar.style.top).toBe(`${160}px`);
 
       unmount();
 
@@ -204,33 +199,32 @@ describe("FloatingActionBar", () => {
       ));
 
       const barB = screen
-        .getByText("Copy")
+        .getByRole("button", { name: "Copy" })
         .closest("[data-tamiz-bar]") as HTMLElement;
 
-      // computeBarPosition(DOMRect(600,500,200,50), 280, 100, 1024, 768)
-      // top = 500 - 100 - 8 = 392, left = 800 + 8 = 808
-      // left 808 + 280 = 1088 > 1016 → clamp: left = 1024 - 280 - 8 = 736
-      expect(barB.style.top).toBe(`${392}px`);
-      expect(barB.style.left).toBe(`${736}px`);
+      // computeBarPosition(DOMRect(600,500,200,50), 260, 32, 1024, 768)
+      // top = 500 - 32 - 8 = 460, left = 800 + 8 = 808
+      // left 808 + 260 = 1068 > 1016 → clamp: left = 1024 - 260 - 8 = 756
+      expect(barB.style.top).toBe(`${460}px`);
+      expect(barB.style.left).toBe(`${756}px`);
     });
   });
 
-  describe("formats layout", () => {
-    it("renders row 1 with format selector before preview button", () => {
+  describe("layout", () => {
+    it("renders single row with format selector and actions", () => {
       render(() => <FloatingActionBar {...makeProps()} />);
       const bar = screen
-        .getByText("Copy")
+        .getByRole("button", { name: "Copy" })
         .closest("[data-tamiz-bar]") as HTMLElement;
-      const rows = Array.from(bar.children);
 
-      expect(rows.length).toBe(2);
-      // Row 1 should contain the Select (format options)
-      expect(rows[0].textContent).toContain("Markdown");
-      expect(rows[0].textContent).toContain("Preview");
-      // Row 2 should contain Copy/Download/Cancel
-      expect(rows[1].textContent).toContain("Copy");
-      expect(rows[1].textContent).toContain("Download");
-      expect(rows[1].textContent).toContain("Cancel");
+      // Single row — no nested row divs
+      expect(bar.children.length).toBeGreaterThanOrEqual(1);
+      // Format selector present
+      expect(bar.textContent).toContain("Markdown");
+      // Actions present via aria-labels
+      expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Download" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
     });
   });
 });

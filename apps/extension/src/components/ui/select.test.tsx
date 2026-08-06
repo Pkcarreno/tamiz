@@ -16,13 +16,13 @@ const options: SelectOption[] = [
 describe("getVariantClasses", () => {
   it("returns subtle variant classes", () => {
     expect(getVariantClasses("subtle")).toBe(
-      "h-[28px] px-2 text-xs text-text-secondary bg-transparent rounded-sm border-border/50 hover:enabled:bg-surface-glass-hover"
+      "h-[24px] px-1 text-[11px] text-text-secondary bg-transparent border-transparent hover:enabled:text-focus"
     );
   });
 
   it("returns standard variant classes", () => {
     expect(getVariantClasses("standard")).toBe(
-      "h-[40px] px-3 text-sm text-text bg-ground-elevated w-full hover:enabled:bg-ground-raised"
+      "h-[28px] px-2 text-[12px] text-text bg-transparent w-full border-border/60 hover:enabled:bg-surface-glass-hover"
     );
   });
 
@@ -33,12 +33,12 @@ describe("getVariantClasses", () => {
 
 describe("getChevronClasses", () => {
   it("returns subtle chevron classes", () => {
-    expect(getChevronClasses("subtle")).toBe("size-[12px] text-text-tertiary");
+    expect(getChevronClasses("subtle")).toBe("size-[10px] text-text-tertiary");
   });
 
   it("returns standard chevron classes", () => {
     expect(getChevronClasses("standard")).toBe(
-      "size-[14px] text-text-tertiary"
+      "size-[12px] text-text-tertiary"
     );
   });
 

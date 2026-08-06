@@ -1,4 +1,5 @@
 import { browser } from "@wxt-dev/browser";
+import Crosshair from "lucide-solid/icons/crosshair";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { Button } from "../../components/ui/button.tsx";
@@ -20,9 +21,8 @@ async function invokePicker(format: "markdown" | "raw"): Promise<void> {
 /**
  * Popup entry point.
  *
- * Provides format configuration and a Capture button.
- * The Capture button sends INVOKE_PICKER through the background relay
- * and closes the popup.
+ * Compact configuration panel with format selector and Capture button.
+ * Paper & Ink visual world: warm ground, ghost buttons, macOS density.
  */
 function App() {
   const [format, setFormat] = createSignal<"markdown" | "raw">("markdown");
@@ -33,21 +33,18 @@ function App() {
   };
 
   return (
-    <div class="w-[320px] bg-ground p-5 font-sans text-text">
-      <h1 class="mb-1 font-semibold text-[17px] text-text -tracking-[0.01em]">
-        Tamiz
-      </h1>
-      <p class="mb-5 text-sm text-text-secondary leading-[1.5]">
-        Configure your capture settings, then click Capture to select an
-        element.
+    <div class="w-[280px] bg-ground p-3 font-sans text-text">
+      <h1 class="mb-0.5 font-semibold text-[14px] text-text">Tamiz</h1>
+      <p class="mb-3 text-[11px] text-text-secondary leading-[1.4]">
+        Select an element to capture clean content.
       </p>
 
-      <div class="mb-4">
+      <div class="mb-3">
         <label
-          class="mb-2 block font-medium text-text-tertiary text-xs uppercase tracking-[0.05em]"
+          class="mb-1 block font-medium text-[10px] text-text-tertiary uppercase tracking-[0.06em]"
           for="format-select"
         >
-          Output format
+          Format
         </label>
         <Select
           id="format-select"
@@ -60,7 +57,8 @@ function App() {
       </div>
 
       {/* biome-ignore lint/performance/noJsxPropsBind: popup renders once */}
-      <Button class="w-full" onClick={handleCapture}>
+      <Button class="w-full gap-1.5" onClick={handleCapture} size="sm">
+        <Crosshair size={13} />
         Capture
       </Button>
     </div>
