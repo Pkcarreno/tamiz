@@ -6,14 +6,15 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
+    "build": "turbo run build build:chrome build:firefox",
+    "dev": "turbo run dev dev:chrome dev:firefox",
     "format": "ultracite format",
     "lint": "ultracite check",
     "lint:fix": "ultracite check --write",
     "prepare": "lefthook install",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
+    "zip": "turbo run zip:chrome zip:firefox",
     "validate": "bun run lint && bun run typecheck && bun run test"
   },
   "devDependencies": {

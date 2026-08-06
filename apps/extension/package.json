@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "wxt build -b chrome && wxt build -b firefox",
     "build:chrome": "wxt build -b chrome",
     "build:firefox": "wxt build -b firefox",
     "dev:chrome": "wxt dev -b chrome",
@@ -12,7 +11,6 @@
     "postinstall": "wxt prepare",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "zip": "wxt zip -b chrome && wxt zip -b firefox",
     "zip:chrome": "wxt zip -b chrome",
     "zip:firefox": "wxt zip -b firefox"
   },

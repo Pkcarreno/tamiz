@@ -5,8 +5,16 @@
       "dependsOn": ["^typecheck"]
     },
     "build": {
-      "dependsOn": ["typecheck", "^build"],
-      "outputs": ["dist/**", ".output/**"]
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "build:chrome": {
+      "dependsOn": ["^build"],
+      "outputs": [".output/chrome-mv3/**"]
+    },
+    "build:firefox": {
+      "dependsOn": ["^build"],
+      "outputs": [".output/firefox-mv2/**", ".output/firefox-mv3/**"]
     },
     "test": {
       "dependsOn": ["build"]
@@ -14,6 +22,20 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "dev:chrome": {
+      "cache": false,
+      "persistent": true
+    },
+    "dev:firefox": {
+      "cache": false,
+      "persistent": true
+    },
+    "zip:chrome": {
+      "outputs": [".output/*-chrome.zip"]
+    },
+    "zip:firefox": {
+      "outputs": [".output/*-firefox.zip"]
     }
   }
 }
