@@ -25,10 +25,10 @@ describe("Select", () => {
     ) as HTMLSelectElement;
     expect(select).not.toBeNull();
     expect(select.options).toHaveLength(2);
-    expect(select.options[0].value).toBe("markdown");
-    expect(select.options[0].textContent).toBe("Markdown");
-    expect(select.options[1].value).toBe("raw");
-    expect(select.options[1].textContent).toBe("Raw HTML");
+    expect(select.options[0]?.value).toBe("markdown");
+    expect(select.options[0]?.textContent).toBe("Markdown");
+    expect(select.options[1]?.value).toBe("raw");
+    expect(select.options[1]?.textContent).toBe("Raw HTML");
   });
 
   it("renders a single option correctly", () => {
@@ -45,8 +45,8 @@ describe("Select", () => {
       "[data-tamiz-select] select"
     ) as HTMLSelectElement;
     expect(select.options).toHaveLength(1);
-    expect(select.options[0].value).toBe("only");
-    expect(select.options[0].textContent).toBe("Only");
+    expect(select.options[0]?.value).toBe("only");
+    expect(select.options[0]?.textContent).toBe("Only");
   });
 
   it("calls onChange with the selected value when an option is chosen", () => {
@@ -97,7 +97,7 @@ describe("Select", () => {
       "[data-tamiz-select] select"
     ) as HTMLSelectElement;
     expect(select.value).toBe("raw");
-    expect(select.options[1].selected).toBe(true);
+    expect(select.options[1]?.selected).toBe(true);
   });
 
   it("reflects markdown as the selected value", () => {
@@ -113,7 +113,7 @@ describe("Select", () => {
       "[data-tamiz-select] select"
     ) as HTMLSelectElement;
     expect(select.value).toBe("markdown");
-    expect(select.options[0].selected).toBe(true);
+    expect(select.options[0]?.selected).toBe(true);
   });
 
   it("renders a chevron SVG that inherits text color via currentColor", () => {

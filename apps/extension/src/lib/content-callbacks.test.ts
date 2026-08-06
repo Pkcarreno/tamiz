@@ -117,7 +117,10 @@ describe("convertElement", () => {
     const element = document.createElement("p");
     await convertElement(element, "markdown");
 
-    const [, options] = vi.mocked(convert).mock.calls[0];
+    const [, options] = vi.mocked(convert).mock.calls[0] as [
+      string,
+      { strategy: unknown },
+    ];
     expect(options.strategy).toBe(markdownStrategy);
   });
 });

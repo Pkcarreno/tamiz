@@ -11,6 +11,7 @@
     "postinstall": "wxt prepare",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "wxt:prepare": "wxt prepare",
     "zip:chrome": "wxt zip -b chrome",
     "zip:firefox": "wxt zip -b firefox"
   },

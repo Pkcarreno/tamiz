@@ -114,7 +114,7 @@ describe("PickerStateMachine", () => {
 
       expect(machine.getState()).toBe("SELECTED");
       expect(onDownload).toHaveBeenCalledTimes(1);
-      const [content, filename] = onDownload.mock.calls[0];
+      const [content, filename] = onDownload.mock.calls[0] as [string, string];
       expect(content).toBe("<article><span>data</span></article>");
       expect(filename).toMatch(FILENAME_PATTERN);
     });

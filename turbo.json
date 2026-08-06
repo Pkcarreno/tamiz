@@ -1,8 +1,11 @@
 {
   "$schema": "https://turbo.build/repo-schema",
   "tasks": {
+    "wxt:prepare": {
+      "outputs": [".wxt/**"]
+    },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": ["^typecheck", "wxt:prepare"]
     },
     "build": {
       "dependsOn": ["^build"],

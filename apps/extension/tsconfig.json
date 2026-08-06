@@ -1,18 +1,9 @@
 {
+  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
-    "strict": true,
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "allowImportingTsExtensions": true,
-    "skipLibCheck": true,
-    "noEmit": true,
-    "isolatedModules": true,
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "jsx": "preserve",
     "jsxImportSource": "solid-js"
   },
-  "include": ["src/**/*"]
+  "include": ["src"],
+  "exclude": ["node_modules", ".output"]
 }
