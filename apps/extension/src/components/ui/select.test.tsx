@@ -1,51 +1,12 @@
 import { cleanup, fireEvent, render } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  getChevronClasses,
-  getVariantClasses,
-  Select,
-  type SelectOption,
-} from "./select.tsx";
+import { Select, type SelectOption } from "./select.tsx";
 
 const options: SelectOption[] = [
   { label: "Markdown", value: "markdown" },
   { label: "Raw HTML", value: "raw" },
 ];
-
-describe("getVariantClasses", () => {
-  it("returns subtle variant classes", () => {
-    expect(getVariantClasses("subtle")).toBe(
-      "h-[24px] px-1 text-[11px] text-text-secondary bg-transparent border-transparent hover:enabled:text-focus"
-    );
-  });
-
-  it("returns standard variant classes", () => {
-    expect(getVariantClasses("standard")).toBe(
-      "h-[28px] px-2 text-[12px] text-text bg-transparent w-full border-border/60 hover:enabled:bg-surface-glass-hover"
-    );
-  });
-
-  it("returns different classes for each variant", () => {
-    expect(getVariantClasses("subtle")).not.toBe(getVariantClasses("standard"));
-  });
-});
-
-describe("getChevronClasses", () => {
-  it("returns subtle chevron classes", () => {
-    expect(getChevronClasses("subtle")).toBe("size-[10px] text-text-tertiary");
-  });
-
-  it("returns standard chevron classes", () => {
-    expect(getChevronClasses("standard")).toBe(
-      "size-[12px] text-text-tertiary"
-    );
-  });
-
-  it("returns different classes for each variant", () => {
-    expect(getChevronClasses("subtle")).not.toBe(getChevronClasses("standard"));
-  });
-});
 
 describe("Select", () => {
   afterEach(() => cleanup());
@@ -329,5 +290,69 @@ describe("Select", () => {
     ) as HTMLSelectElement;
     expect(select).not.toBeNull();
     expect(select.options).toHaveLength(0);
+  });
+
+  it("forwards the name attribute to the native select element", () => {
+    const { container } = render(() => (
+      <Select
+        name="format"
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.name).toBe("format");
+  });
+
+  it("forwards the aria-label attribute to the native select element", () => {
+    const { container } = render(() => (
+      <Select
+        aria-label="Choose format"
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.getAttribute("aria-label")).toBe("Choose format");
+  });
+
+  it("forwards the tabIndex attribute to the native select element", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        tabIndex={-1}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.tabIndex).toBe(-1);
+  });
+
+  it("forwards data-* attributes to the native select element", () => {
+    const { container } = render(() => (
+      <Select
+        data-testid="my-select"
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.getAttribute("data-testid")).toBe("my-select");
   });
 });

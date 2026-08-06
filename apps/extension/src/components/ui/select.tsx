@@ -1,4 +1,6 @@
-import { For } from "solid-js";
+import { cva } from "class-variance-authority";
+import type { JSX } from "solid-js";
+import { For, splitProps } from "solid-js";
 
 import { cn } from "../../lib/cn.ts";
 
@@ -25,9 +27,18 @@ export type SelectVariant = "subtle" | "standard";
 /**
  * Props for the {@link Select} component.
  *
+ * Extends native `<select>` attributes (minus onChange/value/children/class which
+ * are re-declared with custom signatures). All remaining HTML attributes —
+ * `name`, `aria-*`, `data-*`, `tabIndex`, `onFocus`, etc. — are forwarded to
+ * the native `<select>` via `{...rest}`.
+ *
  * @public
  */
-export interface SelectProps {
+export interface SelectProps
+  extends Omit<
+    JSX.SelectHTMLAttributes<HTMLSelectElement>,
+    "onChange" | "value" | "children" | "class"
+  > {
   /** Additional CSS class merged into the native `<select>` element. */
   class?: string;
   /** HTML `disabled` attribute forwarded to the native `<select>` element. */
@@ -44,37 +55,38 @@ export interface SelectProps {
   variant: SelectVariant;
 }
 
-// Variant-specific classes for the native `<select>` element.
-const variantClasses: Record<SelectVariant, string> = {
-  standard:
-    "h-[28px] px-2 text-[12px] text-text bg-transparent w-full border-border/60 hover:enabled:bg-surface-glass-hover",
-  subtle:
-    "h-[24px] px-1 text-[11px] text-text-secondary bg-transparent border-transparent hover:enabled:text-focus",
-};
+/**
+ * CVA variant configuration for the native `<select>` element.
+ *
+ * Base classes (always applied) + `subtle` / `standard` variant classes.
+ */
+const selectVariants = cva(
+  "color-scheme:light relative w-full appearance-none rounded-sm border border-transparent pr-6 font-medium font-sans transition-[color,border-color] duration-fast ease-out focus:shadow-focus focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-[0.35]",
+  {
+    defaultVariants: { variant: "standard" },
+    variants: {
+      variant: {
+        standard:
+          "h-[28px] w-full border-border/60 bg-transparent px-2 text-[12px] text-text hover:enabled:bg-surface-glass-hover",
+        subtle:
+          "h-[24px] border-transparent bg-transparent px-1 text-[11px] text-text-secondary hover:enabled:text-focus",
+      },
+    },
+  }
+);
 
 /**
- * Returns the variant-specific CSS classes for the native `<select>` element.
- *
- * @public
+ * CVA variant configuration for the chevron SVG indicator.
  */
-export function getVariantClasses(variant: SelectVariant): string {
-  return variantClasses[variant];
-}
-
-// Chevron icon classes per variant.
-const chevronClasses: Record<SelectVariant, string> = {
-  standard: "size-[12px] text-text-tertiary",
-  subtle: "size-[10px] text-text-tertiary",
-};
-
-/**
- * Returns the chevron icon classes for a given variant.
- *
- * @public
- */
-export function getChevronClasses(variant: SelectVariant): string {
-  return chevronClasses[variant];
-}
+const chevronVariants = cva("", {
+  defaultVariants: { variant: "standard" },
+  variants: {
+    variant: {
+      standard: "size-[12px] text-text-tertiary",
+      subtle: "size-[10px] text-text-tertiary",
+    },
+  },
+});
 
 /**
  * Native `<select>` with inline chevron indicator and two visual variants.
@@ -85,33 +97,45 @@ export function getChevronClasses(variant: SelectVariant): string {
  * @public
  */
 export function Select(props: SelectProps) {
+  const [local, rest] = splitProps(props, [
+    "class",
+    "disabled",
+    "id",
+    "onChange",
+    "options",
+    "value",
+    "variant",
+  ]);
+
+  function handleChange(e: Event) {
+    local.onChange((e.currentTarget as HTMLSelectElement).value);
+  }
+
   return (
     <div class="relative inline-flex w-full" data-tamiz-select>
       <select
-        class={cn(
-          // Shared base
-          "color-scheme:light relative w-full appearance-none rounded-sm border border-transparent pr-6 font-medium font-sans transition-[color,border-color] duration-fast ease-out focus:shadow-focus focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-[0.35]",
-          // Variant-specific
-          getVariantClasses(props.variant),
-          // User-supplied
-          props.class
-        )}
-        disabled={props.disabled}
-        id={props.id}
+        {...rest}
+        class={cn(selectVariants({ variant: local.variant }), local.class)}
+        disabled={local.disabled}
+        id={local.id}
         // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
-        onChange={(e: Event) =>
-          props.onChange((e.currentTarget as HTMLSelectElement).value)
-        }
-        value={props.value}
+        onChange={handleChange}
       >
-        <For each={props.options}>
-          {(option) => <option value={option.value}>{option.label}</option>}
+        <For each={local.options}>
+          {(option) => (
+            <option
+              selected={option.value === local.value}
+              value={option.value}
+            >
+              {option.label}
+            </option>
+          )}
         </For>
       </select>
       <svg
         aria-hidden="true"
         class={cn(
-          getChevronClasses(props.variant),
+          chevronVariants({ variant: local.variant }),
           "pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2"
         )}
         fill="currentColor"

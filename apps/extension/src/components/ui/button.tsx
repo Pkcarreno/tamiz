@@ -1,3 +1,4 @@
+import { cva } from "class-variance-authority";
 import type { JSX } from "solid-js";
 import { splitProps } from "solid-js";
 
@@ -35,6 +36,34 @@ export interface ButtonProps
 }
 
 /**
+ * CVA variant configuration for the {@link Button} component.
+ *
+ * Base classes (always applied) + variant × size matrix with compound variants
+ * that override sizing for icon buttons. `defaultVariants` ensures a sensible
+ * rendering when no variant/size is provided.
+ */
+const buttonVariants = cva(
+  "inline-flex cursor-pointer select-none items-center justify-center gap-1.5 border border-transparent font-medium font-sans transition-[color,box-shadow,transform] duration-fast ease-out focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1 active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-[0.35]",
+  {
+    compoundVariants: [
+      { class: "size-[24px]", size: "xs", variant: "icon" },
+      { class: "size-[26px]", size: "sm", variant: "icon" },
+    ],
+    defaultVariants: { size: "xs", variant: "ghost" },
+    variants: {
+      size: {
+        sm: "h-[26px] px-2 text-[12px]",
+        xs: "h-[24px] px-1.5 text-[11px]",
+      },
+      variant: {
+        ghost: "bg-transparent text-text-secondary hover:enabled:text-focus",
+        icon: "bg-transparent p-0 text-text-tertiary hover:enabled:text-focus",
+      },
+    },
+  }
+);
+
+/**
  * Ghost-only button component for the Paper & Ink visual world.
  *
  * All buttons render as transparent surfaces with text/icon color hover
@@ -52,30 +81,13 @@ export function Button(props: ButtonProps) {
     "type",
   ]);
 
-  const variant = () => local.variant ?? "ghost";
-  const size = () => local.size ?? "xs";
-
   return (
     <button
       class={cn(
-        // Base
-        "inline-flex cursor-pointer select-none items-center justify-center gap-1.5 border border-transparent font-medium font-sans transition-[color,box-shadow,transform] duration-fast ease-out",
-        // Focus + active (all variants)
-        "focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1 active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-[0.35]",
-        // Ghost: text-only, hover changes text color (link-like)
-        variant() === "ghost" &&
-          "bg-transparent text-text-secondary hover:enabled:text-focus",
-        // Icon: icon-only, hover changes icon color
-        variant() === "icon" &&
-          "bg-transparent p-0 text-text-tertiary hover:enabled:text-focus",
-        // Sizes
-        size() === "xs" &&
-          variant() !== "icon" &&
-          "h-[24px] px-1.5 text-[11px]",
-        size() === "sm" && variant() !== "icon" && "h-[26px] px-2 text-[12px]",
-        // Icon sizes
-        size() === "xs" && variant() === "icon" && "size-[24px]",
-        size() === "sm" && variant() === "icon" && "size-[26px]",
+        buttonVariants({
+          size: local.size ?? "xs",
+          variant: local.variant ?? "ghost",
+        }),
         local.class
       )}
       type={local.type ?? "button"}

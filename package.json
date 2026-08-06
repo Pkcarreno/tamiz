@@ -14,8 +14,8 @@
     "prepare": "lefthook install",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "zip": "turbo run zip:chrome zip:firefox",
-    "validate": "bun run lint && bun run typecheck && bun run test"
+    "validate": "bun run lint && bun run typecheck && bun run test",
+    "zip": "turbo run zip:chrome zip:firefox"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.6",
