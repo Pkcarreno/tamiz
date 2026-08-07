@@ -9,6 +9,7 @@ dist/
 # AI related
 .opencode/
 .agents/
+sdd/
 
 # Impeccable
 .impeccable/config.local.json
