@@ -1,7 +1,7 @@
-import { browser } from "@wxt-dev/browser";
 import Crosshair from "lucide-solid/icons/crosshair";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
+import { browser } from "wxt/browser";
 import { Button } from "../../components/ui/button.tsx";
 import { Select } from "../../components/ui/select.tsx";
 import "../../styles/content.css";

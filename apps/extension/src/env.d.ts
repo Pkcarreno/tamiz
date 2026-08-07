@@ -1,4 +1,4 @@
 /// <reference types="wxt" />
-/// <reference types="@wxt-dev/browser" />
+/// <reference types="wxt/browser" />
 
 declare module "*.css" {}

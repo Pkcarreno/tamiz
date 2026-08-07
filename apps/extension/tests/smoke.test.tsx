@@ -1,6 +1,6 @@
 import { cleanup, render } from "@solidjs/testing-library";
-import { browser } from "@wxt-dev/browser";
 import { describe, expect, it } from "vitest";
+import { browser } from "wxt/browser";
 
 /** Minimal Solid component to verify the JSX transform + testing-library harness. */
 function Greeting() {

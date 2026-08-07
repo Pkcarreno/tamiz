@@ -8,9 +8,8 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-
-import { type Browser, browser } from "@wxt-dev/browser";
 import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
+import { type Browser, browser } from "wxt/browser";
 
 import {
   CONTEXT_MENU_ID,
@@ -270,7 +269,7 @@ describe("handleBackgroundMessage", () => {
   });
 
   it("queries the active tab and relays when sender.tab is missing", async () => {
-    (browser.tabs.query as unknown as Mock).mockResolvedValue([
+    vi.spyOn(browser.tabs, "query").mockResolvedValue([
       { id: 77 } as unknown as Browser.tabs.Tab,
     ]);
     vi.mocked(browser.tabs.sendMessage).mockResolvedValue(undefined);
@@ -288,7 +287,7 @@ describe("handleBackgroundMessage", () => {
   });
 
   it("does not relay when neither sender.tab nor active tab is available", async () => {
-    (browser.tabs.query as unknown as Mock).mockResolvedValue([]);
+    vi.spyOn(browser.tabs, "query").mockResolvedValue([]);
 
     const sender = {} as unknown as Browser.runtime.MessageSender;
     await handleBackgroundMessage({ type: "INVOKE_PICKER" }, sender);
@@ -347,7 +346,7 @@ describe("handleBackgroundMessage", () => {
   });
 
   it("forwards TOAST messages to the popup via runtime.sendMessage", async () => {
-    vi.mocked(browser.runtime.sendMessage).mockResolvedValue(undefined);
+    vi.spyOn(browser.runtime, "sendMessage").mockResolvedValue(undefined);
 
     await handleBackgroundMessage(
       { message: "Copied to clipboard", type: "TOAST" },

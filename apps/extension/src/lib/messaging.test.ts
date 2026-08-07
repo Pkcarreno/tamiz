@@ -1,5 +1,5 @@
-import { browser } from "@wxt-dev/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { browser } from "wxt/browser";
 
 import { type Message, sendMessage } from "./messaging.ts";
 
@@ -29,37 +29,49 @@ describe("Message types", () => {
 
 describe("sendMessage", () => {
   it("forwards a TOAST message through browser.runtime.sendMessage", async () => {
+    const spy = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockResolvedValue(undefined);
     const toast: Message = { message: "Copied!", type: "TOAST" };
     await sendMessage(toast);
-    expect(browser.runtime.sendMessage).toHaveBeenCalledWith(toast);
+    expect(spy).toHaveBeenCalledWith(toast);
   });
 
   it("forwards an INVOKE_PICKER message with format", async () => {
+    const spy = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockResolvedValue(undefined);
     await sendMessage({ format: "markdown", type: "INVOKE_PICKER" });
-    expect(browser.runtime.sendMessage).toHaveBeenCalledWith({
+    expect(spy).toHaveBeenCalledWith({
       format: "markdown",
       type: "INVOKE_PICKER",
     });
   });
 
   it("forwards COPY_TO_CLIPBOARD with content", async () => {
+    const spy = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockResolvedValue(undefined);
     await sendMessage({
       content: "some text",
       type: "COPY_TO_CLIPBOARD",
     });
-    expect(browser.runtime.sendMessage).toHaveBeenCalledWith({
+    expect(spy).toHaveBeenCalledWith({
       content: "some text",
       type: "COPY_TO_CLIPBOARD",
     });
   });
 
   it("forwards DOWNLOAD_FILE with content and filename", async () => {
+    const spy = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockResolvedValue(undefined);
     await sendMessage({
       content: "data",
       filename: "file.md",
       type: "DOWNLOAD_FILE",
     });
-    expect(browser.runtime.sendMessage).toHaveBeenCalledWith({
+    expect(spy).toHaveBeenCalledWith({
       content: "data",
       filename: "file.md",
       type: "DOWNLOAD_FILE",
@@ -77,12 +89,15 @@ describe("onMessage", () => {
     const callback = vi.fn().mockResolvedValue(undefined);
     const sendResponse = vi.fn();
 
+    const addListenerSpy = vi.spyOn(browser.runtime.onMessage, "addListener");
+
     onMessage(callback);
 
-    const addListenerMock = browser.runtime.onMessage.addListener as any;
-    expect(addListenerMock).toHaveBeenCalled();
+    expect(addListenerSpy).toHaveBeenCalled();
 
-    const [[handler]] = addListenerMock.mock.calls;
+    const [[handler]] = addListenerSpy.mock.calls as [
+      [(...args: unknown[]) => unknown],
+    ];
 
     const result = handler(
       { message: "test", type: "TOAST" },
@@ -107,14 +122,14 @@ describe("onMessage", () => {
     // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional spy no-op
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
+    const addListenerSpy = vi.spyOn(browser.runtime.onMessage, "addListener");
+
     onMessage(callback);
 
-    const addListenerMock = browser.runtime.onMessage.addListener as any;
     // Use the most recent registration to avoid picking up the previous test's handler
-    const {
-      mock: { calls },
-    } = addListenerMock;
-    const [[handler]] = calls.slice(-1);
+    const [[handler]] = addListenerSpy.mock.calls.slice(-1) as [
+      [(...args: unknown[]) => unknown],
+    ];
 
     const result = handler(
       { message: "test", type: "TOAST" },
