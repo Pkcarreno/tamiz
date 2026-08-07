@@ -16,27 +16,58 @@ export const CONTEXT_MENU_TITLE = "Capture readable content";
 const CONTENT_SCRIPT_FILE = "content-scripts/content.js";
 
 /**
- * Register the "Capture readable content" context menu item on startup.
+ * Handle a click on the "Capture readable content" context menu item.
  *
- * Creates a page-only context menu entry and registers a click listener
- * that relays `INVOKE_PICKER` to the active tab's content script.
+ * Relays an `INVOKE_PICKER` message to the content script in the clicked tab.
+ * Clicks on other menu items and clicks without a valid tab id are silently
+ * ignored.
  *
  * @public
  */
-export function registerContextMenu(): void {
-  browser.contextMenus.create({
-    contexts: ["page"],
-    id: CONTEXT_MENU_ID,
-    title: CONTEXT_MENU_TITLE,
-  });
+export function handleContextMenuClick(
+  info: Browser.contextMenus.OnClickData,
+  tab?: Browser.tabs.Tab
+): void {
+  if (info.menuItemId === CONTEXT_MENU_ID && tab?.id !== undefined) {
+    relayInvokePicker(tab.id).catch((err) =>
+      console.error("Failed to relay INVOKE_PICKER:", err)
+    );
+  }
+}
 
-  browser.contextMenus.onClicked.addListener((info, tab) => {
-    if (info.menuItemId === CONTEXT_MENU_ID && tab?.id !== undefined) {
-      relayInvokePicker(tab.id).catch((err) =>
-        console.error("Failed to relay INVOKE_PICKER:", err)
-      );
-    }
-  });
+/**
+ * Create the "Capture readable content" context menu item.
+ *
+ * Called on install/update via `onInstalled`. Swallows duplicate-id errors so
+ * the call is idempotent when `onInstalled` fires again after an update — the
+ * menu item already exists and Chrome throws rather than silently no-ops.
+ *
+ * The click listener is registered separately at module scope (see
+ * {@link handleContextMenuClick}) so it survives MV3 service worker restarts.
+ *
+ * @public
+ */
+export function createContextMenu(): void {
+  try {
+    browser.contextMenus.create({
+      contexts: ["page"],
+      id: CONTEXT_MENU_ID,
+      title: CONTEXT_MENU_TITLE,
+    });
+  } catch {
+    // Duplicate-id error on update: menu item already exists, safely ignore.
+  }
+}
+
+// Register the click listener at module scope so it survives MV3 service worker
+// restarts — `onInstalled` only fires on install/update, not on every restart.
+// In the build-time module-evaluation context the fake browser's contextMenus
+// API throws, so we guard with try/catch — the listener is always registered at
+// runtime in a real browser.
+try {
+  browser.contextMenus.onClicked.addListener(handleContextMenuClick);
+} catch {
+  /* Build-time module evaluation: browser APIs are mocked and unsupported. */
 }
 
 /**
@@ -175,7 +206,7 @@ export async function handleBackgroundMessage(
  */
 export default defineBackground({
   main() {
-    browser.runtime.onInstalled.addListener(registerContextMenu);
+    browser.runtime.onInstalled.addListener(createContextMenu);
     onMessage(async (message, sender) => {
       await handleBackgroundMessage(message, sender);
     });

@@ -15,10 +15,11 @@ import {
   CONTEXT_MENU_ID,
   CONTEXT_MENU_TITLE,
   copyToClipboard,
+  createContextMenu,
   downloadFile,
   getMimeType,
   handleBackgroundMessage,
-  registerContextMenu,
+  handleContextMenuClick,
   relayInvokePicker,
 } from "../src/entrypoints/background.ts";
 
@@ -27,9 +28,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("registerContextMenu", () => {
+describe("createContextMenu", () => {
   it("creates a context menu item with correct title and page-only contexts", () => {
-    registerContextMenu();
+    createContextMenu();
 
     expect(browser.contextMenus.create).toHaveBeenCalledTimes(1);
     expect(browser.contextMenus.create).toHaveBeenCalledWith({
@@ -39,26 +40,35 @@ describe("registerContextMenu", () => {
     });
   });
 
-  it("registers an onClicked listener for context menu clicks", () => {
-    registerContextMenu();
+  it("swallows duplicate-id errors to remain idempotent on update", () => {
+    vi.mocked(browser.contextMenus.create)
+      .mockImplementationOnce(() => {
+        /* first call succeeds */
+      })
+      .mockImplementationOnce(() => {
+        throw new Error("Cannot create menu item: menu item already exists");
+      });
 
-    expect(browser.contextMenus.onClicked.addListener).toHaveBeenCalledTimes(1);
-    expect(browser.contextMenus.onClicked.addListener).toHaveBeenCalledWith(
-      expect.any(Function)
-    );
+    expect(() => {
+      createContextMenu();
+      createContextMenu();
+    }).not.toThrow();
+
+    expect(browser.contextMenus.create).toHaveBeenCalledTimes(2);
   });
+});
 
-  it("relays INVOKE_PICKER to the tab when our menu item is clicked", () => {
+describe("handleContextMenuClick", () => {
+  it("sends INVOKE_PICKER to the tab when the tamiz menu item is clicked", () => {
     vi.mocked(browser.tabs.sendMessage).mockResolvedValue(undefined);
-    registerContextMenu();
 
-    const listener = vi.mocked(browser.contextMenus.onClicked.addListener).mock
-      .calls[0][0] as (
-      info: { menuItemId: string | number },
-      tab?: { id?: number }
-    ) => void;
-
-    listener({ menuItemId: CONTEXT_MENU_ID }, { id: 99 });
+    handleContextMenuClick(
+      {
+        editable: false,
+        menuItemId: CONTEXT_MENU_ID,
+      } as Browser.contextMenus.OnClickData,
+      { id: 99 } as Browser.tabs.Tab
+    );
 
     expect(browser.tabs.sendMessage).toHaveBeenCalledWith(99, {
       type: "INVOKE_PICKER",
@@ -66,29 +76,25 @@ describe("registerContextMenu", () => {
   });
 
   it("ignores clicks on unrelated menu items", () => {
-    registerContextMenu();
-
-    const listener = vi.mocked(browser.contextMenus.onClicked.addListener).mock
-      .calls[0][0] as (
-      info: { menuItemId: string | number },
-      tab?: { id?: number }
-    ) => void;
-
-    listener({ menuItemId: "something-else" }, { id: 99 });
+    handleContextMenuClick(
+      {
+        editable: false,
+        menuItemId: "something-else",
+      } as Browser.contextMenus.OnClickData,
+      { id: 99 } as Browser.tabs.Tab
+    );
 
     expect(browser.tabs.sendMessage).not.toHaveBeenCalled();
   });
 
   it("does not relay when the clicked tab has no id", () => {
-    registerContextMenu();
-
-    const listener = vi.mocked(browser.contextMenus.onClicked.addListener).mock
-      .calls[0][0] as (
-      info: { menuItemId: string | number },
-      tab?: { id?: number }
-    ) => void;
-
-    listener({ menuItemId: CONTEXT_MENU_ID }, {});
+    handleContextMenuClick(
+      {
+        editable: false,
+        menuItemId: CONTEXT_MENU_ID,
+      } as Browser.contextMenus.OnClickData,
+      undefined
+    );
 
     expect(browser.tabs.sendMessage).not.toHaveBeenCalled();
   });
@@ -356,6 +362,64 @@ describe("handleBackgroundMessage", () => {
     expect(browser.runtime.sendMessage).toHaveBeenCalledWith({
       message: "Copied to clipboard",
       type: "TOAST",
+    });
+  });
+});
+
+describe("module-scope listener registration (SW restart regression)", () => {
+  it("registers onClicked listener on module load without onInstalled firing", async () => {
+    vi.resetModules();
+
+    // After resetModules the fake browser is re-created. Re-apply the
+    // contextMenus overlays that setup.ts applies to the original instance.
+    const { fakeBrowser } = await import("wxt/testing/fake-browser");
+    fakeBrowser.contextMenus.create = vi.fn();
+    fakeBrowser.contextMenus.onClicked.addListener = vi.fn();
+
+    // Fresh dynamic import simulates service worker restart.
+    // defineBackground is an identity no-op (set in setup.ts), so main() is
+    // never invoked and onInstalled never fires.
+    const mod = await import("../src/entrypoints/background.ts");
+
+    // Exactly-once registration via module-import side effect — the listener
+    // is registered at module scope, not inside onInstalled.
+    expect(
+      fakeBrowser.contextMenus.onClicked.addListener
+    ).toHaveBeenCalledTimes(1);
+    expect(fakeBrowser.contextMenus.onClicked.addListener).toHaveBeenCalledWith(
+      mod.handleContextMenuClick
+    );
+  });
+
+  it("sends INVOKE_PICKER when the menu item is clicked after SW restart", async () => {
+    vi.resetModules();
+
+    const { fakeBrowser } = await import("wxt/testing/fake-browser");
+    fakeBrowser.contextMenus.create = vi.fn();
+    fakeBrowser.contextMenus.onClicked.addListener = vi.fn();
+    fakeBrowser.tabs.sendMessage = vi.fn().mockResolvedValue(undefined);
+
+    // Fresh import simulates SW restart — onInstalled does not fire, but the
+    // module-scope listener is registered.
+    await import("../src/entrypoints/background.ts");
+
+    // Extract the handler that was registered at module scope and simulate a click.
+    const listener = fakeBrowser.contextMenus.onClicked.addListener.mock
+      .calls[0][0] as (
+      info: Browser.contextMenus.OnClickData,
+      tab?: Browser.tabs.Tab
+    ) => void;
+
+    listener(
+      {
+        editable: false,
+        menuItemId: CONTEXT_MENU_ID,
+      } as Browser.contextMenus.OnClickData,
+      { id: 99 } as Browser.tabs.Tab
+    );
+
+    expect(fakeBrowser.tabs.sendMessage).toHaveBeenCalledWith(99, {
+      type: "INVOKE_PICKER",
     });
   });
 });
