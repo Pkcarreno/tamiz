@@ -25,6 +25,12 @@ describe("Message types", () => {
     expect(download.content).toBe("hello");
     expect(download.filename).toBe("test.md");
   });
+
+  it("CONTENT_READY is a valid message variant with no payload", () => {
+    const ready: Message = { type: "CONTENT_READY" };
+    expect(ready.type).toBe("CONTENT_READY");
+    expect(ready).toEqual({ type: "CONTENT_READY" });
+  });
 });
 
 describe("sendMessage", () => {
@@ -76,6 +82,14 @@ describe("sendMessage", () => {
       filename: "file.md",
       type: "DOWNLOAD_FILE",
     });
+  });
+
+  it("forwards CONTENT_READY through browser.runtime.sendMessage", async () => {
+    const spy = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockResolvedValue(undefined);
+    await sendMessage({ type: "CONTENT_READY" });
+    expect(spy).toHaveBeenCalledWith({ type: "CONTENT_READY" });
   });
 
   afterEach(() => {

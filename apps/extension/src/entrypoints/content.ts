@@ -226,6 +226,16 @@ export default defineContentScript({
         machine.dispatch({ type: "INVOKE" });
       }
     });
+
+    // Announce readiness so the background can flush any pending INVOKE_PICKER
+    // that arrived before the content script registered its message listener.
+    // Guarded so setup failures never break the picker on tabs where the
+    // background page is unavailable.
+    try {
+      await sendMessage({ type: "CONTENT_READY" });
+    } catch {
+      /* Background may be unavailable on some tabs — silently ignore. */
+    }
   },
   matches: ["<all_urls>"],
 });

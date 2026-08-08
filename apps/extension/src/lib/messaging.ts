@@ -9,7 +9,8 @@ export type Message =
   | { type: "INVOKE_PICKER"; format?: "markdown" | "raw" }
   | { type: "COPY_TO_CLIPBOARD"; content: string }
   | { type: "DOWNLOAD_FILE"; content: string; filename: string }
-  | { type: "TOAST"; message: string };
+  | { type: "TOAST"; message: string }
+  | { type: "CONTENT_READY" };
 
 /**
  * Send a message from content script to background.

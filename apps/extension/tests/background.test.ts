@@ -14,6 +14,7 @@ import { type Browser, browser } from "wxt/browser";
 import {
   CONTEXT_MENU_ID,
   CONTEXT_MENU_TITLE,
+  clearPendingInvokes,
   copyToClipboard,
   createContextMenu,
   downloadFile,
@@ -21,11 +22,13 @@ import {
   handleBackgroundMessage,
   handleContextMenuClick,
   relayInvokePicker,
+  removePendingInvoke,
 } from "../src/entrypoints/background.ts";
 
 afterEach(() => {
   vi.clearAllMocks();
   vi.restoreAllMocks();
+  clearPendingInvokes();
 });
 
 describe("createContextMenu", () => {
@@ -123,14 +126,15 @@ describe("relayInvokePicker", () => {
     });
   });
 
-  it("falls back to scripting.executeScript when tabs.sendMessage fails, then retries", async () => {
-    vi.mocked(browser.tabs.sendMessage)
-      .mockRejectedValueOnce(new Error("Could not establish connection"))
-      .mockResolvedValueOnce(undefined);
+  it("injects content script and queues the invoke on failure (no blind retry)", async () => {
+    vi.mocked(browser.tabs.sendMessage).mockRejectedValueOnce(
+      new Error("Could not establish connection")
+    );
     (browser.scripting.executeScript as unknown as Mock).mockResolvedValue([]);
 
     await relayInvokePicker(42);
 
+    // executeScript injects the content script
     expect(browser.scripting.executeScript).toHaveBeenCalledTimes(1);
     expect(browser.scripting.executeScript).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -138,7 +142,127 @@ describe("relayInvokePicker", () => {
         target: { tabId: 42 },
       })
     );
+    // No blind retry — only the initial failed attempt.
+    expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("flushes a queued INVOKE_PICKER exactly once when CONTENT_READY arrives", async () => {
+    // Simulate: tabs.sendMessage fails (no listener yet) → inject → queue.
+    vi.mocked(browser.tabs.sendMessage).mockRejectedValueOnce(
+      new Error("Could not establish connection")
+    );
+    (browser.scripting.executeScript as unknown as Mock).mockResolvedValue([]);
+
+    await relayInvokePicker(42);
+
+    // Before CONTENT_READY: only the initial failed attempt (no retry).
+    expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(1);
+
+    // Content script sends CONTENT_READY → background flushes the queued invoke.
+    await handleBackgroundMessage({ type: "CONTENT_READY" }, {
+      tab: { id: 42 },
+    } as unknown as Browser.runtime.MessageSender);
+
+    // Exactly one INVOKE_PICKER sent via the flush.
     expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(2);
+    expect(browser.tabs.sendMessage).toHaveBeenLastCalledWith(42, {
+      type: "INVOKE_PICKER",
+    });
+  });
+});
+
+describe("CONTENT_READY handshake", () => {
+  it("does not inject or queue when tabs.sendMessage succeeds immediately", async () => {
+    vi.mocked(browser.tabs.sendMessage).mockResolvedValue(undefined);
+
+    await relayInvokePicker(42);
+
+    // Direct delivery succeeded — no fallback injection or queue.
+    expect(browser.scripting.executeScript).not.toHaveBeenCalled();
+    expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(1);
+
+    // No pending entry to flush — CONTENT_READY is a no-op for this tab.
+    await handleBackgroundMessage({ type: "CONTENT_READY" }, {
+      tab: { id: 42 },
+    } as unknown as Browser.runtime.MessageSender);
+    expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("content script without a sender tab does not crash on CONTENT_READY", async () => {
+    const sender = {} as unknown as Browser.runtime.MessageSender;
+    await expect(
+      handleBackgroundMessage({ type: "CONTENT_READY" }, sender)
+    ).resolves.not.toThrow();
+  });
+
+  it("drops a pending invoke after the 5s timeout without sending", async () => {
+    vi.useFakeTimers();
+    vi.mocked(browser.tabs.sendMessage).mockRejectedValueOnce(
+      new Error("Could not establish connection")
+    );
+    (browser.scripting.executeScript as unknown as Mock).mockResolvedValue([]);
+
+    await relayInvokePicker(99);
+
+    // Entry is queued; flush should still send if it arrives before timeout.
+    expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(1);
+
+    // Advance past the 5s timeout — entry is dropped.
+    vi.advanceTimersByTime(5000);
+
+    // CONTENT_READY after timeout → nothing to flush.
+    await handleBackgroundMessage({ type: "CONTENT_READY" }, {
+      tab: { id: 99 },
+    } as unknown as Browser.runtime.MessageSender);
+    expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
+  });
+
+  it("removePendingInvoke discards a queued invoke before CONTENT_READY", async () => {
+    vi.mocked(browser.tabs.sendMessage).mockRejectedValueOnce(
+      new Error("Could not establish connection")
+    );
+    (browser.scripting.executeScript as unknown as Mock).mockResolvedValue([]);
+
+    await relayInvokePicker(77);
+    // 1 call (the failed attempt); invoke is now queued for tab 77.
+    expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(1);
+
+    // Simulate tab close → cleanup.
+    removePendingInvoke(77);
+
+    // CONTENT_READY arrives after tab closed → no pending entry, no flush.
+    await handleBackgroundMessage({ type: "CONTENT_READY" }, {
+      tab: { id: 77 },
+    } as unknown as Browser.runtime.MessageSender);
+    expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("deduplicates when relayInvokePicker is called twice before CONTENT_READY", async () => {
+    vi.mocked(browser.tabs.sendMessage)
+      .mockRejectedValueOnce(new Error("Could not establish connection"))
+      .mockRejectedValueOnce(new Error("Could not establish connection"));
+    (browser.scripting.executeScript as unknown as Mock).mockResolvedValue([]);
+
+    // First queue (no format).
+    await relayInvokePicker(42);
+    // Second queue (with format) — should replace, not stack.
+    await relayInvokePicker(42, "raw");
+
+    // Two failed attempts, two injections, no retries.
+    expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(2);
+    expect(browser.scripting.executeScript).toHaveBeenCalledTimes(2);
+
+    // CONTENT_READY → flush sends EXACTLY ONE invoke (the latest, with format).
+    await handleBackgroundMessage({ type: "CONTENT_READY" }, {
+      tab: { id: 42 },
+    } as unknown as Browser.runtime.MessageSender);
+    expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(3);
+    expect(browser.tabs.sendMessage).toHaveBeenLastCalledWith(42, {
+      format: "raw",
+      type: "INVOKE_PICKER",
+    });
   });
 });
 
@@ -421,6 +545,18 @@ describe("module-scope listener registration (SW restart regression)", () => {
     expect(fakeBrowser.tabs.sendMessage).toHaveBeenCalledWith(99, {
       type: "INVOKE_PICKER",
     });
+  });
+
+  it("registers tabs.onRemoved listener on module load for pending cleanup", async () => {
+    vi.resetModules();
+
+    const { fakeBrowser } = await import("wxt/testing/fake-browser");
+    fakeBrowser.contextMenus.onClicked.addListener = vi.fn();
+    fakeBrowser.tabs.onRemoved.addListener = vi.fn();
+
+    await import("../src/entrypoints/background.ts");
+
+    expect(fakeBrowser.tabs.onRemoved.addListener).toHaveBeenCalledTimes(1);
   });
 });
 

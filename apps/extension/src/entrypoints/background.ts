@@ -16,6 +16,96 @@ export const CONTEXT_MENU_TITLE = "Capture readable content";
 const CONTENT_SCRIPT_FILE = "content-scripts/content.js";
 
 /**
+ * Maximum time (ms) to wait for a content script's `CONTENT_READY` before
+ * dropping the pending invoke. Prevents the background from holding invokes
+ * indefinitely for tabs where the content script never finishes loading.
+ */
+const PENDING_INVOKE_TIMEOUT_MS = 5000;
+
+/**
+ * A queued `INVOKE_PICKER` awaiting the content script's `CONTENT_READY`
+ * announcement.
+ */
+interface PendingInvoke {
+  message: Message;
+  timeout: ReturnType<typeof setTimeout>;
+}
+
+/**
+ * Pending invokes keyed by tab id, waiting for the content script to announce
+ * `CONTENT_READY` after its message listener is registered.
+ */
+const pendingInvokes = new Map<number, PendingInvoke>();
+
+/**
+ * Queue an `INVOKE_PICKER` message for a tab whose content script has not yet
+ * announced readiness. Deduplicates: if an entry already exists for the tab,
+ * its timeout is cleared and replaced so the most recent invoke wins.
+ *
+ * @internal
+ */
+export function queuePendingInvoke(tabId: number, message: Message): void {
+  const existing = pendingInvokes.get(tabId);
+  if (existing) {
+    clearTimeout(existing.timeout);
+  }
+  pendingInvokes.set(tabId, {
+    message,
+    timeout: setTimeout(() => {
+      pendingInvokes.delete(tabId);
+    }, PENDING_INVOKE_TIMEOUT_MS),
+  });
+}
+
+/**
+ * Flush the pending invoke for a tab by sending it immediately. Clears the
+ * timeout first so it does not fire after the flush.
+ *
+ * @internal
+ */
+export function flushPendingInvokes(tabId: number | undefined): void {
+  if (tabId === undefined) {
+    return;
+  }
+  const pending = pendingInvokes.get(tabId);
+  if (!pending) {
+    return;
+  }
+  clearTimeout(pending.timeout);
+  pendingInvokes.delete(tabId);
+  browser.tabs.sendMessage(tabId, pending.message).catch((err) => {
+    console.error("[tamiz] failed to flush pending invoke:", err);
+  });
+}
+
+/**
+ * Remove a pending invoke for the given tab without sending it. Called when a
+ * tab is closed to prevent leaks.
+ *
+ * @internal
+ */
+export function removePendingInvoke(tabId: number): void {
+  const pending = pendingInvokes.get(tabId);
+  if (pending) {
+    clearTimeout(pending.timeout);
+    pendingInvokes.delete(tabId);
+  }
+}
+
+/**
+ * Clear all pending invokes and their timeouts. Intended for graceful shutdown
+ * and test cleanup.
+ *
+ * @internal
+ */
+export function clearPendingInvokes(): void {
+  for (const { timeout } of pendingInvokes.values()) {
+    clearTimeout(timeout);
+  }
+  pendingInvokes.clear();
+}
+
+/**
  * Handle a click on the "Capture readable content" context menu item.
  *
  * Relays an `INVOKE_PICKER` message to the content script in the clicked tab.
@@ -70,12 +160,27 @@ try {
   /* Build-time module evaluation: browser APIs are mocked and unsupported. */
 }
 
+// Register tab-removal cleanup at module scope so it survives MV3 service
+// worker restarts (onInstalled only fires on install/update, not every
+// restart). When a tab is closed, any pending invoke for that tab is discarded
+// to avoid sending into a dead page.
+try {
+  browser.tabs.onRemoved.addListener((tabId: number) => {
+    removePendingInvoke(tabId);
+  });
+} catch {
+  /* Build-time module evaluation: browser APIs are mocked and unsupported. */
+}
+
 /**
  * Relay an `INVOKE_PICKER` message to the content script in `tabId`.
  *
  * If the content script is not injected — `tabs.sendMessage` rejects because
- * there is no listener — the script is injected first via
- * `scripting.executeScript` and the message is retried.
+ * there is no listener — the script is injected via `scripting.executeScript`
+ * and the invoke is queued. The queued invoke is flushed when the content
+ * script sends `CONTENT_READY`, which it dispatches after registering its
+ * message listener. This avoids the race where a blind retry fires before the
+ * listener exists ("Receiving end does not exist").
  *
  * @public
  */
@@ -91,7 +196,7 @@ export async function relayInvokePicker(
       files: [CONTENT_SCRIPT_FILE],
       target: { tabId },
     });
-    await browser.tabs.sendMessage(tabId, message);
+    queuePendingInvoke(tabId, message);
   }
 }
 
@@ -159,6 +264,7 @@ export async function downloadFile(
  * - `COPY_TO_CLIPBOARD` → write to the clipboard
  * - `DOWNLOAD_FILE` → trigger a file download
  * - `TOAST` → forward to the popup if open
+ * - `CONTENT_READY` → flush any pending `INVOKE_PICKER` for the sender's tab
  *
  * @public
  */
@@ -180,6 +286,10 @@ export async function handleBackgroundMessage(
       } else {
         await relayInvokePicker(tabId, message.format);
       }
+      break;
+    }
+    case "CONTENT_READY": {
+      flushPendingInvokes(sender.tab?.id);
       break;
     }
     case "COPY_TO_CLIPBOARD":
