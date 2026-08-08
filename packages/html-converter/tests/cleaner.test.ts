@@ -47,6 +47,16 @@ describe("cleanHtml", () => {
     expect(result).toContain("Real content");
   });
 
+  test("preserves elements with class containing 'ad' as substring (word boundary)", () => {
+    // "heading-style-h4" contains "ad" but should NOT be removed
+    const html =
+      '<div class="heading-style-h4">Qualifications</div>' +
+      '<div class="text-size-regular">Content here</div>';
+    const result = cleanHtml(html);
+    expect(result).toContain("Qualifications");
+    expect(result).toContain("Content here");
+  });
+
   test("strips non-semantic attributes (class, id, data-*, onclick)", () => {
     const html =
       '<p class="text-large" id="para1" data-track="true" onclick="evil()" title="hello" href="https://example.com">Text</p>';

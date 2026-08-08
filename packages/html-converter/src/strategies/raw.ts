@@ -1,5 +1,10 @@
 import { SEMANTIC_ATTRIBUTES, stripNonSemanticAttributes } from "../cleaner.ts";
-import { getContentNodes, isStructuralElement, NODE_TYPE } from "../dom.ts";
+import {
+  getContentNodes,
+  isStructuralElement,
+  NODE_TYPE,
+  stripInvisibleChars,
+} from "../dom.ts";
 import type { ConversionStrategy } from "../types.ts";
 
 /**
@@ -43,7 +48,7 @@ function formatNode(node: Node, depth: number): string {
   const indent = "  ".repeat(depth);
 
   if (node.nodeType === NODE_TYPE.TEXT) {
-    const text = (node.textContent ?? "").trim();
+    const text = stripInvisibleChars(node.textContent ?? "").trim();
     return text ? `${indent}${text}\n` : "";
   }
 
@@ -70,14 +75,13 @@ function formatNode(node: Node, depth: number): string {
     return `${indent}${openTag} />\n`;
   }
 
-  // Split into element-only children, skipping whitespace and
-  // structural tags that linkedom injects into document fragments
-  const childElements = Array.from(node.childNodes).filter(
-    (child) =>
-      child.nodeType === NODE_TYPE.ELEMENT && !isStructuralElement(child)
+  // Walk ALL childNodes in document order — text nodes and elements
+  // interleaved, skipping structural tags that linkedom injects
+  const children = Array.from(node.childNodes).filter(
+    (child) => !isStructuralElement(child)
   );
 
-  if (childElements.length === 0) {
+  if (children.length === 0) {
     const text = (element.textContent ?? "").trim();
     return text
       ? `${indent}${openTag}>${text}</${tag}>\n`
@@ -85,7 +89,7 @@ function formatNode(node: Node, depth: number): string {
   }
 
   const lines: string[] = [`${indent}${openTag}>`];
-  for (const child of childElements) {
+  for (const child of children) {
     const formatted = formatNode(child, depth + 1).trimEnd();
     if (formatted) {
       lines.push(formatted);

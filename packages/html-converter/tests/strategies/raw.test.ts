@@ -103,4 +103,28 @@ describe("rawStrategy", () => {
     expect(result).toContain("Content");
     expect(result).not.toContain('class="x"');
   });
+
+  test("preserves interleaved text and elements in document order", () => {
+    const html = "<div>Hello <span>world</span></div>";
+    const doc = parseHTML(html).document;
+
+    const result = rawStrategy.convert(doc);
+
+    // Text "Hello " must survive before <span> — current code drops it
+    expect(result).toContain("Hello");
+    expect(result).toContain("<span>");
+    expect(result).toContain("world");
+  });
+
+  test("strips zero-width joiner from text nodes", () => {
+    const html = "<li>\u200D<strong>Nice to have</strong>: Experience.</li>";
+    const doc = parseHTML(html).document;
+
+    const result = rawStrategy.convert(doc);
+
+    // Zero-width joiner should not appear in output
+    expect(result).not.toContain("\u200D");
+    expect(result).toContain("Nice to have");
+    expect(result).toContain(": Experience.");
+  });
 });

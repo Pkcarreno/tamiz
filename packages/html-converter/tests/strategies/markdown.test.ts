@@ -75,12 +75,11 @@ describe("markdownStrategy — inline formatting", () => {
     expect(markdownStrategy.convert(doc)).toBe("**Bold** and *italic*\n");
   });
 
-  test("escapes markdown special characters in text", () => {
+  test("does not escape mid-paragraph # and whitespace-surrounded *", () => {
     const doc = parseHTML("<p>A #1 * B</p>").document;
-    // # and * should be escaped
+    // # is mid-paragraph (not line-start), * is whitespace-surrounded (not flanking)
     const result = markdownStrategy.convert(doc);
-    expect(result).toContain("\\#");
-    expect(result).toContain("B");
+    expect(result).toBe("A #1 * B\n");
   });
 });
 
@@ -242,5 +241,96 @@ describe("markdownStrategy — mixed content", () => {
     const parser = getDomParser();
     const doc = parser.parse("<p>Hello <strong>there</strong></p>");
     expect(markdownStrategy.convert(doc)).toBe("Hello **there**\n");
+  });
+});
+
+describe("markdownStrategy — line-start escaping", () => {
+  test("escapes # at line start", () => {
+    const doc = parseHTML("<p># Heading</p>").document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("\\# Heading\n");
+  });
+
+  test("escapes --- at line start as thematic break", () => {
+    const doc = parseHTML("<p>---</p>").document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("\\---\n");
+  });
+
+  test("escapes ordered list marker at line start", () => {
+    const doc = parseHTML("<p>1. item</p>").document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("1\\. item\n");
+  });
+});
+
+describe("markdownStrategy — div inline grouping", () => {
+  test("groups consecutive inline content in div into one paragraph", () => {
+    const doc = parseHTML("<div>Hello <strong>world</strong>!</div>").document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("Hello **world**!\n");
+  });
+});
+
+describe("markdownStrategy — empty formatting guards", () => {
+  test("emits nothing for empty strong", () => {
+    const doc = parseHTML("<p><strong></strong>text</p>").document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("text\n");
+  });
+
+  test("emits nothing for empty b", () => {
+    const doc = parseHTML("<p><b></b>text</p>").document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("text\n");
+  });
+
+  test("emits nothing for empty em", () => {
+    const doc = parseHTML("<p><em></em>text</p>").document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("text\n");
+  });
+
+  test("emits nothing for empty i and u", () => {
+    const doc = parseHTML("<p><i></i><u></u>text</p>").document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("text\n");
+  });
+
+  test("emits nothing for empty code", () => {
+    const doc = parseHTML("<p><code></code>text</p>").document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("text\n");
+  });
+
+  test("emits nothing for empty anchor", () => {
+    const doc = parseHTML('<p><a href="x"></a>text</p>').document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("text\n");
+  });
+
+  test("emits nothing for strong with zero-width joiner", () => {
+    // U+200D (zero-width joiner) should be treated as invisible
+    const doc = parseHTML("<p>before<strong>\u200D</strong>after</p>").document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("beforeafter\n");
+  });
+
+  test("emits nothing for strong with only non-breaking spaces", () => {
+    // U+00A0 (non-breaking space) should be treated as invisible
+    const doc = parseHTML(
+      "<p>text<strong>\u00A0\u00A0</strong>end</p>"
+    ).document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("textend\n");
+  });
+
+  test("no extra space from zero-width joiner before inline in list item", () => {
+    // Zero-width joiner before strong should not produce double space
+    const doc = parseHTML(
+      "<ul><li>\u200D<strong>Nice to have</strong>: Experience.</li></ul>"
+    ).document;
+    const result = markdownStrategy.convert(doc);
+    expect(result).toBe("- **Nice to have** : Experience.\n");
   });
 });

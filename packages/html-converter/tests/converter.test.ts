@@ -121,6 +121,12 @@ describe("convert", () => {
     const result = convert("<p>test</p>", { strategy: markdownStrategy });
     expect(result).toBeInstanceOf(Promise);
   });
+
+  test("groups div inline content into single markdown paragraph", async () => {
+    const html = "<div>Hello <strong>world</strong>!</div>";
+    const result = await convert(html, { strategy: markdownStrategy });
+    expect(result).toBe("Hello **world**!\n");
+  });
 });
 
 describe("convert with getDomParser integration", () => {

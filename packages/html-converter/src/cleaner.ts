@@ -34,14 +34,14 @@ const UNWANTED_TAGS: ReadonlySet<string> = new Set([
 
 /** CSS class / ID fragments that signal ads, sidebars, or boilerplate */
 const AD_SIDEBAR_PATTERNS: readonly RegExp[] = [
-  /ad(s|vertisement)?/i,
-  /banner/i,
-  /comment/i,
-  /promo/i,
-  /related/i,
-  /sidebar/i,
-  /social/i,
-  /supplemental/i,
+  /\bad(s|vertisement)?\b/i,
+  /\bbanner\b/i,
+  /\bcomment\b/i,
+  /\bpromo\b/i,
+  /\brelated\b/i,
+  /\bsidebar\b/i,
+  /\bsocial\b/i,
+  /\bsupplemental\b/i,
 ];
 
 /** Attributes that carry semantic meaning and survive cleaning */
