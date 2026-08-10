@@ -24,7 +24,7 @@ async function invokePicker(format: "markdown" | "html"): Promise<void> {
  * Compact configuration panel with format selector and Capture button.
  * Paper & Ink visual world: warm ground, ghost buttons, macOS density.
  */
-function App() {
+export function App() {
   const [format, setFormat] = createSignal<"markdown" | "html">("markdown");
 
   const handleCapture = async () => {
@@ -34,7 +34,16 @@ function App() {
 
   return (
     <div class="w-[280px] bg-ground p-3 font-sans text-text">
-      <h1 class="mb-0.5 font-semibold text-[14px] text-text">Tamiz</h1>
+      <div class="mb-0.5 flex items-center gap-1.5">
+        <img
+          alt=""
+          class="size-[18px]"
+          height="18"
+          src="/icons/32.png"
+          width="18"
+        />
+        <h1 class="font-semibold text-[14px] text-text">Tamiz</h1>
+      </div>
       <p class="mb-3 text-[11px] text-text-secondary leading-[1.4]">
         Select an element to capture clean content.
       </p>
