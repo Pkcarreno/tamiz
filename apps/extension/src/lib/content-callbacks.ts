@@ -82,9 +82,9 @@ export function injectHighlightStyles(): void {
 }
 
 /** File extension (including the dot) used for each output format. */
-const FORMAT_EXTENSION: Record<"markdown" | "raw", string> = {
+const FORMAT_EXTENSION: Record<"markdown" | "html", string> = {
+  html: "html",
   markdown: "md",
-  raw: "html",
 };
 
 /** Result of {@link convertElement} — the converted content and a filename. */
@@ -110,18 +110,18 @@ export interface ConvertedContent {
  */
 export async function convertElement(
   element: Element,
-  format: "markdown" | "raw"
+  format: "markdown" | "html"
 ): Promise<ConvertedContent> {
   const html = extractContent(element);
 
-  const [{ convert }, { markdownStrategy }, { rawStrategy }] =
+  const [{ convert }, { markdownStrategy }, { htmlStrategy }] =
     await Promise.all([
       import("@tamiz/html-converter"),
       import("@tamiz/html-converter/strategies/markdown"),
-      import("@tamiz/html-converter/strategies/raw"),
+      import("@tamiz/html-converter/strategies/html"),
     ]);
 
-  const strategy = format === "markdown" ? markdownStrategy : rawStrategy;
+  const strategy = format === "markdown" ? markdownStrategy : htmlStrategy;
   const content = await convert(html, { strategy });
 
   const tag = element.tagName.toLowerCase();

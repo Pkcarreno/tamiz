@@ -119,7 +119,7 @@ function toPrettyHtml(content: Element | Document): string {
 }
 
 /**
- * Raw HTML output strategy.
+ * HTML output strategy.
  *
  * Returns the cleaned DOM tree serialised to HTML with only semantic
  * attributes (href, src, alt, title, colspan, rowspan) retained.
@@ -127,7 +127,7 @@ function toPrettyHtml(content: Element | Document): string {
  *
  * @public
  */
-export const rawStrategy: ConversionStrategy = {
+export const htmlStrategy: ConversionStrategy = {
   convert(content: Element | Document): string {
     // Always strip non-semantic attributes, even when the cleaner
     // was not run (clean: false)

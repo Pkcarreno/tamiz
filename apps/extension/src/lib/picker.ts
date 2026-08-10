@@ -17,12 +17,12 @@ export type PickerState = "IDLE" | "HIGHLIGHTING" | "SELECTED";
  * @public
  */
 export type PickerEvent =
-  | { type: "INVOKE"; format?: "markdown" | "raw" }
+  | { type: "INVOKE"; format?: "markdown" | "html" }
   | { type: "MOUSEMOVE"; target: Element }
   | { type: "CLICK"; target: Element }
   | { type: "COPY" }
   | { type: "DOWNLOAD" }
-  | { type: "FORMAT_CHANGE"; format: "markdown" | "raw" }
+  | { type: "FORMAT_CHANGE"; format: "markdown" | "html" }
   | { type: "DISMISS" }
   | { type: "SCROLL" }
   | { type: "RESIZE" };
@@ -35,7 +35,7 @@ export type PickerEvent =
 export class PickerStateMachine {
   private state: PickerState = "IDLE";
   private selectedElement: Element | null = null;
-  private format: "markdown" | "raw" = "markdown";
+  private format: "markdown" | "html" = "markdown";
 
   private readonly onStateChange?: (state: PickerState) => void;
   private readonly onElementSelected?: (element: Element) => void;
@@ -82,7 +82,7 @@ export class PickerStateMachine {
   /**
    * Get current format.
    */
-  getFormat(): "markdown" | "raw" {
+  getFormat(): "markdown" | "html" {
     return this.format;
   }
 

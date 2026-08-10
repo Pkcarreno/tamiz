@@ -43,14 +43,14 @@ describe("PickerStateMachine", () => {
 
     it("initializes format from INVOKE event when provided", () => {
       const machine = new PickerStateMachine();
-      machine.dispatch({ format: "raw", type: "INVOKE" });
-      expect(machine.getFormat()).toBe("raw");
+      machine.dispatch({ format: "html", type: "INVOKE" });
+      expect(machine.getFormat()).toBe("html");
     });
 
     it("ignores INVOKE while already in HIGHLIGHTING", () => {
       const machine = new PickerStateMachine();
       machine.dispatch({ type: "INVOKE" });
-      machine.dispatch({ format: "raw", type: "INVOKE" });
+      machine.dispatch({ format: "html", type: "INVOKE" });
       // Format was set by the first INVOKE (default markdown), second ignored.
       expect(machine.getFormat()).toBe("markdown");
       expect(machine.getState()).toBe("HIGHLIGHTING");
@@ -61,8 +61,8 @@ describe("PickerStateMachine", () => {
     it("updates format when FORMAT_CHANGE is dispatched in SELECTED", () => {
       const machine = new PickerStateMachine();
       selectElement(machine);
-      machine.dispatch({ format: "raw", type: "FORMAT_CHANGE" });
-      expect(machine.getFormat()).toBe("raw");
+      machine.dispatch({ format: "html", type: "FORMAT_CHANGE" });
+      expect(machine.getFormat()).toBe("html");
       expect(machine.getState()).toBe("SELECTED");
     });
   });
@@ -313,7 +313,7 @@ describe("PickerStateMachine", () => {
 
     it("FORMAT_CHANGE in IDLE is ignored", () => {
       const machine = new PickerStateMachine();
-      machine.dispatch({ format: "raw", type: "FORMAT_CHANGE" });
+      machine.dispatch({ format: "html", type: "FORMAT_CHANGE" });
       expect(machine.getFormat()).toBe("markdown");
       expect(machine.getState()).toBe("IDLE");
     });
@@ -355,8 +355,8 @@ describe("PickerStateMachine", () => {
       expect(machine.getState()).toBe("IDLE");
       expect(onTeardown).toHaveBeenCalledTimes(1);
 
-      machine.dispatch({ format: "raw", type: "INVOKE" });
-      expect(machine.getFormat()).toBe("raw");
+      machine.dispatch({ format: "html", type: "INVOKE" });
+      expect(machine.getFormat()).toBe("html");
       expect(machine.getState()).toBe("HIGHLIGHTING");
     });
   });

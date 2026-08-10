@@ -11,7 +11,7 @@ export interface ContentAppProps {
   /** The currently selected DOM element. */
   element: Accessor<Element | null>;
   /** Current output format. */
-  format: Accessor<"markdown" | "raw">;
+  format: Accessor<"markdown" | "html">;
   /** Callback when cancel is clicked. */
   onCancel: () => void;
   /** Callback when copy is requested. */
@@ -19,7 +19,7 @@ export interface ContentAppProps {
   /** Callback when download is requested. */
   onDownload: () => void;
   /** Callback when format changes. */
-  onFormatChange: (format: "markdown" | "raw") => void;
+  onFormatChange: (format: "markdown" | "html") => void;
   /** Called when the toast API is ready. */
   onToastReady: (showToast: (msg: string) => void) => void;
   /** Whether the floating bar is visible. */

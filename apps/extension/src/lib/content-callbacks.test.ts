@@ -1,6 +1,6 @@
 import { convert } from "@tamiz/html-converter";
+import { htmlStrategy } from "@tamiz/html-converter/strategies/html";
 import { markdownStrategy } from "@tamiz/html-converter/strategies/markdown";
-import { rawStrategy } from "@tamiz/html-converter/strategies/raw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearHighlights,
@@ -16,7 +16,7 @@ vi.mock("@tamiz/html-converter", () => ({
 }));
 
 const MARKDOWN_FILENAME_REGEX = /^article-\d+\.md$/;
-const RAW_FILENAME_REGEX = /^section-\d+\.html$/;
+const HTML_FILENAME_REGEX = /^section-\d+\.html$/;
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -69,14 +69,14 @@ describe("convertElement", () => {
     expect(result.content).toBe("# Hello world");
   });
 
-  it("uses raw strategy when format is raw", async () => {
+  it("uses html strategy when format is html", async () => {
     vi.mocked(convert).mockResolvedValue("<article>Hello</article>");
 
     const element = document.createElement("section");
-    const result = await convertElement(element, "raw");
+    const result = await convertElement(element, "html");
 
     expect(convert).toHaveBeenCalledWith(expect.any(String), {
-      strategy: rawStrategy,
+      strategy: htmlStrategy,
     });
     expect(result.content).toBe("<article>Hello</article>");
   });
@@ -90,13 +90,13 @@ describe("convertElement", () => {
     expect(result.filename).toMatch(MARKDOWN_FILENAME_REGEX);
   });
 
-  it("generates a filename with .html extension for raw format", async () => {
+  it("generates a filename with .html extension for html format", async () => {
     vi.mocked(convert).mockResolvedValue("content");
 
     const element = document.createElement("section");
-    const result = await convertElement(element, "raw");
+    const result = await convertElement(element, "html");
 
-    expect(result.filename).toMatch(RAW_FILENAME_REGEX);
+    expect(result.filename).toMatch(HTML_FILENAME_REGEX);
   });
 
   it("does not mutate the source element during extraction", async () => {

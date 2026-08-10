@@ -16,7 +16,7 @@ const BAR_HEIGHT = 32;
 /** Format options presented in the bar's Select toggle. */
 const FORMAT_OPTIONS: SelectOption[] = [
   { label: "Markdown", value: "markdown" },
-  { label: "Raw HTML", value: "raw" },
+  { label: "HTML", value: "html" },
 ];
 
 /**
@@ -28,7 +28,7 @@ export interface FloatingActionBarProps {
   /** The selected DOM element the bar is anchored to. */
   element: Accessor<Element | null>;
   /** Currently selected output format. */
-  format: Accessor<"markdown" | "raw">;
+  format: Accessor<"markdown" | "html">;
   /** Called when the user clicks Cancel. */
   onCancel: () => void;
   /** Called when the user clicks Copy. */
@@ -36,7 +36,7 @@ export interface FloatingActionBarProps {
   /** Called when the user clicks Download. */
   onDownload: () => void;
   /** Called when the user selects a different format. */
-  onFormatChange: (format: "markdown" | "raw") => void;
+  onFormatChange: (format: "markdown" | "html") => void;
 }
 
 /**
@@ -78,7 +78,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
   });
 
   function handleFormatChange(value: string) {
-    props.onFormatChange(value as "markdown" | "raw");
+    props.onFormatChange(value as "markdown" | "html");
   }
 
   return (

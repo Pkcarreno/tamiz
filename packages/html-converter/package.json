@@ -16,9 +16,9 @@
       "types": "./dist/cleaner.d.mts",
       "default": "./dist/cleaner.js"
     },
-    "./strategies/raw": {
-      "types": "./dist/strategies/raw.d.mts",
-      "default": "./dist/strategies/raw.js"
+    "./strategies/html": {
+      "types": "./dist/strategies/html.d.mts",
+      "default": "./dist/strategies/html.js"
     },
     "./strategies/markdown": {
       "types": "./dist/strategies/markdown.d.mts",

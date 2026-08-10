@@ -5,7 +5,7 @@ import { Select, type SelectOption } from "./select.tsx";
 
 const options: SelectOption[] = [
   { label: "Markdown", value: "markdown" },
-  { label: "Raw HTML", value: "raw" },
+  { label: "HTML", value: "html" },
 ];
 
 describe("Select", () => {
@@ -27,8 +27,8 @@ describe("Select", () => {
     expect(select.options).toHaveLength(2);
     expect(select.options[0]?.value).toBe("markdown");
     expect(select.options[0]?.textContent).toBe("Markdown");
-    expect(select.options[1]?.value).toBe("raw");
-    expect(select.options[1]?.textContent).toBe("Raw HTML");
+    expect(select.options[1]?.value).toBe("html");
+    expect(select.options[1]?.textContent).toBe("HTML");
   });
 
   it("renders a single option correctly", () => {
@@ -62,18 +62,18 @@ describe("Select", () => {
     const select = container.querySelector(
       "[data-tamiz-select] select"
     ) as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: "raw" } });
-    expect(onChange).toHaveBeenCalledWith("raw");
+    fireEvent.change(select, { target: { value: "html" } });
+    expect(onChange).toHaveBeenCalledWith("html");
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onChange with markdown when switching back from raw", () => {
+  it("calls onChange with markdown when switching back from html", () => {
     const onChange = vi.fn();
     const { container } = render(() => (
       <Select
         onChange={onChange}
         options={options}
-        value="raw"
+        value="html"
         variant="standard"
       />
     ));
@@ -89,14 +89,14 @@ describe("Select", () => {
       <Select
         onChange={vi.fn()}
         options={options}
-        value="raw"
+        value="html"
         variant="standard"
       />
     ));
     const select = container.querySelector(
       "[data-tamiz-select] select"
     ) as HTMLSelectElement;
-    expect(select.value).toBe("raw");
+    expect(select.value).toBe("html");
     expect(select.options[1]?.selected).toBe(true);
   });
 

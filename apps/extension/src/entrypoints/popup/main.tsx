@@ -8,13 +8,13 @@ import "../../styles/content.css";
 
 const FORMAT_OPTIONS = [
   { label: "Markdown", value: "markdown" },
-  { label: "Raw HTML", value: "raw" },
+  { label: "HTML", value: "html" },
 ];
 
 /**
  * Send INVOKE_PICKER to the active tab's content script via background relay.
  */
-async function invokePicker(format: "markdown" | "raw"): Promise<void> {
+async function invokePicker(format: "markdown" | "html"): Promise<void> {
   await browser.runtime.sendMessage({ format, type: "INVOKE_PICKER" });
 }
 
@@ -25,7 +25,7 @@ async function invokePicker(format: "markdown" | "raw"): Promise<void> {
  * Paper & Ink visual world: warm ground, ghost buttons, macOS density.
  */
 function App() {
-  const [format, setFormat] = createSignal<"markdown" | "raw">("markdown");
+  const [format, setFormat] = createSignal<"markdown" | "html">("markdown");
 
   const handleCapture = async () => {
     await invokePicker(format());
@@ -49,7 +49,7 @@ function App() {
         <Select
           id="format-select"
           // biome-ignore lint/performance/noJsxPropsBind: popup renders once
-          onChange={(value) => setFormat(value as "markdown" | "raw")}
+          onChange={(value) => setFormat(value as "markdown" | "html")}
           options={FORMAT_OPTIONS}
           value={format()}
           variant="standard"

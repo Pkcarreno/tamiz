@@ -185,7 +185,7 @@ function filterByContentScore(root: Node): void {
  * Special case: `class` attributes starting with `language-` on `<code>`
  * elements are preserved for Markdown code block language detection.
  *
- * Exported so the *raw* strategy can apply the same filtering even when
+ * Exported so the html strategy can apply the same filtering even when
  * the cleaning pipeline was skipped.
  *
  * @public

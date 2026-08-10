@@ -37,7 +37,7 @@ export default defineContentScript({
     const [selectedElement, setSelectedElement] = createSignal<Element | null>(
       null
     );
-    const [barFormat, setBarFormat] = createSignal<"markdown" | "raw">(
+    const [barFormat, setBarFormat] = createSignal<"markdown" | "html">(
       "markdown"
     );
     const [barVisible, setBarVisible] = createSignal(false);
@@ -218,7 +218,7 @@ export default defineContentScript({
 
     // Listen for messages from popup/background
     browser.runtime.onMessage.addListener((message: unknown) => {
-      const msg = message as { type: string; format?: "markdown" | "raw" };
+      const msg = message as { type: string; format?: "markdown" | "html" };
       if (msg.type === "INVOKE_PICKER") {
         if (msg.format) {
           setBarFormat(msg.format);

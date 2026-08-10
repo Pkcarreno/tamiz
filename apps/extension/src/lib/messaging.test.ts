@@ -11,9 +11,9 @@ describe("Message types", () => {
   });
 
   it("INVOKE_PICKER carries an optional format field", () => {
-    const invoke: Message = { format: "raw", type: "INVOKE_PICKER" };
+    const invoke: Message = { format: "html", type: "INVOKE_PICKER" };
     expect(invoke.type).toBe("INVOKE_PICKER");
-    expect(invoke.format).toBe("raw");
+    expect(invoke.format).toBe("html");
   });
 
   it("DOWNLOAD_FILE carries content and filename", () => {

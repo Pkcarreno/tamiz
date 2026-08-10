@@ -186,7 +186,7 @@ try {
  */
 export async function relayInvokePicker(
   tabId: number,
-  format?: "markdown" | "raw"
+  format?: "markdown" | "html"
 ): Promise<void> {
   const message: Message = { format, type: "INVOKE_PICKER" };
   try {

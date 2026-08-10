@@ -118,10 +118,10 @@ describe("relayInvokePicker", () => {
   it("includes the format in the message when provided", async () => {
     vi.mocked(browser.tabs.sendMessage).mockResolvedValue(undefined);
 
-    await relayInvokePicker(42, "raw");
+    await relayInvokePicker(42, "html");
 
     expect(browser.tabs.sendMessage).toHaveBeenCalledWith(42, {
-      format: "raw",
+      format: "html",
       type: "INVOKE_PICKER",
     });
   });
@@ -248,7 +248,7 @@ describe("CONTENT_READY handshake", () => {
     // First queue (no format).
     await relayInvokePicker(42);
     // Second queue (with format) — should replace, not stack.
-    await relayInvokePicker(42, "raw");
+    await relayInvokePicker(42, "html");
 
     // Two failed attempts, two injections, no retries.
     expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(2);
@@ -260,7 +260,7 @@ describe("CONTENT_READY handshake", () => {
     } as unknown as Browser.runtime.MessageSender);
     expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(3);
     expect(browser.tabs.sendMessage).toHaveBeenLastCalledWith(42, {
-      format: "raw",
+      format: "html",
       type: "INVOKE_PICKER",
     });
   });
@@ -388,12 +388,12 @@ describe("handleBackgroundMessage", () => {
       tab: { id: 42 },
     } as unknown as Browser.runtime.MessageSender;
     await handleBackgroundMessage(
-      { format: "raw", type: "INVOKE_PICKER" },
+      { format: "html", type: "INVOKE_PICKER" },
       sender
     );
 
     expect(browser.tabs.sendMessage).toHaveBeenCalledWith(42, {
-      format: "raw",
+      format: "html",
       type: "INVOKE_PICKER",
     });
   });

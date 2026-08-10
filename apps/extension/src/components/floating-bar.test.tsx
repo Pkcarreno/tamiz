@@ -22,7 +22,7 @@ function makeElement(rect: {
 /** Shared props with sensible defaults for every test. */
 function makeProps(overrides: Record<string, unknown> = {}) {
   const el = makeElement({ height: 50, left: 100, top: 200, width: 200 });
-  const [format] = createSignal<"markdown" | "raw">("markdown");
+  const [format] = createSignal<"markdown" | "html">("markdown");
   return {
     element: (() => el) as Accessor<Element | null>,
     format,
@@ -43,7 +43,7 @@ describe("FloatingActionBar", () => {
 
       // Format selector
       expect(screen.getByText("Markdown")).toBeTruthy();
-      expect(screen.getByText("Raw HTML")).toBeTruthy();
+      expect(screen.getByText("HTML")).toBeTruthy();
 
       // Action buttons (icon-only with aria-labels)
       expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
@@ -52,7 +52,7 @@ describe("FloatingActionBar", () => {
     });
 
     it("reflects the active format via select value", () => {
-      const [format] = createSignal<"markdown" | "raw">("raw");
+      const [format] = createSignal<"markdown" | "html">("html");
       const { container } = render(() => (
         <FloatingActionBar {...makeProps({ format })} />
       ));
@@ -60,7 +60,7 @@ describe("FloatingActionBar", () => {
       const select = container.querySelector(
         "[data-tamiz-select] select"
       ) as HTMLSelectElement;
-      expect(select.value).toBe("raw");
+      expect(select.value).toBe("html");
     });
 
     it("root element has data-tamiz-bar attribute for extraction stripping", () => {
@@ -94,20 +94,20 @@ describe("FloatingActionBar", () => {
       expect(props.onCancel).toHaveBeenCalledTimes(1);
     });
 
-    it("calls onFormatChange with 'raw' when Raw HTML is selected", () => {
+    it("calls onFormatChange with 'html' when HTML is selected", () => {
       const props = makeProps();
       const { container } = render(() => <FloatingActionBar {...props} />);
 
       const select = container.querySelector(
         "[data-tamiz-select] select"
       ) as HTMLSelectElement;
-      fireEvent.change(select, { target: { value: "raw" } });
-      expect(props.onFormatChange).toHaveBeenCalledWith("raw");
+      fireEvent.change(select, { target: { value: "html" } });
+      expect(props.onFormatChange).toHaveBeenCalledWith("html");
     });
 
-    it("calls onFormatChange with 'markdown' when Markdown is selected (from raw)", () => {
+    it("calls onFormatChange with 'markdown' when Markdown is selected (from html)", () => {
       const props = makeProps();
-      const [format] = createSignal<"markdown" | "raw">("raw");
+      const [format] = createSignal<"markdown" | "html">("html");
       const { container } = render(() => (
         <FloatingActionBar {...props} format={format} />
       ));
@@ -129,7 +129,7 @@ describe("FloatingActionBar", () => {
         width: 200,
       });
       const [elementAccessor] = createSignal<Element | null>(element);
-      const [format] = createSignal<"markdown" | "raw">("markdown");
+      const [format] = createSignal<"markdown" | "html">("markdown");
 
       render(() => (
         <FloatingActionBar
@@ -160,7 +160,7 @@ describe("FloatingActionBar", () => {
         width: 200,
       });
       const [element, setElement] = createSignal<Element | null>(elementA);
-      const [format] = createSignal<"markdown" | "raw">("markdown");
+      const [format] = createSignal<"markdown" | "html">("markdown");
 
       const { unmount } = render(() => (
         <FloatingActionBar

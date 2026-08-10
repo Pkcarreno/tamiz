@@ -34,7 +34,7 @@ The name Tamiz (Spanish for "sieve/strainer") encodes the product promise: remov
 ## Capabilities and Constraints
 
 - **Element picker**: Visual hover-highlight + click selection with state machine (IDLE → HIGHLIGHTING → SELECTED)
-- **Format output**: Markdown (via `@tamiz/html-converter`) or raw HTML
+- **Format output**: Markdown (via `@tamiz/html-converter`) or HTML
 - **Copy to clipboard**: Primary action, one click
 - **Download as file**: Secondary action, `.md` or `.html` extension
 - **Shadow DOM isolation**: Picker UI doesn't interfere with host page styles
