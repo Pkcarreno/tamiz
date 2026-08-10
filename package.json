@@ -14,7 +14,7 @@
     "prepare": "lefthook install",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "validate": "bun run lint && bun run typecheck && bun run test",
+    "validate": "turbo run --continue lint typecheck test",
     "zip": "turbo run zip:chrome zip:firefox"
   },
   "devDependencies": {

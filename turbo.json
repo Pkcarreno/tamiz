@@ -4,6 +4,7 @@
     "wxt:prepare": {
       "outputs": [".wxt/**"]
     },
+    "//#lint": {},
     "typecheck": {
       "dependsOn": ["^typecheck", "wxt:prepare"]
     },
@@ -20,7 +21,7 @@
       "outputs": [".output/firefox-mv2/**", ".output/firefox-mv3/**"]
     },
     "test": {
-      "dependsOn": ["build"]
+      "dependsOn": ["build", "wxt:prepare"]
     },
     "dev": {
       "cache": false,
