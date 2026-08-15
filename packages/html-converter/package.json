@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Isomorphic HTML-to-text converter toolkit for the Tamiz browser extension",
   "type": "module",
+  "license": "MIT",
   "exports": {
     ".": {
       "types": "./dist/converter.d.mts",
