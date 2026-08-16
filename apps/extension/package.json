@@ -2,8 +2,8 @@
   "name": "@tamiz/extension",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "build:chrome": "wxt build -b chrome",
     "build:firefox": "wxt build -b firefox",

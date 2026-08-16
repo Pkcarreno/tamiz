@@ -16,25 +16,6 @@ export default defineConfig({
             strict_min_version: "109.0",
           },
         };
-        // Firefox reads `theme_icons` at the manifest top level as light/dark
-        // icon pairs per size. WXT's auto-discovery writes them under `action`,
-        // which is stripped for MV2, so set top-level theme_icons explicitly.
-        // The @wxt-dev/browser types omit this Firefox-only key, so the
-        // manifest is widened (no `any`).
-        const ffManifest = manifest as typeof manifest & {
-          browser_action?: { default_icon?: Record<string, string> };
-          theme_icons?: Array<{ dark: string; light: string; sizes: string }>;
-        };
-        ffManifest.theme_icons = [
-          { dark: "icon-dark-16.png", light: "icon-light-16.png", sizes: "16" },
-          { dark: "icon-dark-32.png", light: "icon-light-32.png", sizes: "32" },
-        ];
-        if (ffManifest.browser_action) {
-          ffManifest.browser_action.default_icon = {
-            "16": "icons/16.png",
-            "32": "icons/32.png",
-          };
-        }
       }
     },
   },
