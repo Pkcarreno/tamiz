@@ -14,9 +14,12 @@ import { fakeBrowser } from "wxt/testing/fake-browser";
  *   - scripting.executeScript
  *   - tabs.sendMessage
  *
+ * `downloads.onChanged` has a partial implementation (addListener) but no
+ * `trigger` method, so we overlay it with `createEventForTesting` as well.
+ *
  * We attach `vi.fn()` overlays for the functions and an EventForTesting object
- * for `contextMenus.onClicked` so tests can both assert calls and `.trigger()`
- * the click listener.
+ * for `contextMenus.onClicked` and `downloads.onChanged` so tests can both
+ * assert calls and `.trigger()` the listener.
  */
 
 /**
@@ -53,6 +56,7 @@ function createEventForTesting() {
 fakeBrowser.contextMenus.create = vi.fn();
 fakeBrowser.contextMenus.onClicked = createEventForTesting();
 fakeBrowser.downloads.download = vi.fn();
+fakeBrowser.downloads.onChanged = createEventForTesting();
 fakeBrowser.scripting.executeScript = vi.fn();
 fakeBrowser.tabs.sendMessage = vi.fn();
 

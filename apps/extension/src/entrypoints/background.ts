@@ -106,6 +106,91 @@ export function clearPendingInvokes(): void {
 }
 
 /**
+ * Maximum time (ms) to wait for a download's `onChanged` event before revoking
+ * a tracked blob URL as a fallback. Firefox builds use blob URLs for downloads;
+ * if `onChanged` does not fire within this window, the blob URL is revoked to
+ * avoid leaking memory.
+ */
+const BLOB_URL_TIMEOUT_MS = 30_000;
+
+/**
+ * A tracked blob URL paired with the 30-second revocation timeout handle.
+ *
+ * @internal
+ */
+interface BlobUrlEntry {
+  /** The blob URL to revoke. */
+  blobUrl: string;
+  /** Fallback timeout that revokes the URL if onChanged never fires. */
+  timeout: ReturnType<typeof setTimeout>;
+}
+
+/**
+ * Blob URLs keyed by download id, pending revocation once the download reaches
+ * a terminal state. Only populated for Firefox downloads.
+ *
+ * @internal
+ */
+const blobUrlMap = new Map<number, BlobUrlEntry>();
+
+/**
+ * Clear all tracked blob URLs, revoking each and canceling its timeout.
+ * Intended for graceful shutdown and test cleanup so blob URLs from one
+ * test don't leak into another.
+ *
+ * @internal
+ */
+export function clearBlobUrlMap(): void {
+  for (const { blobUrl, timeout } of blobUrlMap.values()) {
+    clearTimeout(timeout);
+    URL.revokeObjectURL(blobUrl);
+  }
+  blobUrlMap.clear();
+}
+
+/**
+ * Register a blob URL for revocation when the corresponding download reaches a
+ * terminal state via `downloads.onChanged`, or as a 30-second timeout fallback
+ * if `onChanged` never fires.
+ *
+ * @internal
+ */
+function trackBlobUrl(downloadId: number, blobUrl: string): void {
+  blobUrlMap.set(downloadId, {
+    blobUrl,
+    timeout: setTimeout(() => {
+      const entry = blobUrlMap.get(downloadId);
+      if (entry) {
+        URL.revokeObjectURL(entry.blobUrl);
+        blobUrlMap.delete(downloadId);
+      }
+    }, BLOB_URL_TIMEOUT_MS),
+  });
+}
+
+/**
+ * Revoke tracked blob URLs when a download reaches a terminal state
+ * (`complete` or `interrupted`). The 30-second timeout fallback in
+ * {@link trackBlobUrl} handles the case where `onChanged` never fires.
+ *
+ * Registered at module scope so it survives MV3 service worker restarts.
+ *
+ * @internal
+ */
+function handleDownloadChange(delta: Browser.downloads.DownloadDelta): void {
+  const current = delta.state?.current;
+  if (current !== "complete" && current !== "interrupted") {
+    return;
+  }
+  const entry = blobUrlMap.get(delta.id);
+  if (entry) {
+    clearTimeout(entry.timeout);
+    URL.revokeObjectURL(entry.blobUrl);
+    blobUrlMap.delete(delta.id);
+  }
+}
+
+/**
  * Handle a click on the "Capture readable content" context menu item.
  *
  * Relays an `INVOKE_PICKER` message to the content script in the clicked tab.
@@ -168,6 +253,17 @@ try {
   browser.tabs.onRemoved.addListener((tabId: number) => {
     removePendingInvoke(tabId);
   });
+} catch {
+  /* Build-time module evaluation: browser APIs are mocked and unsupported. */
+}
+
+// Register the blob URL revocation listener at module scope so it survives MV3
+// service worker restarts — onInstalled only fires on install/update, not every
+// restart. In the build-time module-evaluation context the fake browser's
+// downloads API throws, so we guard with try/catch — the listener is always
+// registered at runtime in a real browser.
+try {
+  browser.downloads.onChanged.addListener(handleDownloadChange);
 } catch {
   /* Build-time module evaluation: browser APIs are mocked and unsupported. */
 }
@@ -237,14 +333,15 @@ export function getMimeType(filename: string): string {
 /**
  * Trigger a file download for the given content and filename.
  *
- * Constructs a `data:` URL from the content and the filename's MIME type,
- * then passes it to `browser.downloads.download`. Using a data URL instead
- * of `URL.createObjectURL` keeps the function compatible with Chrome MV3
- * service workers — where `createObjectURL` is unavailable — and Firefox
- * MV3 event pages.
+ * On Firefox, constructs a `blob:` URL via `URL.createObjectURL` — the Firefox
+ * MV2 background page supports this API, unlike Chrome MV3 service workers which
+ * crash on `createObjectURL`. On Chrome (and other browsers), falls back to a
+ * `data:` URL for MV3 compatibility.
  *
- * Errors are re-thrown so callers can surface download failures to the
- * user instead of silently succeeding.
+ * Blob URL lifecycle management (onChanged revocation + 30s timeout fallback)
+ * is handled by the module-scope listener below. If `downloads.download` itself
+ * rejects, the blob URL is revoked immediately and the error is re-thrown so
+ * callers can surface it.
  *
  * @public
  */
@@ -252,8 +349,22 @@ export async function downloadFile(
   content: string,
   filename: string
 ): Promise<void> {
-  const url = `data:${getMimeType(filename)};charset=utf-8,${encodeURIComponent(content)}`;
-  await browser.downloads.download({ filename, url });
+  const mimeType = getMimeType(filename);
+
+  if (import.meta.env.BROWSER === "firefox") {
+    const url = URL.createObjectURL(new Blob([content], { type: mimeType }));
+    let downloadId: number;
+    try {
+      downloadId = await browser.downloads.download({ filename, url });
+    } catch (err) {
+      URL.revokeObjectURL(url);
+      throw err;
+    }
+    trackBlobUrl(downloadId, url);
+  } else {
+    const url = `data:${mimeType};charset=utf-8,${encodeURIComponent(content)}`;
+    await browser.downloads.download({ filename, url });
+  }
 }
 
 /**

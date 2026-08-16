@@ -14,6 +14,7 @@ import { type Browser, browser } from "wxt/browser";
 import {
   CONTEXT_MENU_ID,
   CONTEXT_MENU_TITLE,
+  clearBlobUrlMap,
   clearPendingInvokes,
   copyToClipboard,
   createContextMenu,
@@ -28,8 +29,26 @@ import {
 afterEach(() => {
   vi.clearAllMocks();
   vi.restoreAllMocks();
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
   clearPendingInvokes();
+  clearBlobUrlMap();
 });
+
+/**
+ * Trigger the `downloads.onChanged` event. setup.ts overlays
+ * `downloads.onChanged` with `createEventForTesting()` which provides a
+ * `trigger` method — cast to access it since the runtime types don't include it.
+ */
+function triggerOnChanged(
+  delta: Browser.downloads.DownloadDelta
+): Promise<unknown[]> {
+  return (
+    browser.downloads.onChanged as unknown as {
+      trigger: (delta: Browser.downloads.DownloadDelta) => Promise<unknown[]>;
+    }
+  ).trigger(delta);
+}
 
 describe("createContextMenu", () => {
   it("creates a context menu item with correct title and page-only contexts", () => {
@@ -308,6 +327,7 @@ describe("getMimeType", () => {
 
 describe("downloadFile", () => {
   it("calls browser.downloads.download with a data URL containing encoded content", async () => {
+    vi.stubEnv("BROWSER", "chrome");
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("file content", "article-123.md");
@@ -320,6 +340,7 @@ describe("downloadFile", () => {
   });
 
   it("uses text/html MIME type in the data URL for .html filenames", async () => {
+    vi.stubEnv("BROWSER", "chrome");
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("<h1>Hello</h1>", "page.html");
@@ -332,6 +353,7 @@ describe("downloadFile", () => {
   });
 
   it("uses text/markdown MIME type in the data URL for .md filenames", async () => {
+    vi.stubEnv("BROWSER", "chrome");
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("content", "article.md");
@@ -344,6 +366,7 @@ describe("downloadFile", () => {
   });
 
   it("uses text/plain MIME type in the data URL for .txt filenames", async () => {
+    vi.stubEnv("BROWSER", "chrome");
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("hello world", "notes.txt");
@@ -355,7 +378,8 @@ describe("downloadFile", () => {
     });
   });
 
-  it("does not use URL.createObjectURL or URL.revokeObjectURL (MV3-safe)", async () => {
+  it("does not use URL.createObjectURL or URL.revokeObjectURL in Chrome (MV3-safe)", async () => {
+    vi.stubEnv("BROWSER", "chrome");
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
     const createObjectURLSpy = vi.spyOn(URL, "createObjectURL");
     const revokeObjectURLSpy = vi.spyOn(URL, "revokeObjectURL");
@@ -366,7 +390,8 @@ describe("downloadFile", () => {
     expect(revokeObjectURLSpy).not.toHaveBeenCalled();
   });
 
-  it("rethrows download errors without revoking any URL", async () => {
+  it("rethrows download errors without revoking any URL (chrome)", async () => {
+    vi.stubEnv("BROWSER", "chrome");
     vi.mocked(browser.downloads.download).mockRejectedValue(
       new Error("download failed")
     );
@@ -377,6 +402,141 @@ describe("downloadFile", () => {
     );
 
     expect(revokeSpy).not.toHaveBeenCalled();
+  });
+
+  // --- Firefox branch (spec §1, §4) ---
+
+  it("creates a blob URL via URL.createObjectURL for Firefox downloads", async () => {
+    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
+
+    const createObjectURLSpy = vi.spyOn(URL, "createObjectURL");
+
+    await downloadFile("file content", "article.md");
+
+    expect(createObjectURLSpy).toHaveBeenCalledWith(expect.any(Blob));
+    const blob = createObjectURLSpy.mock.calls[0][0] as Blob;
+    expect(blob.type).toBe("text/markdown");
+    expect(blob.size).toBe(12);
+  });
+
+  it("passes a blob URL to browser.downloads.download for Firefox", async () => {
+    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
+
+    await downloadFile("file content", "article.md");
+
+    const downloadCall = vi.mocked(browser.downloads.download).mock
+      .calls[0][0] as { url: string };
+    expect(downloadCall.url.startsWith("blob:")).toBe(true);
+  });
+
+  it("creates a blob URL with the correct MIME type for .html on Firefox", async () => {
+    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
+
+    const createObjectURLSpy = vi.spyOn(URL, "createObjectURL");
+
+    await downloadFile("<h1>Hi</h1>", "page.html");
+
+    expect(createObjectURLSpy).toHaveBeenCalledWith(expect.any(Blob));
+    const blob = createObjectURLSpy.mock.calls[0][0] as Blob;
+    expect(blob.type).toBe("text/html");
+    const downloadCall = vi.mocked(browser.downloads.download).mock
+      .calls[0][0] as { url: string };
+    expect(downloadCall.url.startsWith("blob:")).toBe(true);
+  });
+
+  it("rethrows download errors and revokes the blob URL (firefox)", async () => {
+    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(browser.downloads.download).mockRejectedValue(
+      new Error("download failed")
+    );
+
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    await expect(downloadFile("data", "test.txt")).rejects.toThrow(
+      "download failed"
+    );
+
+    expect(revokeSpy).toHaveBeenCalled();
+  });
+
+  // --- Blob URL revocation via onChanged + timeout (spec §1, §4) ---
+
+  it("revokes blob URL when downloads.onChanged fires with complete state", async () => {
+    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
+
+    const createSpy = vi.spyOn(URL, "createObjectURL");
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    await downloadFile("file content", "article.md");
+
+    const blobUrl = createSpy.mock.results[0]?.value as string;
+
+    await triggerOnChanged({
+      id: 42,
+      state: { current: "complete" },
+    });
+
+    expect(revokeSpy).toHaveBeenCalledWith(blobUrl);
+  });
+
+  it("revokes blob URL when downloads.onChanged fires with interrupted state", async () => {
+    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
+
+    const createSpy = vi.spyOn(URL, "createObjectURL");
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    await downloadFile("file content", "article.md");
+
+    const blobUrl = createSpy.mock.results[0]?.value as string;
+
+    await triggerOnChanged({
+      id: 42,
+      state: { current: "interrupted" },
+    });
+
+    expect(revokeSpy).toHaveBeenCalledWith(blobUrl);
+  });
+
+  it("does not revoke blob URL on non-terminal onChanged state", async () => {
+    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
+
+    vi.spyOn(URL, "createObjectURL");
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    await downloadFile("file content", "article.md");
+
+    await triggerOnChanged({
+      id: 42,
+      state: { current: "in_progress" },
+    });
+
+    expect(revokeSpy).not.toHaveBeenCalled();
+  });
+
+  it("revokes blob URL via 30s timeout fallback if onChanged does not fire", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(browser.downloads.download).mockResolvedValue(42);
+
+    const createSpy = vi.spyOn(URL, "createObjectURL");
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    await downloadFile("file content", "article.md");
+
+    const blobUrl = createSpy.mock.results[0]?.value as string;
+
+    // onChanged does not fire — advance past the 30s timeout.
+    vi.advanceTimersByTime(30_000);
+
+    expect(revokeSpy).toHaveBeenCalledWith(blobUrl);
+
+    vi.useRealTimers();
   });
 });
 

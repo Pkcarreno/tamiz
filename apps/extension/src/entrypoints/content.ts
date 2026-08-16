@@ -55,8 +55,13 @@ export default defineContentScript({
         showToast?.("Copied to clipboard");
       },
       onDownload: (content, filename) => {
-        sendMessage({ content, filename, type: "DOWNLOAD_FILE" });
-        showToast?.("Element downloaded");
+        sendMessage({ content, filename, type: "DOWNLOAD_FILE" })
+          .then(() => showToast?.("Element downloaded"))
+          .catch((err: unknown) =>
+            showToast?.(
+              `Download failed: ${err instanceof Error ? err.message : String(err)}`
+            )
+          );
       },
       onElementSelected: (element) => {
         clearHighlights();
@@ -142,7 +147,9 @@ export default defineContentScript({
                   showToast?.("Element downloaded");
                 } catch (err) {
                   console.error("Tamiz: download failed", err);
-                  showToast?.("Download failed");
+                  showToast?.(
+                    `Download failed: ${err instanceof Error ? err.message : String(err)}`
+                  );
                 }
                 machine.dispatch({ type: "DISMISS" });
               },

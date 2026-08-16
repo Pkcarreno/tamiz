@@ -92,6 +92,24 @@ describe("sendMessage", () => {
     expect(spy).toHaveBeenCalledWith({ type: "CONTENT_READY" });
   });
 
+  it("rejects when the background handler returns an error payload", async () => {
+    vi.spyOn(browser.runtime, "sendMessage").mockImplementation(() =>
+      Promise.resolve({ __error: "handler failure" })
+    );
+
+    await expect(
+      sendMessage({ message: "test", type: "TOAST" })
+    ).rejects.toThrow("handler failure");
+  });
+
+  it("resolves with undefined when the background returns a non-error response", async () => {
+    vi.spyOn(browser.runtime, "sendMessage").mockResolvedValue(undefined);
+
+    await expect(
+      sendMessage({ message: "test", type: "TOAST" })
+    ).resolves.toBeUndefined();
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -128,7 +146,7 @@ describe("onMessage", () => {
     expect(sendResponse).toHaveBeenCalled();
   });
 
-  it("calls sendResponse and logs the error when the callback rejects", async () => {
+  it("sends an error payload via sendResponse when the callback rejects", async () => {
     const { onMessage } = await import("./messaging.ts");
     const error = new Error("handler failure");
     const callback = vi.fn().mockRejectedValue(error);
@@ -156,12 +174,38 @@ describe("onMessage", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(sendResponse).toHaveBeenCalled();
+    // sendResponse must carry an error payload so Firefox's promise-based
+    // sendMessage rejects on the content-script side (spec §2.2).
+    expect(sendResponse).toHaveBeenCalledWith({ __error: "handler failure" });
     expect(consoleSpy).toHaveBeenCalledWith(
       "[tamiz] message handler error:",
       error
     );
 
+    consoleSpy.mockRestore();
+  });
+
+  it("sends an error payload with a stringified message when the callback rejects with a non-Error", async () => {
+    const { onMessage } = await import("./messaging.ts");
+    const callback = vi.fn().mockRejectedValue("boom");
+    const sendResponse = vi.fn();
+    // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional spy no-op
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const addListenerSpy = vi.spyOn(browser.runtime.onMessage, "addListener");
+
+    onMessage(callback);
+
+    const [[handler]] = addListenerSpy.mock.calls.slice(-1) as [
+      [(...args: unknown[]) => unknown],
+    ];
+
+    handler({ message: "test", type: "TOAST" }, {}, sendResponse);
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(sendResponse).toHaveBeenCalledWith({ __error: "boom" });
     consoleSpy.mockRestore();
   });
 });
