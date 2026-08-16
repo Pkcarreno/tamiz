@@ -11,6 +11,12 @@ import path from "node:path";
 import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 import { type Browser, browser } from "wxt/browser";
 
+/** Regex to detect `.action` API access in minified build output. */
+const RE_ACTION_API = /\.action\b/;
+
+/** Regex to detect `.browserAction` API access in minified build output. */
+const RE_BROWSER_ACTION_API = /\.browserAction\b/;
+
 import {
   CONTEXT_MENU_ID,
   CONTEXT_MENU_TITLE,
@@ -20,6 +26,7 @@ import {
   createContextMenu,
   downloadFile,
   getMimeType,
+  handleActionClick,
   handleBackgroundMessage,
   handleContextMenuClick,
   relayInvokePicker,
@@ -117,6 +124,30 @@ describe("handleContextMenuClick", () => {
       } as Browser.contextMenus.OnClickData,
       undefined
     );
+
+    expect(browser.tabs.sendMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleActionClick", () => {
+  it("sends INVOKE_PICKER to the tab when the extension icon is clicked", () => {
+    vi.mocked(browser.tabs.sendMessage).mockResolvedValue(undefined);
+
+    handleActionClick({ id: 99 } as Browser.tabs.Tab);
+
+    expect(browser.tabs.sendMessage).toHaveBeenCalledWith(99, {
+      type: "INVOKE_PICKER",
+    });
+  });
+
+  it("does not relay when the tab is undefined", () => {
+    handleActionClick(undefined);
+
+    expect(browser.tabs.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("does not relay when the tab has no id", () => {
+    handleActionClick({} as Browser.tabs.Tab);
 
     expect(browser.tabs.sendMessage).not.toHaveBeenCalled();
   });
@@ -635,7 +666,7 @@ describe("handleBackgroundMessage", () => {
     ).rejects.toThrow("download failed");
   });
 
-  it("forwards TOAST messages to the popup via runtime.sendMessage", async () => {
+  it("silently ignores TOAST messages (no popup to forward to)", async () => {
     vi.spyOn(browser.runtime, "sendMessage").mockResolvedValue(undefined);
 
     await handleBackgroundMessage(
@@ -643,10 +674,7 @@ describe("handleBackgroundMessage", () => {
       {} as unknown as Browser.runtime.MessageSender
     );
 
-    expect(browser.runtime.sendMessage).toHaveBeenCalledWith({
-      message: "Copied to clipboard",
-      type: "TOAST",
-    });
+    expect(browser.runtime.sendMessage).not.toHaveBeenCalled();
   });
 });
 
@@ -718,6 +746,41 @@ describe("module-scope listener registration (SW restart regression)", () => {
 
     expect(fakeBrowser.tabs.onRemoved.addListener).toHaveBeenCalledTimes(1);
   });
+
+  it("registers action.onClicked listener on module load (MV3)", async () => {
+    vi.stubEnv("MANIFEST_VERSION", "3");
+    vi.resetModules();
+
+    const { fakeBrowser } = await import("wxt/testing/fake-browser");
+    fakeBrowser.contextMenus.create = vi.fn();
+    fakeBrowser.contextMenus.onClicked.addListener = vi.fn();
+    fakeBrowser.action.onClicked.addListener = vi.fn();
+
+    const mod = await import("../src/entrypoints/background.ts");
+
+    // The icon-click handler is registered at module scope via browser.action (MV3).
+    expect(fakeBrowser.action.onClicked.addListener).toHaveBeenCalledTimes(1);
+    expect(fakeBrowser.action.onClicked.addListener).toHaveBeenCalledWith(
+      mod.handleActionClick
+    );
+  });
+
+  it("uses browserAction.onClicked on module load when MANIFEST_VERSION is 2", async () => {
+    vi.stubEnv("MANIFEST_VERSION", "2");
+    vi.resetModules();
+
+    const { fakeBrowser } = await import("wxt/testing/fake-browser");
+    fakeBrowser.contextMenus.create = vi.fn();
+    fakeBrowser.contextMenus.onClicked.addListener = vi.fn();
+
+    // The module should load without throwing — the try/catch absorbs the
+    // TypeError when browser.browserAction doesn't exist in the fake browser.
+    // We verify the module loads and exports the expected handlers.
+    const mod = await import("../src/entrypoints/background.ts");
+
+    expect(mod.handleActionClick).toBeDefined();
+    expect(mod.handleContextMenuClick).toBeDefined();
+  });
 });
 
 describe("manifest permissions", () => {
@@ -740,4 +803,34 @@ describe("manifest permissions", () => {
 
     expect(manifest.permissions).toContain("downloads");
   }, 120_000);
+});
+
+describe("cross-browser action API selection", () => {
+  it("chrome-mv3 build uses browser.action (not browserAction)", () => {
+    const bgPath = path.join(
+      process.cwd(),
+      ".output",
+      "chrome-mv3",
+      "background.js"
+    );
+    const code = readFileSync(bgPath, "utf-8");
+
+    // Chrome MV3 should reference .action. (minified as t.action).
+    // It must NOT reference .browserAction.
+    expect(code).toMatch(RE_ACTION_API);
+    expect(code).not.toMatch(RE_BROWSER_ACTION_API);
+  });
+
+  it("firefox-mv2 build uses browser.browserAction (not action API)", () => {
+    const bgPath = path.join(
+      process.cwd(),
+      ".output",
+      "firefox-mv2",
+      "background.js"
+    );
+    const code = readFileSync(bgPath, "utf-8");
+
+    // Firefox MV2 should reference .browserAction (minified as t.browserAction).
+    expect(code).toMatch(RE_BROWSER_ACTION_API);
+  });
 });

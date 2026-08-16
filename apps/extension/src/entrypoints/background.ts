@@ -211,6 +211,24 @@ export function handleContextMenuClick(
 }
 
 /**
+ * Handle a click on the extension toolbar icon.
+ *
+ * Relays an `INVOKE_PICKER` message to the content script in the clicked tab,
+ * defaulting to the content script's initial `barFormat` (markdown). Clicks on
+ * pages where this is not possible are silently ignored — callers without a
+ * valid tab id or where `relayInvokePicker` itself rejects are swallowed.
+ *
+ * @public
+ */
+export function handleActionClick(tab?: Browser.tabs.Tab): void {
+  if (tab?.id !== undefined) {
+    relayInvokePicker(tab.id).catch((err) =>
+      console.error("Failed to relay INVOKE_PICKER from action click:", err)
+    );
+  }
+}
+
+/**
  * Create the "Capture readable content" context menu item.
  *
  * Called on install/update via `onInstalled`. Swallows duplicate-id errors so
@@ -241,6 +259,22 @@ export function createContextMenu(): void {
 // runtime in a real browser.
 try {
   browser.contextMenus.onClicked.addListener(handleContextMenuClick);
+} catch {
+  /* Build-time module evaluation: browser APIs are mocked and unsupported. */
+}
+
+// Register the extension icon click listener at module scope so it survives MV3
+// service worker restarts — `onInstalled` only fires on install/update, not on
+// every restart. When the popup is absent, `action.onClicked` (MV3) or
+// `browserAction.onClicked` (MV2) fires on icon click; the handler relays the
+// same `INVOKE_PICKER` flow as the context menu.
+const actionApi =
+  import.meta.env.MANIFEST_VERSION === 2
+    ? browser.browserAction
+    : browser.action;
+
+try {
+  actionApi.onClicked.addListener(handleActionClick);
 } catch {
   /* Build-time module evaluation: browser APIs are mocked and unsupported. */
 }
@@ -374,7 +408,6 @@ export async function downloadFile(
  * - `INVOKE_PICKER` → relay to the sender's tab (or active tab as fallback)
  * - `COPY_TO_CLIPBOARD` → write to the clipboard
  * - `DOWNLOAD_FILE` → trigger a file download
- * - `TOAST` → forward to the popup if open
  * - `CONTENT_READY` → flush any pending `INVOKE_PICKER` for the sender's tab
  *
  * @public
@@ -408,11 +441,6 @@ export async function handleBackgroundMessage(
       break;
     case "DOWNLOAD_FILE":
       await downloadFile(message.content, message.filename);
-      break;
-    case "TOAST":
-      await browser.runtime.sendMessage(message).catch(() => {
-        /* no popup open — silently drop the toast */
-      });
       break;
     default:
       break;
