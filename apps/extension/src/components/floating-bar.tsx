@@ -7,12 +7,6 @@ import { computeBarPosition } from "../lib/position.ts";
 import { Button } from "./ui/button.tsx";
 import { Select, type SelectOption } from "./ui/select.tsx";
 
-/** Estimated width of the floating bar used for viewport clamping. */
-const BAR_WIDTH = 260;
-
-/** Estimated height of the floating bar used for viewport clamping. */
-const BAR_HEIGHT = 32;
-
 /** Format options presented in the bar's Select toggle. */
 const FORMAT_OPTIONS: SelectOption[] = [
   { label: "Markdown", value: "markdown" },
@@ -40,38 +34,31 @@ export interface FloatingActionBarProps {
 }
 
 /**
- * Thin vertical separator between interaction zones.
- */
-function Separator() {
-  return (
-    <div
-      aria-hidden="true"
-      class="mx-0.5 h-3 w-px bg-border transition-colors duration-fast group-hover/bar:bg-text-tertiary"
-    />
-  );
-}
-
-/**
  * Floating action bar rendered inside a Shadow DOM host.
  *
- * Single-row, compact layout with no container gaps or padding.
- * All buttons are ghost (text-only, hover changes text color).
- * Thin vertical separators divide interaction zones.
- * Format selector fills available width. macOS-native density.
+ * Two-row layout: Row 1 (top) has the format selector. Row 2 (bottom) has
+ * copy, download, and cancel buttons. Container width is `fit-content`,
+ * determined by the widest row. Zero visual gap between elements —
+ * separation is implicit via hover/focus accent color.
  *
  * @public
  */
 export function FloatingActionBar(props: FloatingActionBarProps) {
+  // biome-ignore lint/suspicious/noUnassignedVariables: SolidJS ref callback assigns this
+  let barRef: HTMLDivElement | undefined;
+
   const position = createMemo(() => {
     const el = props.element();
     if (!el) {
       return { left: 0, top: 0 };
     }
-    const rect = el.getBoundingClientRect();
+    const targetRect = el.getBoundingClientRect();
+    const barWidth = barRef?.getBoundingClientRect().width ?? 200;
+    const barHeight = 64; // 32px × 2 rows
     return computeBarPosition(
-      rect,
-      BAR_WIDTH,
-      BAR_HEIGHT,
+      targetRect,
+      barWidth,
+      barHeight,
       window.innerWidth,
       window.innerHeight
     );
@@ -83,50 +70,60 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
 
   return (
     <div
-      class="group/bar fixed z-[2147483647] flex items-center rounded-md border border-border bg-ground-raised px-1 shadow-md backdrop-blur-[12px] [animation:tz-lens-appear_var(--tz-duration-slow)_var(--tz-ease-out)]"
+      class="group/bar fixed z-[2147483647] flex w-fit flex-col rounded-md border border-border bg-ground-raised shadow-md [animation:tz-lens-appear_var(--tz-duration-slow)_var(--tz-ease-out)]"
       data-tamiz-bar
+      ref={barRef}
       style={{
         left: `${position().left}px`,
         top: `${position().top}px`,
       }}
     >
-      {/* Format selector — fills available width */}
-      <div class="min-w-0 flex-1">
-        <Select
-          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
-          onChange={handleFormatChange}
-          options={FORMAT_OPTIONS}
-          value={props.format()}
-          variant="subtle"
-        />
+      {/* Row 1: Format selector */}
+      <div class="flex h-[32px] items-center px-1">
+        <div class="min-w-0 flex-1">
+          <Select
+            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+            onChange={handleFormatChange}
+            options={FORMAT_OPTIONS}
+            value={props.format()}
+            variant="subtle"
+          />
+        </div>
       </div>
 
-      <Separator />
+      {/* Row separator */}
+      <div
+        aria-hidden="true"
+        class="h-px w-full border-border border-t border-solid"
+      />
 
-      {/* Action icons */}
-      <Button aria-label="Copy" onClick={props.onCopy} size="xs" variant="icon">
-        <Copy size={14} />
-      </Button>
-      <Button
-        aria-label="Download"
-        onClick={props.onDownload}
-        size="xs"
-        variant="icon"
-      >
-        <Download size={14} />
-      </Button>
-
-      <Separator />
-
-      {/* Cancel */}
-      <Button
-        aria-label="Cancel"
-        onClick={props.onCancel}
-        size="xs"
-        variant="ghost"
-      >
-        <X size={12} />
-      </Button>
+      {/* Row 2: Action buttons */}
+      <div class="flex h-[32px] items-center justify-center px-1">
+        <Button
+          aria-label="Copy"
+          onClick={props.onCopy}
+          size="xs"
+          variant="icon"
+        >
+          <Copy size={16} />
+        </Button>
+        <Button
+          aria-label="Download"
+          onClick={props.onDownload}
+          size="xs"
+          variant="icon"
+        >
+          <Download size={16} />
+        </Button>
+        <Button
+          aria-label="Cancel"
+          onClick={props.onCancel}
+          size="xs"
+          variant="ghost"
+        >
+          <X size={14} />
+        </Button>
+      </div>
     </div>
   );
 }

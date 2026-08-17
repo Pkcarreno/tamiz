@@ -278,7 +278,7 @@ describe("Select", () => {
     const select = container.querySelector(
       "[data-tamiz-select] select"
     ) as HTMLSelectElement;
-    expect(select.className).toContain("focus:shadow-focus");
+    expect(select.className).toContain("focus-visible:shadow-focus");
   });
 
   it("renders an empty select when options array is empty", () => {
@@ -354,5 +354,95 @@ describe("Select", () => {
       "[data-tamiz-select] select"
     ) as HTMLSelectElement;
     expect(select.getAttribute("data-testid")).toBe("my-select");
+  });
+
+  it("does not include color-scheme:light in select classes", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.className).not.toContain("color-scheme:light");
+  });
+
+  it("renders subtle variant at 32px height", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="subtle"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.className).toContain("h-[32px]");
+  });
+
+  it("renders standard variant at 32px height", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.className).toContain("h-[32px]");
+  });
+
+  it("does not use the undefined bg-surface-glass-hover token", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.className).not.toContain("bg-surface-glass-hover");
+  });
+
+  it("uses text-accent on hover for standard variant", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="standard"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.className).toContain("hover:enabled:text-accent");
+  });
+
+  it("uses text-accent on hover for subtle variant", () => {
+    const { container } = render(() => (
+      <Select
+        onChange={vi.fn()}
+        options={options}
+        value="markdown"
+        variant="subtle"
+      />
+    ));
+    const select = container.querySelector(
+      "[data-tamiz-select] select"
+    ) as HTMLSelectElement;
+    expect(select.className).toContain("hover:enabled:text-accent");
   });
 });

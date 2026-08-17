@@ -61,15 +61,15 @@ export interface SelectProps
  * Base classes (always applied) + `subtle` / `standard` variant classes.
  */
 const selectVariants = cva(
-  "color-scheme:light relative w-full appearance-none rounded-sm border border-transparent pr-6 font-medium font-sans transition-[color,border-color] duration-fast ease-out focus:shadow-focus focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-[0.35]",
+  "relative w-full appearance-none rounded-sm border border-transparent pr-6 font-medium font-sans transition-[color,border-color,box-shadow] duration-fast ease-out focus-visible:shadow-focus focus-visible:outline-none focus-visible:ring-0 active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-[0.35]",
   {
     defaultVariants: { variant: "standard" },
     variants: {
       variant: {
         standard:
-          "h-[28px] w-full border-border/60 bg-transparent px-2 text-[12px] text-text hover:enabled:bg-surface-glass-hover",
+          "h-[32px] w-full border-border/60 bg-transparent px-2 text-[12px] text-text hover:enabled:text-accent",
         subtle:
-          "h-[24px] border-transparent bg-transparent px-1 text-[11px] text-text-secondary hover:enabled:text-focus",
+          "h-[32px] border-transparent bg-transparent px-1 text-[11px] text-text-secondary hover:enabled:text-accent",
       },
     },
   }

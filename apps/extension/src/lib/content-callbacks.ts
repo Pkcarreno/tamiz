@@ -63,19 +63,17 @@ export function injectHighlightStyles(): void {
   // Hex values are hardcoded because these styles are injected into the host
   // page (not Shadow DOM), so CSS variables are unavailable. They are kept in
   // sync with design tokens defined in content.css :root:
-  //   #00d4ff            — --tz-focus
-  //   rgba(0,212,255,.15) — --tz-focus-dim
-  //   #33dfff            — --tz-focus-bright
+  //   #2563eb            — --tz-accent (light)
+  //   rgba(37,99,235,.12) — --tz-accent-dim (light)
+  //   #3b82f6            — --tz-accent-bright (light)
   style.textContent = `
     .tamiz-highlight {
-      outline: 2px solid #00d4ff !important;
-      outline-offset: 2px !important;
-      background-color: rgba(0, 212, 255, 0.15) !important;
+      box-shadow: 0 0 0 2px #2563eb !important;
+      background-color: rgba(37, 99, 235, 0.12) !important;
     }
     .tamiz-hover {
-      outline: 2px dashed #33dfff !important;
-      outline-offset: 1px !important;
-      background-color: rgba(51, 223, 255, 0.08) !important;
+      box-shadow: inset 0 0 0 2px #3b82f6 !important;
+      background-color: rgba(59, 130, 246, 0.08) !important;
     }
   `;
   document.head.appendChild(style);

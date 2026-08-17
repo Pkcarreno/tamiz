@@ -43,28 +43,28 @@ export interface ButtonProps
  * rendering when no variant/size is provided.
  */
 const buttonVariants = cva(
-  "inline-flex cursor-pointer select-none items-center justify-center gap-1.5 border border-transparent font-medium font-sans transition-[color,box-shadow,transform] duration-fast ease-out focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1 active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-[0.35]",
+  "inline-flex cursor-pointer select-none items-center justify-center gap-1.5 rounded-sm border border-transparent font-medium font-sans transition-[color,box-shadow,transform] duration-fast ease-out focus-visible:shadow-focus focus-visible:outline-none active:enabled:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-[0.35]",
   {
     compoundVariants: [
-      { class: "size-[24px]", size: "xs", variant: "icon" },
-      { class: "size-[26px]", size: "sm", variant: "icon" },
+      { class: "size-[32px]", size: "xs", variant: "icon" },
+      { class: "size-[32px]", size: "sm", variant: "icon" },
     ],
     defaultVariants: { size: "xs", variant: "ghost" },
     variants: {
       size: {
-        sm: "h-[26px] px-2 text-[12px]",
-        xs: "h-[24px] px-1.5 text-[11px]",
+        sm: "h-[32px] px-2 text-[12px]",
+        xs: "h-[32px] px-1.5 text-[11px]",
       },
       variant: {
-        ghost: "bg-transparent text-text-secondary hover:enabled:text-focus",
-        icon: "bg-transparent p-0 text-text-tertiary hover:enabled:text-focus",
+        ghost: "bg-transparent text-text-secondary hover:enabled:text-accent",
+        icon: "bg-transparent p-0 text-text-tertiary hover:enabled:text-accent",
       },
     },
   }
 );
 
 /**
- * Ghost-only button component for the Paper & Ink visual world.
+ * Ghost-only button component for the Precision Tool visual world.
  *
  * All buttons render as transparent surfaces with text/icon color hover
  * (link-like behavior). No background emphasis, no border. macOS-native

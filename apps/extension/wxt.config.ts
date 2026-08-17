@@ -38,6 +38,13 @@ export default defineConfig({
     plugins: [
       tailwindcss(),
       {
+        enforce: "post",
+        name: "shadow-dom-root-selector",
+        transformCSS(css) {
+          return css.replaceAll(":root", ":host");
+        },
+      },
+      {
         buildStart() {
           const iconSource = resolve(process.cwd(), "src/assets/icon.svg");
           if (!existsSync(iconSource)) {

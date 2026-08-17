@@ -146,9 +146,9 @@ describe("FloatingActionBar", () => {
         .getByRole("button", { name: "Copy" })
         .closest("[data-tamiz-bar]") as HTMLElement;
 
-      // computeBarPosition(DOMRect(100,200,200,50), 260, 32, 1024, 768)
-      // top = 200 - 32 - 8 = 160, left = 300 + 8 = 308
-      expect(bar.style.top).toBe(`${160}px`);
+      // computeBarPosition(DOMRect(100,200,200,50), 200, 64, 1024, 768)
+      // top = 200 - 64 - 8 = 128, left = 300 + 8 = 308
+      expect(bar.style.top).toBe(`${128}px`);
       expect(bar.style.left).toBe(`${308}px`);
     });
 
@@ -176,7 +176,7 @@ describe("FloatingActionBar", () => {
       const bar = screen
         .getByRole("button", { name: "Copy" })
         .closest("[data-tamiz-bar]") as HTMLElement;
-      expect(bar.style.top).toBe(`${160}px`);
+      expect(bar.style.top).toBe(`${128}px`);
 
       unmount();
 
@@ -202,11 +202,11 @@ describe("FloatingActionBar", () => {
         .getByRole("button", { name: "Copy" })
         .closest("[data-tamiz-bar]") as HTMLElement;
 
-      // computeBarPosition(DOMRect(600,500,200,50), 260, 32, 1024, 768)
-      // top = 500 - 32 - 8 = 460, left = 800 + 8 = 808
-      // left 808 + 260 = 1068 > 1016 → clamp: left = 1024 - 260 - 8 = 756
-      expect(barB.style.top).toBe(`${460}px`);
-      expect(barB.style.left).toBe(`${756}px`);
+      // computeBarPosition(DOMRect(600,500,200,50), 200, 64, 1024, 768)
+      // top = 500 - 64 - 8 = 428, left = 800 + 8 = 808
+      // left 808 + 200 = 1008 < 1016 → no clamp
+      expect(barB.style.top).toBe(`${428}px`);
+      expect(barB.style.left).toBe(`${808}px`);
     });
   });
 

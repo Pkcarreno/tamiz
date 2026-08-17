@@ -161,19 +161,27 @@ describe("injectHighlightStyles", () => {
     expect(styles.length).toBe(1);
   });
 
-  it("uses focus hex #00d4ff synced to --tz-focus design token", () => {
+  it("uses accent hex #2563eb synced to --tz-accent design token", () => {
     injectHighlightStyles();
     const css =
       document.getElementById("tamiz-highlight-styles")?.textContent ?? "";
-    expect(css).toContain("#00d4ff");
-    expect(css).not.toContain("#3b82f6");
+    expect(css).toContain("#2563eb");
+    expect(css).not.toContain("#00d4ff");
   });
 
-  it("uses focus-bright hex #33dfff synced to --tz-focus-bright design token", () => {
+  it("uses accent-bright hex #3b82f6 synced to --tz-accent-bright design token", () => {
     injectHighlightStyles();
     const css =
       document.getElementById("tamiz-highlight-styles")?.textContent ?? "";
-    expect(css).toContain("#33dfff");
-    expect(css).not.toContain("#93c5fd");
+    expect(css).toContain("#3b82f6");
+    expect(css).not.toContain("#33dfff");
+  });
+
+  it("uses box-shadow instead of outline for cross-browser consistency", () => {
+    injectHighlightStyles();
+    const css =
+      document.getElementById("tamiz-highlight-styles")?.textContent ?? "";
+    expect(css).toContain("box-shadow");
+    expect(css).not.toContain("outline");
   });
 });

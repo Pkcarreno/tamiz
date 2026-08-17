@@ -50,14 +50,14 @@ describe("Button", () => {
   it("renders xs size (default)", () => {
     render(() => <Button>Small</Button>);
     const btn = screen.getByText("Small") as HTMLButtonElement;
-    expect(btn.classList.contains("h-[24px]")).toBe(true);
+    expect(btn.classList.contains("h-[32px]")).toBe(true);
     expect(btn.classList.contains("px-1.5")).toBe(true);
   });
 
   it("renders sm size", () => {
     render(() => <Button size="sm">Small</Button>);
     const btn = screen.getByText("Small") as HTMLButtonElement;
-    expect(btn.classList.contains("h-[26px]")).toBe(true);
+    expect(btn.classList.contains("h-[32px]")).toBe(true);
     expect(btn.classList.contains("px-2")).toBe(true);
   });
 
@@ -86,7 +86,7 @@ describe("Button", () => {
       </Button>
     ));
     const btn = screen.getByText("Icon").closest("button") as HTMLButtonElement;
-    expect(btn.classList.contains("size-[24px]")).toBe(true);
+    expect(btn.classList.contains("size-[32px]")).toBe(true);
   });
 
   it("renders icon variant with sm square dimensions when size is sm", () => {
@@ -96,6 +96,32 @@ describe("Button", () => {
       </Button>
     ));
     const btn = screen.getByText("Icon").closest("button") as HTMLButtonElement;
-    expect(btn.classList.contains("size-[26px]")).toBe(true);
+    expect(btn.classList.contains("size-[32px]")).toBe(true);
+  });
+
+  it("uses text-accent on hover for ghost variant", () => {
+    render(() => <Button variant="ghost">Ghost</Button>);
+    const btn = screen.getByText("Ghost") as HTMLButtonElement;
+    expect(btn.className).toContain("hover:enabled:text-accent");
+  });
+
+  it("uses text-accent on hover for icon variant", () => {
+    render(() => (
+      <Button variant="icon">
+        <span>Icon</span>
+      </Button>
+    ));
+    const btn = screen.getByText("Icon").closest("button") as HTMLButtonElement;
+    expect(btn.className).toContain("hover:enabled:text-accent");
+  });
+
+  it("does not use the undefined text-focus token", () => {
+    render(() => (
+      <Button variant="ghost">
+        <span>Icon</span>
+      </Button>
+    ));
+    const btn = screen.getByText("Icon").closest("button") as HTMLButtonElement;
+    expect(btn.className).not.toContain("text-focus");
   });
 });

@@ -169,6 +169,19 @@ export default defineContentScript({
 
     ui.mount();
 
+    // Dark mode: detect prefers-color-scheme and toggle .dark on shadow root host.
+    // CSS custom properties pierce shadow DOM, so .dark on :root inside the
+    // shadow root activates the dark token set from content.css.
+    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    function applyDarkMode() {
+      const host = ui.shadowHost;
+      if (host) {
+        host.classList.toggle("dark", darkQuery.matches);
+      }
+    }
+    applyDarkMode();
+    darkQuery.addEventListener("change", applyDarkMode);
+
     // Keyboard shortcut to dismiss picker
     ctx.addEventListener(document, "keydown", (e) => {
       if ((e as KeyboardEvent).key === "Escape") {
