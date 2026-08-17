@@ -1,6 +1,6 @@
 ---
 name: Tamiz
-description: Precision instrument for extracting clean content from web pages for LLM workflows
+description: Design system for the Tamiz browser extension
 colors:
   ground: "#f5f5f7"
   ground-raised: "#ffffff"
@@ -85,152 +85,147 @@ components:
 
 ## Overview
 
-**Creative Direction: "Paper & Ink"**
+**Creative direction: Paper & Ink**
 
-Tamiz is a precision instrument for extracting signal from noise. The visual system draws from stationery and craft — warm paper grounds, near-black ink text, and the restraint of a well-made tool. Every surface exists to bring content into focus, then recede. The interface is invisible until needed.
+The visual system uses warm neutral backgrounds and dark text. The interface stays hidden until the user needs it. The palette has warm tones and one orange accent. The accent color shows only on active states. The typography uses the default fonts of the operating system.
 
-The palette is deliberately restrained: warm paper tones with a single burnt orange accent that appears only on active focus states. Typography is the system stack, chosen for native integration over personality. The extension should feel like part of the browser, not a third-party add-on.
+**Key characteristics:**
 
-**Key Characteristics:**
-- Light warm paper ground (#f5f5f7) with white raised surfaces
-- Single burnt orange accent (#c45d2e) — appears only on active focus states
-- Ghost interactions: no background emphasis, text-color hover (link-like)
-- macOS-native density: compact, accessible, not oversized
-- Hairline separators between interaction zones
-- System typography for native feel
+1. Use the warm background color (#f5f5f7) with white raised surfaces.
+2. Use the orange accent color (#c45d2e) only for active states.
+3. Use ghost buttons. Do not emphasize the background. Change the text color on hover.
+4. Make the density compact. Do not make elements too large.
+5. Put thin lines between interaction zones.
+6. Use system fonts.
 
 ## Colors
 
-The palette is a restrained warm neutral system with one saturated accent. The accent appears only on interactive focus states; everything else is ground.
+The palette has warm neutral colors and one accent color. The accent color shows only on active states. All other areas use background colors.
 
 ### Primary
 
-- **Burnt Orange** (#c45d2e): The color of focus. Used exclusively for active focus states — the floating bar's selected format, the button's primary state, the element highlight ring. Its rarity is the point: the user sees it only when they're actively capturing content.
+- **Orange** (#c45d2e): Use this color for active states. Examples include the selected format, the primary button state, and the highlight ring.
 
 ### Neutral
 
-- **Warm Paper** (#f5f5f7): The ground. The browser extension's light canvas, chosen for low visual weight and warmth.
-- **White Surface** (#ffffff): Elevated cards and panels (floating bar, toast). Pure white for depth hierarchy on light ground.
-- **Ink** (#1d1d1f): Primary text on light ground. High contrast (16.1:1), near-black for readability.
-- **Graphite** (#6e6e73): Secondary text, descriptions, labels. 5.2:1 contrast — clearly readable but subordinate.
-- **Silver** (#aeaeb2): Tertiary text, placeholders, disabled states. Use sparingly.
+- **Warm background** (#f5f5f7): Use this color for the primary background.
+- **White surface** (#ffffff): Use this color for elevated cards and panels.
+- **Ink text** (#1d1d1f): Use this color for primary text.
+- **Graphite text** (#6e6e73): Use this color for secondary text, descriptions, and labels.
+- **Silver text** (#aeaeb2): Use this color for tertiary text, placeholders, and disabled states.
 
-### Named Rules
+### Named rules
 
-**The Focus Rarity Rule.** The burnt orange accent appears on ≤15% of any given surface. Its rarity makes the focus moment feel significant. If orange appears everywhere, it's decoration, not function.
+**The focus limit rule.** Put the orange accent on less than 15 percent of a surface.
 
-**The Ground Purity Rule.** Never use colored overlays or tinted backgrounds on the ground surfaces. Depth comes from elevation and shadow, not hue shifts.
+**The pure background rule.** Do not use color overlays on background surfaces. Do not tint background surfaces. Use elevation and shadow to show depth.
 
 ## Typography
 
-**Display Font:** System stack (-apple-system, SF Pro Text, Inter, system-ui)
-**Body Font:** Same system stack
-**Mono Font:** SF Mono, JetBrains Mono, Fira Code (for data and measurements)
+**Display font:** System fonts (-apple-system, SF Pro Text, Inter, system-ui).
+**Body font:** System fonts.
+**Mono font:** SF Mono, JetBrains Mono, Fira Code.
 
-**Character:** The typography is invisible by design. System faces blend with the browser's native UI, reinforcing that Tamiz is a tool, not a product. Hierarchy comes from weight and size, not font personality.
+Use the system fonts to match the user interface of the browser. Change font weight and size to show hierarchy.
 
 ### Hierarchy
 
-- **Display** (600 weight, 15px, -0.01em tracking): Popup title. Tight, confident, present but not loud.
-- **Body** (400 weight, 13px, 1.5 line-height): Primary content text. The workhorse.
-- **Label** (500 weight, 10px, 0.06em tracking, uppercase): Field labels. Small, scannable, functional.
-- **Mono** (400 weight, 12px): Data values, measurements, code references. Never decorative.
+- **Display** (600 weight, 15px, -0.01em tracking): Use for titles.
+- **Body** (400 weight, 13px, 1.5 line-height): Use for primary text.
+- **Label** (500 weight, 10px, 0.06em tracking, uppercase): Use for field labels.
+- **Mono** (400 weight, 12px): Use for data values, measurements, and code.
 
-### Named Rules
+### Named rules
 
-**The System Stack Rule.** Never import custom fonts. The system stack is the point — native integration over brand expression.
+**The system font rule.** Do not import custom fonts. Use the default system fonts.
 
 ## Layout
 
-Tamiz operates at small fixed dimensions: the popup is 280px wide, the floating bar is ~260px wide, and content highlights overlay any page. There is no grid — components are self-contained panels with internal padding.
+The extension uses small fixed dimensions. The floating bar is approximately 260px wide. The system does not use a grid. Components are independent panels.
 
-**Spacing rhythm:** 4px base unit, scaled as 4/8/12/16/20/24. Tight internal spacing, generous external separation. More space above headings than below.
+**Spacing rhythm:** Use a 4px base unit. Scale the spacing as 4, 8, 12, 16, 20, or 24px. Keep internal spacing tight. Put more space above headings than below headings.
 
-**Density:** Compact. macOS-native. These are utility surfaces, not content pages. Every pixel serves a function.
+**Density:** Make the layout compact.
 
-## Elevation & Depth
+## Elevation and Depth
 
-The system uses minimal shadows on light ground. Depth comes from elevation differences — white surfaces on warm paper ground — with subtle shadows for floating elements.
+The system uses small shadows on light backgrounds. Use white surfaces on the warm background to show depth. Use shadows for floating elements.
 
-### Shadow Vocabulary
+### Shadows
 
-- **Small** (`0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)`): Subtle lift for buttons and small elements.
-- **Medium** (`0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)`): Floating bar, elevated panels.
-- **Large** (`0 4px 16px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.04)`): Toast notifications, overlays.
-- **Focus Glow** (`0 0 0 2px rgba(196,93,46,0.12), 0 0 12px rgba(196,93,46,0.2)`): Active focus ring. The warm glow signals precision.
+- **Small** (`0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)`): Use for buttons and small elements.
+- **Medium** (`0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)`): Use for the floating bar and elevated panels.
+- **Large** (`0 4px 16px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.04)`): Use for toast notifications and overlays.
+- **Focus glow** (`0 0 0 2px rgba(196,93,46,0.12), 0 0 12px rgba(196,93,46,0.2)`): Use for the active focus ring.
 
-### Named Rules
+### Named rules
 
-**The Light Ground Rule.** On light surfaces, shadows are minimal and warm. Heavy shadows feel wrong on paper — they belong on dark grounds.
+**The light background rule.** Make shadows small on light surfaces. Do not use heavy shadows.
 
 ## Shapes
 
-The form language is compact but soft. Radii are moderate — not sharp, not bubbly.
+Use moderate border radii for elements.
 
-- **Small** (4px): Compact elements like small buttons, select options.
-- **Medium** (6px): Standard buttons, panels, floating bar. The default radius.
-- **Large** (8px): Toast notifications, larger containers.
-- **Pill** (999px): Toast shape. Fully rounded for a floating, ephemeral feel.
+- **Small radius** (4px): Use for small buttons and select options.
+- **Medium radius** (6px): Use for standard buttons, panels, and the floating bar.
+- **Large radius** (8px): Use for toast notifications and large containers.
+- **Pill radius** (999px): Use for the toast shape.
 
-**Border treatment:** 1px solid borders at 10% black opacity. Barely visible at rest, they define edges without visual weight.
+**Borders:** Use a 1px solid border at 10 percent black opacity.
 
 ## Components
 
 ### Buttons
 
-Two variants: ghost (text-only) and icon (icon-only square). No primary, no secondary emphasis — all buttons are ghost-like. Hover changes text/icon color (link-like behavior), never background.
+The system has a ghost button and an icon button. Do not use a primary button or a secondary button. Do not change the background color on hover.
 
-- **Ghost:** Transparent, text-only. For Cancel and text actions. Hover changes text color to focus.
-- **Icon:** Transparent, icon-only square. For Copy and Download (lucide-solid icons). Hover changes icon color to focus.
-- **States:** Hover (text color to focus), active (scale 0.97), disabled (0.35 opacity), focus-visible (2px orange outline).
+- **Ghost button:** A transparent button with text. Use for Cancel actions and text actions. Change the text color to the accent color on hover.
+- **Icon button:** A transparent square button with an icon. Use for Copy actions and Download actions. Change the icon color to the accent color on hover.
+- **Button states:** On hover, change the color to the accent color. On active, scale to 0.97. On disabled, set the opacity to 0.35. On focus, add a 2px orange outline.
 
-### Select (Native `<select>`)
+### Select
 
-Two visual variants: subtle (floating bar) and standard (popup). Both are minimal — no background emphasis, no visible border at rest.
+The system uses the native select element. It has a subtle version and a standard version. Do not emphasize the background.
 
-- **Subtle:** Borderless, full-width, ghost-like. For floating bar format selection.
-- **Standard:** Minimal border, for popup/form layouts.
-- **States:** Focus (warm glow ring), hover (subtle text color change).
+- **Subtle select:** A borderless element. Use for format selection in the floating bar.
+- **Standard select:** An element with a minimal border. Use for forms.
+- **Select states:** On focus, show the focus glow ring. On hover, change the text color.
 
 ### Toast
 
-Ephemeral notification. Pill-shaped, light surface, centered at bottom of viewport.
+A short message at the bottom of the screen.
 
-- **Shape:** Full pill (999px radius).
-- **Surface:** White ground (#ffffff) with medium shadow.
-- **Animation:** Fade + scale from below.
+- **Shape:** Pill radius (999px).
+- **Surface:** White background (#ffffff) with a medium shadow.
+- **Animation:** Fade and scale from the bottom.
 
-### Floating Bar
+### Floating bar
 
-The core interaction surface. Single-row layout, no container gaps or padding.
+A horizontal bar with a single row layout. The container has no gaps and no padding.
 
-- **Surface:** White ground (#ffffff) with medium shadow and 12px backdrop blur.
-- **Shape:** 6px radius (medium). Single-row layout.
-- **Animation:** Scale + fade entrance (280ms ease-out).
-- **Content:** Format selector (fill width) → separator → Copy icon → Download icon → separator → Cancel.
-- **Separators:** Thin 1px vertical lines between interaction zones. Become visible on hover of the group.
+- **Surface:** White background (#ffffff) with a medium shadow and a 12px backdrop blur.
+- **Shape:** Medium radius (6px).
+- **Animation:** Scale and fade entrance for 280 milliseconds.
+- **Content:** Format selector, separator, Copy icon, Download icon, separator, Cancel button.
+- **Separators:** A 1px vertical line between interaction zones. Show the separator when the user hovers over the group.
 
-### Popup
 
-Configuration surface. 280px wide, light ground, minimal chrome.
 
-- **Surface:** Warm paper ground (#f5f5f7). No borders, no shadows — it sits flat.
-- **Typography:** Title (display), description (secondary), labels (tertiary uppercase).
-- **Layout:** Vertical stack, generous spacing between sections.
+## Rules
 
-## Do's and Don'ts
+### Do these things
 
-### Do:
-- **Do** use the burnt orange accent only for active focus states — selection, hover highlight, primary action.
-- **Do** keep buttons ghost-like: text-only or icon-only, hover changes color not background.
-- **Do** use macOS-native density: compact, accessible, not oversized.
-- **Do** use thin separators between interaction zones in the floating bar.
-- **Do** keep typography at system defaults — the native feel is the brand.
+1. Use the orange accent only for active states.
+2. Use ghost buttons. Change the color on hover.
+3. Make the layout compact.
+4. Put thin separators between interaction zones in the floating bar.
+5. Use default system fonts.
 
-### Don't:
-- **Don't** use orange as a general accent — it's reserved for the focus moment.
-- **Don't** add primary or emphasis buttons — all actions are ghost-like.
-- **Don't** use heavy shadows on light ground — they feel wrong on paper.
-- **Don't** import custom fonts — the system stack is intentional.
-- **Don't** use gradient backgrounds or decorative overlays — depth comes from elevation.
-- **Don't** make elements oversized — macOS density is the reference.
+### Do not do these things
+
+1. Do not use the orange color as a general accent.
+2. Do not add primary buttons.
+3. Do not use heavy shadows on the light background.
+4. Do not import custom fonts.
+5. Do not use gradient backgrounds or color overlays.
+6. Do not make elements too large.

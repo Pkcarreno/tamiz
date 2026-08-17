@@ -2,104 +2,120 @@
 
 ## Project Overview
 
-Tamiz is a monorepo for a browser extension that visually selects page content and converts it to markdown or clean HTML. The core conversion logic lives in agnostic packages reusable outside the extension.
+Tamiz is a monorepo for a browser extension. This extension selects page content visually. The extension converts the content to markdown or clean HTML. The core conversion logic is in agnostic packages. You can use these packages outside the extension.
 
 ## Monorepo Structure
 
-```
+```text
 tamiz/
 ├── apps/
-│   └── extension/          # Browser extension (WXT + SolidJS)
+│   └── extension/          # Browser extension (WXT + SolidJS + Tailwind v4)
 ├── packages/
-│   └── <converter-name>/   # Agnostic HTML conversion logic
+│   └── html-converter/     # Agnostic HTML conversion library
 ├── package.json            # Root — monorepo tools only
 ├── turbo.json
-├── biome.json
-└── AGENTS.md               # This file
+├── biome.jsonc
+└── AGENTS.md
 ```
 
-## Tooling (Root)
+## Root Tools
 
-- **Runtime/Package Manager**: Bun
-- **Build Orchestration**: Turborepo
-- **Linter/Formatter**: Biome + Ultracite preset
-- **Git Hooks**: Lefthook
-- **Commits**: Commitizen
+- Runtime and Package Manager: Bun
+- Build Orchestration: Turborepo
+- Linter and Formatter: Biome with the Ultracite preset
+- Git Hooks: Lefthook
+- Commits: Commitizen
 
 ## Conventions
 
 ### Naming
 
-- All packages use the `@tamiz/<name>` scope
-- Package names are lowercase, hyphen-separated
+- Use the `@tamiz/<name>` scope for all packages.
+- Write package names in lowercase letters.
+- Separate words in package names with hyphens.
 
-### Code Language
+### Language Standard
 
-- All code, comments, READMEs, and documentation in **English**
-- Code must be self-documenting. Comments explain **why**, not **what**
+- Write all code, comments, README files, and documentation in English.
+- Make the code self-documenting.
+- Write comments to explain the reason for the code. Do not explain what the code does.
+- You must use STE-flavored Simplified Technical English for all text.
+- This rule applies to comments, documentation, TSDoc blocks, user interface strings, error messages, and README text.
+- Use the `ste-writing` skill as the standard.
 
 ### Dependencies
 
-- **Only indispensable dependencies**. Prefer dependencies that reduce code complexity and maintenance burden.
-- Only from trusted, high-performance sources
-- Install with: `bun add --filter @tamiz/<package> <dep>@latest`
-- Never add global tooling deps to workspace packages — root only
+- Add only necessary dependencies.
+- Use dependencies that decrease code complexity.
+- Use dependencies that decrease maintenance work.
+- Get dependencies from trusted sources.
+- Use this command to install a dependency: `bun add --filter @tamiz/<package> <dep>@latest`
+- Do not install global tool dependencies in the workspace packages.
+- Install global tools in the root directory only.
 
 ### Documentation
 
-- Do not over-document trivial implementations
-- **TSDOC is MANDATORY** for:
-  - All methods, interfaces, type aliases, and module entry point exports
-  - Pure functions managing complex logic or state mutations
-  - Custom protocol implementations or parsers where the "why" or I/O shapes are non-obvious
+- Do not write documentation for simple code.
+- Write TSDoc blocks for all methods, interfaces, type aliases, and module exports.
+- Write TSDoc blocks for pure functions that manage complex logic or state mutations.
+- Write TSDoc blocks for custom protocols or parsers.
 
 ### Public API Marking
 
-All exported types, interfaces, and component props forming the public API MUST have `@public` in their TSDoc block:
-
-- **Grouped exports**: `/** @public */` directly above the export block
-- **Inline exports with TSDOC**: Merge `@public` into existing block (no separate block)
-- **Inline exports without TSDOC**: `/** @public */` directly above the declaration
+- Add the `@public` tag to the TSDoc block for all exported types, interfaces, and component properties. These items form the public API.
+- For grouped exports, put `/** @public */` directly above the export block.
+- For inline exports with a TSDoc block, put the `@public` tag in the existing block. Do not make a separate block.
+- For inline exports without a TSDoc block, put `/** @public */` directly above the declaration.
 
 ### Exports
 
-- **AVOID barrel files**. Export directly from the module.
+- Do not use barrel files.
+- Export items directly from the module.
 
 ### TypeScript
 
-- **Strict Mode**: `strict: true`. Avoid `any`; prefer `unknown`
-- **Inference**: Use Type Inference for local variables
-- **Types**: Prefer `interface` for public APIs and props. Use explicit typing for parameters/returns where it enhances clarity
-- **Utility Types**: Use `Record<string, unknown>` for generic objects instead of `object` or `any`
-- **Enums**: Avoid enums. Use JavaScript objects or TypeScript unions instead
-- Leverage type narrowing and `as const` assertions
+- Use strict mode: `strict: true`.
+- Do not use the `any` type. Use the `unknown` type instead.
+- Use type inference for local variables.
+- Use `interface` for public APIs and component properties.
+- Type the parameters and return values explicitly to improve clarity.
+- Use `Record<string, unknown>` for generic objects. Do not use `object` or `any`.
+- Do not use enums. Use JavaScript objects or TypeScript unions.
+- Use type narrowing.
+- Use `as const` assertions.
 
 ### Modern JavaScript
 
-- Use `for...of`, optional chaining (`?.`), and nullish coalescing (`??`)
-- `const` by default. Never `var`
-- `async/await` instead of promise chains. Always `await` promises
+- Use `for...of` loops.
+- Use optional chaining (`?.`).
+- Use nullish coalescing (`??`).
+- Use `const` as the default. Do not use `var`.
+- Use `async` and `await` instead of promise chains.
+- Always `await` promises.
+
+### Testing
+
+- Use Vitest as the test runner for all workspaces.
+- Put the test files next to the source files.
+- Use the same file name with a `.test` suffix. For example, use `picker.test.ts` for `picker.ts`.
 
 ## Workspace Awareness
 
-- Always verify which app or package you are modifying
-- Add dependencies to the correct workspace `package.json`, not root
-- Root `package.json` is exclusively for monorepo management tools
+- Identify the correct app or package before you change it.
+- Add dependencies to the correct workspace `package.json` file.
+- Do not add workspace dependencies to the root `package.json` file.
+- Use the root `package.json` file for monorepo management tools only.
 
 ## Validation Protocol
 
-**After every change**, run the full validation pipeline:
-
-```bash
-bun run validate
-```
-
-This executes in order: `lint → typecheck → test`
-
-Never skip steps. Never commit without a green validation.
+- Run the full validation pipeline after every change.
+- Run this command: `bun run validate`
+- This command runs these steps in order: `lint`, `typecheck`, `test`.
+- Do not skip steps.
+- Do not commit code before the validation passes.
 
 ## Scope Discipline
 
-- No over-engineering
-- No elaborate visual designs or heavy effects
-- Logic must be agnostic — runnable in any terminal without modification
+- Do not over-engineer the code.
+- Write agnostic logic.
+- Make sure that the logic runs in any terminal without modifications.
