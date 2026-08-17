@@ -7,7 +7,12 @@ import {
   hoverHighlight,
   injectHighlightStyles,
 } from "../lib/content-callbacks.ts";
-import { sendMessage } from "../lib/messaging.ts";
+import {
+  type Message,
+  onMessage,
+  sendMessage,
+  setTransport,
+} from "../lib/messaging.ts";
 import { PickerStateMachine } from "../lib/picker.ts";
 
 /**
@@ -22,6 +27,31 @@ import { PickerStateMachine } from "../lib/picker.ts";
 export default defineContentScript({
   cssInjectionMode: "ui",
   async main(ctx) {
+    setTransport({
+      onMessage: (handler) => {
+        browser.runtime.onMessage.addListener(
+          (
+            message: unknown,
+            sender: unknown,
+            sendResponse: (response?: unknown) => void
+          ) => {
+            handler(message as Message, sender)
+              .then((result) => sendResponse(result))
+              .catch((err) => {
+                console.error("[tamiz] message handler error:", err);
+                const errorMsg =
+                  err instanceof Error
+                    ? err.message
+                    : String(err ?? "Unknown error");
+                sendResponse({ __error: errorMsg });
+              });
+            return true;
+          }
+        );
+      },
+      sendMessage: (msg) => browser.runtime.sendMessage(msg),
+    });
+
     const [{ createSignal }, { render }, { ContentApp }] = await Promise.all([
       import("solid-js"),
       import("solid-js/web"),
@@ -237,14 +267,14 @@ export default defineContentScript({
     );
 
     // Listen for messages from popup/background
-    browser.runtime.onMessage.addListener((message: unknown) => {
-      const msg = message as { type: string; format?: "markdown" | "html" };
-      if (msg.type === "INVOKE_PICKER") {
-        if (msg.format) {
-          setBarFormat(msg.format);
+    onMessage((message) => {
+      if (message.type === "INVOKE_PICKER") {
+        if (message.format) {
+          setBarFormat(message.format);
         }
         machine.dispatch({ type: "INVOKE" });
       }
+      return Promise.resolve();
     });
 
     // Announce readiness so the background can flush any pending INVOKE_PICKER

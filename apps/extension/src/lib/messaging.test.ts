@@ -1,7 +1,12 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { browser } from "wxt/browser";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { type Message, sendMessage } from "./messaging.ts";
+import {
+  type Message,
+  type MessageTransport,
+  onMessage,
+  sendMessage,
+  setTransport,
+} from "./messaging.ts";
 
 describe("Message types", () => {
   it("TOAST is a valid message variant with a message string", () => {
@@ -34,178 +39,149 @@ describe("Message types", () => {
 });
 
 describe("sendMessage", () => {
-  it("forwards a TOAST message through browser.runtime.sendMessage", async () => {
-    const spy = vi
-      .spyOn(browser.runtime, "sendMessage")
-      .mockResolvedValue(undefined);
-    const toast: Message = { message: "Copied!", type: "TOAST" };
-    await sendMessage(toast);
-    expect(spy).toHaveBeenCalledWith(toast);
+  let mockTransport: MessageTransport;
+
+  beforeEach(() => {
+    mockTransport = {
+      onMessage: vi.fn(),
+      sendMessage: vi.fn().mockResolvedValue(undefined),
+    };
+    setTransport(mockTransport);
   });
 
-  it("forwards an INVOKE_PICKER message with format", async () => {
-    const spy = vi
-      .spyOn(browser.runtime, "sendMessage")
-      .mockResolvedValue(undefined);
+  afterEach(() => {
+    setTransport(null as never);
+    vi.clearAllMocks();
+  });
+
+  it("delegates to transport.sendMessage with the message payload", async () => {
+    const toast: Message = { message: "Copied!", type: "TOAST" };
+    await sendMessage(toast);
+    expect(mockTransport.sendMessage).toHaveBeenCalledWith(toast);
+  });
+
+  it("delegates INVOKE_PICKER with format through transport", async () => {
     await sendMessage({ format: "markdown", type: "INVOKE_PICKER" });
-    expect(spy).toHaveBeenCalledWith({
+    expect(mockTransport.sendMessage).toHaveBeenCalledWith({
       format: "markdown",
       type: "INVOKE_PICKER",
     });
   });
 
-  it("forwards COPY_TO_CLIPBOARD with content", async () => {
-    const spy = vi
-      .spyOn(browser.runtime, "sendMessage")
-      .mockResolvedValue(undefined);
-    await sendMessage({
-      content: "some text",
-      type: "COPY_TO_CLIPBOARD",
-    });
-    expect(spy).toHaveBeenCalledWith({
+  it("delegates COPY_TO_CLIPBOARD with content through transport", async () => {
+    await sendMessage({ content: "some text", type: "COPY_TO_CLIPBOARD" });
+    expect(mockTransport.sendMessage).toHaveBeenCalledWith({
       content: "some text",
       type: "COPY_TO_CLIPBOARD",
     });
   });
 
-  it("forwards DOWNLOAD_FILE with content and filename", async () => {
-    const spy = vi
-      .spyOn(browser.runtime, "sendMessage")
-      .mockResolvedValue(undefined);
+  it("delegates DOWNLOAD_FILE with content and filename through transport", async () => {
     await sendMessage({
       content: "data",
       filename: "file.md",
       type: "DOWNLOAD_FILE",
     });
-    expect(spy).toHaveBeenCalledWith({
+    expect(mockTransport.sendMessage).toHaveBeenCalledWith({
       content: "data",
       filename: "file.md",
       type: "DOWNLOAD_FILE",
     });
   });
 
-  it("forwards CONTENT_READY through browser.runtime.sendMessage", async () => {
-    const spy = vi
-      .spyOn(browser.runtime, "sendMessage")
-      .mockResolvedValue(undefined);
+  it("delegates CONTENT_READY through transport", async () => {
     await sendMessage({ type: "CONTENT_READY" });
-    expect(spy).toHaveBeenCalledWith({ type: "CONTENT_READY" });
+    expect(mockTransport.sendMessage).toHaveBeenCalledWith({
+      type: "CONTENT_READY",
+    });
   });
 
-  it("rejects when the background handler returns an error payload", async () => {
-    vi.spyOn(browser.runtime, "sendMessage").mockImplementation(() =>
-      Promise.resolve({ __error: "handler failure" })
-    );
-
+  it("rejects with the error message when transport returns an __error payload", async () => {
+    vi.mocked(mockTransport.sendMessage).mockResolvedValue({
+      __error: "handler failure",
+    });
     await expect(
       sendMessage({ message: "test", type: "TOAST" })
     ).rejects.toThrow("handler failure");
   });
 
-  it("resolves with undefined when the background returns a non-error response", async () => {
-    vi.spyOn(browser.runtime, "sendMessage").mockResolvedValue(undefined);
-
+  it("resolves with undefined when transport returns undefined", async () => {
+    vi.mocked(mockTransport.sendMessage).mockResolvedValue(undefined);
     await expect(
       sendMessage({ message: "test", type: "TOAST" })
     ).resolves.toBeUndefined();
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
+  it("resolves with undefined when transport returns a non-error value", async () => {
+    vi.mocked(mockTransport.sendMessage).mockResolvedValue("some result");
+    await expect(
+      sendMessage({ message: "test", type: "TOAST" })
+    ).resolves.toBeUndefined();
+  });
+
+  it("throws when transport is not configured", async () => {
+    setTransport(null as never);
+    await expect(
+      sendMessage({ message: "test", type: "TOAST" })
+    ).rejects.toThrow(
+      "Transport not configured. Call setTransport() before using messaging."
+    );
   });
 });
 
 describe("onMessage", () => {
-  it("keeps the message channel open and calls sendResponse", async () => {
-    const { onMessage } = await import("./messaging.ts");
+  let mockTransport: MessageTransport;
+  let capturedHandler:
+    | ((message: Message, sender: unknown) => Promise<unknown>)
+    | null;
+
+  beforeEach(() => {
+    capturedHandler = null;
+    mockTransport = {
+      onMessage: vi.fn((handler) => {
+        capturedHandler = handler;
+      }),
+      sendMessage: vi.fn().mockResolvedValue(undefined),
+    };
+    setTransport(mockTransport);
+  });
+
+  afterEach(() => {
+    setTransport(null as never);
+    vi.clearAllMocks();
+    capturedHandler = null;
+  });
+
+  it("delegates to transport.onMessage with the callback", () => {
     const callback = vi.fn().mockResolvedValue(undefined);
-    const sendResponse = vi.fn();
-
-    const addListenerSpy = vi.spyOn(browser.runtime.onMessage, "addListener");
-
     onMessage(callback);
-
-    expect(addListenerSpy).toHaveBeenCalled();
-
-    const [[handler]] = addListenerSpy.mock.calls as [
-      [(...args: unknown[]) => unknown],
-    ];
-
-    const result = handler(
-      { message: "test", type: "TOAST" },
-      {},
-      sendResponse
-    );
-    expect(result).toBe(true);
-
-    // Wait for promise to resolve
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(callback).toHaveBeenCalled();
-    expect(sendResponse).toHaveBeenCalled();
+    expect(mockTransport.onMessage).toHaveBeenCalledWith(callback);
   });
 
-  it("sends an error payload via sendResponse when the callback rejects", async () => {
-    const { onMessage } = await import("./messaging.ts");
-    const error = new Error("handler failure");
-    const callback = vi.fn().mockRejectedValue(error);
-    const sendResponse = vi.fn();
-    // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional spy no-op
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    const addListenerSpy = vi.spyOn(browser.runtime.onMessage, "addListener");
-
-    onMessage(callback);
-
-    // Use the most recent registration to avoid picking up the previous test's handler
-    const [[handler]] = addListenerSpy.mock.calls.slice(-1) as [
-      [(...args: unknown[]) => unknown],
-    ];
-
-    const result = handler(
-      { message: "test", type: "TOAST" },
-      {},
-      sendResponse
+  it("throws when transport is not configured", () => {
+    setTransport(null as never);
+    expect(() => onMessage(vi.fn())).toThrow(
+      "Transport not configured. Call setTransport() before using messaging."
     );
-    expect(result).toBe(true);
-
-    // Wait for the rejection to propagate through .catch()
-    await Promise.resolve();
-    await Promise.resolve();
-
-    // sendResponse must carry an error payload so Firefox's promise-based
-    // sendMessage rejects on the content-script side (spec §2.2).
-    expect(sendResponse).toHaveBeenCalledWith({ __error: "handler failure" });
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "[tamiz] message handler error:",
-      error
-    );
-
-    consoleSpy.mockRestore();
   });
 
-  it("sends an error payload with a stringified message when the callback rejects with a non-Error", async () => {
-    const { onMessage } = await import("./messaging.ts");
-    const callback = vi.fn().mockRejectedValue("boom");
-    const sendResponse = vi.fn();
-    // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional spy no-op
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    const addListenerSpy = vi.spyOn(browser.runtime.onMessage, "addListener");
-
+  it("passes message and sender through to the callback when handler is invoked", async () => {
+    const callback = vi.fn().mockResolvedValue(undefined);
     onMessage(callback);
+    expect(capturedHandler).not.toBeNull();
+    const sender = { tab: { id: 1 } };
+    await capturedHandler?.({ type: "CONTENT_READY" }, sender);
+    expect(callback).toHaveBeenCalledWith({ type: "CONTENT_READY" }, sender);
+  });
 
-    const [[handler]] = addListenerSpy.mock.calls.slice(-1) as [
-      [(...args: unknown[]) => unknown],
-    ];
-
-    handler({ message: "test", type: "TOAST" }, {}, sendResponse);
-
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(sendResponse).toHaveBeenCalledWith({ __error: "boom" });
-    consoleSpy.mockRestore();
+  it("returns the callback's resolved value when handler is invoked", async () => {
+    const callback = vi.fn().mockResolvedValue("result");
+    onMessage(callback);
+    expect(capturedHandler).not.toBeNull();
+    const result = await capturedHandler?.(
+      { message: "hi", type: "TOAST" },
+      {}
+    );
+    expect(result).toBe("result");
   });
 });

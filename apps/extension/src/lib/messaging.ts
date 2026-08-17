@@ -1,5 +1,3 @@
-import { type Browser, browser } from "wxt/browser";
-
 /**
  * Message types for content script ↔ background communication.
  *
@@ -51,15 +49,59 @@ function isErrorResponse(response: unknown): response is ErrorResponse {
 }
 
 /**
- * Build an error payload from a thrown value, serialising non-Error throws to
- * their string representation.
+ * Transport interface for message passing between content script and background.
+ * Implementations wrap platform-specific messaging APIs (WXT, vanilla browser,
+ * test mocks).
+ *
+ * @public
+ */
+export interface MessageTransport {
+  /**
+   * Register a handler for incoming messages.
+   * The handler receives the message and an opaque sender reference.
+   * The transport is responsible for error serialization and channel management.
+   */
+  onMessage: (
+    handler: (message: Message, sender: unknown) => Promise<unknown>
+  ) => void;
+  /**
+   * Send a message to the counterpart (content ↔ background).
+   * Resolves with the response from the handler, or an error payload.
+   */
+  sendMessage: (message: Message) => Promise<unknown>;
+}
+
+/**
+ * Module-level transport instance. Set via {@link setTransport} at entry-point
+ * startup before any messaging calls.
  *
  * @internal
  */
-function toErrorResponse(err: unknown): ErrorResponse {
-  const message =
-    err instanceof Error ? err.message : String(err ?? "Unknown error");
-  return { [ERROR_SENTINEL]: message };
+let transport: MessageTransport | null = null;
+
+/**
+ * Configure the message transport. Must be called before any sendMessage/onMessage
+ * use. Typically called once at entry-point startup.
+ *
+ * @param t - Transport implementation wrapping platform-specific messaging APIs
+ * @public
+ */
+export function setTransport(t: MessageTransport): void {
+  transport = t;
+}
+
+/**
+ * Retrieve the configured transport. Throws if `setTransport` has not been called.
+ *
+ * @internal
+ */
+function getTransport(): MessageTransport {
+  if (!transport) {
+    throw new Error(
+      "Transport not configured. Call setTransport() before using messaging."
+    );
+  }
+  return transport;
 }
 
 /**
@@ -73,7 +115,8 @@ function toErrorResponse(err: unknown): ErrorResponse {
  * @public
  */
 export async function sendMessage(message: Message): Promise<void> {
-  const response = await browser.runtime.sendMessage(message);
+  const t = getTransport();
+  const response = await t.sendMessage(message);
   if (isErrorResponse(response)) {
     throw new Error(response[ERROR_SENTINEL]);
   }
@@ -82,34 +125,19 @@ export async function sendMessage(message: Message): Promise<void> {
 /**
  * Listen for messages in background script.
  *
- * Returns the Promise from the callback so Firefox's promise-based
- * `browser` API keeps the message channel open. On success, `sendResponse` is
- * called with the handler's resolved value (or `undefined` for void handlers).
- * On failure, `sendResponse` is called with an error payload so the content
- * script's `sendMessage` rejects with the error details instead of silently
- * resolving.
+ * Delegates to the configured transport's `onMessage`. The transport is
+ * responsible for calling `sendResponse(result)` on success and
+ * `sendResponse({ __error: ... })` on failure, as well as returning `true`
+ * to keep the message channel open for Firefox's promise-based API.
+ *
+ * The sender parameter is `unknown` to keep this module WXT-agnostic; entry
+ * points that need the concrete type can narrow locally.
  *
  * @public
  */
 export function onMessage(
-  callback: (
-    message: Message,
-    sender: Browser.runtime.MessageSender
-  ) => Promise<unknown>
+  callback: (message: Message, sender: unknown) => Promise<unknown>
 ): void {
-  browser.runtime.onMessage.addListener(
-    (
-      message: Message,
-      sender: Browser.runtime.MessageSender,
-      sendResponse: (response?: unknown) => void
-    ) => {
-      callback(message, sender)
-        .then((result) => sendResponse(result))
-        .catch((err) => {
-          console.error("[tamiz] message handler error:", err);
-          sendResponse(toErrorResponse(err));
-        });
-      return true;
-    }
-  );
+  const t = getTransport();
+  t.onMessage(callback);
 }
