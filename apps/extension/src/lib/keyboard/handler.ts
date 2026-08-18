@@ -1,3 +1,4 @@
+import type { ActionDispatcher } from "../../core/actions/dispatcher.ts";
 import type { PickerStateMachine } from "../picker.ts";
 import { resolveCommand } from "./registry.ts";
 import type { Format, ShortcutContext } from "./types.ts";
@@ -12,14 +13,14 @@ import { isInputElement } from "./types.ts";
  * @public
  */
 export interface KeydownHandlerDeps {
+  /** The centralized dispatcher to route resolved actions through. */
+  dispatcher: ActionDispatcher;
   /** Read the currently focused element (production: `() => document.activeElement`). */
   getActiveElement: () => Element | null;
   /** Read the current bar format (the SolidJS signal getter). */
   getCurrentFormat: () => Format;
-  /** The picker state machine to dispatch resolved commands to. */
+  /** The picker state machine for reading state context. */
   machine: PickerStateMachine;
-  /** Set the bar format (the SolidJS signal setter) for FORMAT_CHANGE commands. */
-  setFormat: (format: Format) => void;
   /** The shadow host element for re-dispatching unmatched key events. */
   shadowHost: Element | null;
 }
@@ -36,16 +37,18 @@ export interface KeydownHandlerDeps {
  *    f → FORMAT_CHANGE (cycles markdown↔html).
  *
  * When a shortcut matches, the event is consumed (`preventDefault`,
- * `stopPropagation`) and the corresponding {@link PickerEvent} is dispatched on
- * the state machine. For FORMAT_CHANGE commands the format signal is updated
- * alongside the machine event so the bar and machine stay in sync.
+ * `stopPropagation`) and the resolved {@link PickerAction} is dispatched
+ * through the centralized {@link ActionDispatcher}. The handler does NOT
+ * dispatch DISMISS after COPY/DOWNLOAD — that responsibility lives in the
+ * action handler registered by {@link composeActions}, so both the UI button
+ * and keyboard shortcut paths produce identical behavior.
  *
  * When no shortcut matches, the event is re-dispatched on the shadow host with
  * `bubbles: true` and `composed: true` so it can reach page-level listeners
  * that the content script's `isolateEvents: ["keydown"]` would otherwise hide.
  *
  * @param event - The raw `keydown` event from the content script listener.
- * @param deps  - Runtime dependencies (machine, format signals, shadow host).
+ * @param deps  - Runtime dependencies (dispatcher, machine, shadow host).
  *
  * @public
  */
@@ -64,15 +67,9 @@ export function handleKeydown(
   if (command) {
     event.preventDefault();
     event.stopPropagation();
-    deps.machine.dispatch(command.event);
-    if (command.format !== undefined) {
-      deps.setFormat(command.format);
-    }
-    // Close the picker after terminal actions (copy, download) so the
-    // flow ends the same way as clicking the corresponding button.
-    if (command.event.type === "COPY" || command.event.type === "DOWNLOAD") {
-      deps.machine.dispatch({ type: "DISMISS" });
-    }
+    // Route through the centralized dispatcher so the same action handler
+    // runs for keyboard shortcuts as for UI button clicks.
+    deps.dispatcher.dispatch(command);
     return;
   }
 

@@ -1,12 +1,16 @@
 /**
  * Integration tests for the content-script keydown handler.
  *
- * Verifies {@link handleKeydown} correctly wires the keyboard shortcut registry
- * to the picker state machine: Escape dismiss, Ctrl/Meta+c copy, f format-cycle,
- * input-focus suppression, and shadow-host re-dispatch of unmatched keys.
+ * Verifies {@link handleKeydown} correctly resolves keyboard shortcuts and
+ * dispatches the resulting {@link PickerAction} through the centralized
+ * {@link ActionDispatcher} — NOT through the state machine directly.
+ *
+ * The keyboard handler never dispatches DISMISS after COPY/DOWNLOAD; that
+ * responsibility lives in the action handler (composer).
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createActionDispatcher } from "../src/core/actions/dispatcher.ts";
 import type { KeydownHandlerDeps } from "../src/lib/keyboard/handler.ts";
 import { handleKeydown } from "../src/lib/keyboard/handler.ts";
 import { PickerStateMachine } from "../src/lib/picker.ts";
@@ -23,32 +27,31 @@ function keyEvent(config: {
 }
 
 /**
- * Build a fully mocked deps object for {@link handleKeydown}.
+ * Build a fully wired deps object for {@link handleKeydown}.
  *
- * The returned `machine` is a real `PickerStateMachine` so state transitions
- * exercise the actual state machine logic. Format tracking uses an internal
- * variable so `getCurrentFormat`/`setFormat` behave like a SolidJS signal pair.
+ * The `machine` is a real `PickerStateMachine` so state transitions exercise
+ * the actual state machine logic. The `dispatcher` is a real
+ * `ActionDispatcher` with no handlers registered — the handler dispatches to
+ * it and we spy on `dispatch` to verify the action pipeline.
  */
 function makeDeps(
   overrides: Partial<KeydownHandlerDeps> = {}
 ): KeydownHandlerDeps {
-  let format: "markdown" | "html" = "markdown";
   const machine = new PickerStateMachine();
   const shadowHost = document.createElement("div");
+  const dispatcher = createActionDispatcher();
 
   return {
+    dispatcher,
     getActiveElement: () => null,
-    getCurrentFormat: () => format,
+    getCurrentFormat: () => "markdown",
     machine,
-    setFormat: (f) => {
-      format = f;
-    },
     shadowHost,
     ...overrides,
   };
 }
 
-/** Transition a machine to SELECTED state so copy/download/format shortcuts are active. */
+/** Transition a real machine to SELECTED state so copy/download/format shortcuts are active. */
 function selectElement(machine: PickerStateMachine): void {
   machine.dispatch({ type: "INVOKE" });
   machine.dispatch({ target: document.createElement("div"), type: "CLICK" });
@@ -59,55 +62,57 @@ afterEach(() => {
 });
 
 describe("handleKeydown — Escape", () => {
-  it("dispatches DISMISS in HIGHLIGHTING state", () => {
+  it("dispatches DISMISS through the dispatcher in HIGHLIGHTING state", () => {
     const deps = makeDeps();
     deps.machine.dispatch({ type: "INVOKE" });
     expect(deps.machine.getState()).toBe("HIGHLIGHTING");
 
-    const event = keyEvent({ key: "Escape" });
-    const preventDefault = vi.spyOn(event, "preventDefault");
-    const stopPropagation = vi.spyOn(event, "stopPropagation");
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    const machineSpy = vi.spyOn(deps.machine, "dispatch");
 
-    handleKeydown(event, deps);
+    handleKeydown(keyEvent({ key: "Escape" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "DISMISS" });
-    expect(preventDefault).toHaveBeenCalled();
-    expect(stopPropagation).toHaveBeenCalled();
+    expect(machineSpy).not.toHaveBeenCalled();
+    expect(dispatchSpy.mock.calls[0][0]).toEqual({ type: "DISMISS" });
   });
 
-  it("dispatches DISMISS in SELECTED state", () => {
+  it("dispatches DISMISS through the dispatcher in SELECTED state", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
     expect(deps.machine.getState()).toBe("SELECTED");
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    const machineSpy = vi.spyOn(deps.machine, "dispatch");
     const event = keyEvent({ key: "Escape" });
 
     handleKeydown(event, deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "DISMISS" });
+    expect(machineSpy).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("dispatches DISMISS in IDLE state", () => {
+  it("dispatches DISMISS through the dispatcher in IDLE state", () => {
     const deps = makeDeps();
     expect(deps.machine.getState()).toBe("IDLE");
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    const machineSpy = vi.spyOn(deps.machine, "dispatch");
     handleKeydown(keyEvent({ key: "Escape" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "DISMISS" });
+    expect(machineSpy).not.toHaveBeenCalled();
   });
 
-  it("dispatches DISMISS even when an input element is focused", () => {
+  it("dispatches DISMISS through the dispatcher even when an input is focused", () => {
     const deps = makeDeps({
       getActiveElement: () => document.createElement("input"),
     });
     deps.machine.dispatch({ type: "INVOKE" });
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     handleKeydown(keyEvent({ key: "Escape" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "DISMISS" });
@@ -116,62 +121,60 @@ describe("handleKeydown — Escape", () => {
 });
 
 describe("handleKeydown — Ctrl+c / Meta+c → COPY in SELECTED", () => {
-  it("dispatches COPY on ctrl+c in SELECTED", () => {
+  it("dispatches COPY through the dispatcher on ctrl+c in SELECTED", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    const machineSpy = vi.spyOn(deps.machine, "dispatch");
     const event = keyEvent({ ctrlKey: true, key: "c" });
 
     handleKeydown(event, deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "COPY" });
+    expect(machineSpy).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("dispatches COPY on meta+c in SELECTED", () => {
+  it("dispatches COPY through the dispatcher on meta+c in SELECTED", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
-    const event = keyEvent({ key: "c", metaKey: true });
-
-    handleKeydown(event, deps);
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    handleKeydown(keyEvent({ key: "c", metaKey: true }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "COPY" });
-    expect(event.defaultPrevented).toBe(true);
   });
 
-  it("does not dispatch COPY when format is html", () => {
-    const deps = makeDeps();
-    deps.setFormat("html");
+  it("dispatches COPY regardless of current format", () => {
+    const deps = makeDeps({ getCurrentFormat: () => "html" });
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     handleKeydown(keyEvent({ ctrlKey: true, key: "c" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "COPY" });
   });
 
-  it("dispatches DISMISS after COPY to close the picker", () => {
+  it("does NOT dispatch DISMISS after COPY (DISMISS lives in the action handler)", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     handleKeydown(keyEvent({ ctrlKey: true, key: "c" }), deps);
 
-    expect(dispatchSpy).toHaveBeenCalledTimes(2);
-    expect(dispatchSpy.mock.calls[0][0]).toEqual({ type: "COPY" });
-    expect(dispatchSpy.mock.calls[1][0]).toEqual({ type: "DISMISS" });
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    expect(dispatchSpy).toHaveBeenCalledWith({ type: "COPY" });
+    expect(dispatchSpy).not.toHaveBeenCalledWith({ type: "DISMISS" });
   });
 });
 
 describe("handleKeydown — Ctrl+s / Meta+s → DOWNLOAD in SELECTED", () => {
-  it("dispatches DOWNLOAD on ctrl+s in SELECTED", () => {
+  it("dispatches DOWNLOAD through the dispatcher on ctrl+s in SELECTED", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     const event = keyEvent({ ctrlKey: true, key: "s" });
 
     handleKeydown(event, deps);
@@ -180,77 +183,64 @@ describe("handleKeydown — Ctrl+s / Meta+s → DOWNLOAD in SELECTED", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("dispatches DOWNLOAD on meta+s in SELECTED", () => {
+  it("dispatches DOWNLOAD through the dispatcher on meta+s in SELECTED", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
-    const event = keyEvent({ key: "s", metaKey: true });
-
-    handleKeydown(event, deps);
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    handleKeydown(keyEvent({ key: "s", metaKey: true }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "DOWNLOAD" });
-    expect(event.defaultPrevented).toBe(true);
   });
 
-  it("dispatches DISMISS after DOWNLOAD to close the picker", () => {
+  it("does NOT dispatch DISMISS after DOWNLOAD (DISMISS lives in the action handler)", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     handleKeydown(keyEvent({ ctrlKey: true, key: "s" }), deps);
 
-    expect(dispatchSpy).toHaveBeenCalledTimes(2);
-    expect(dispatchSpy.mock.calls[0][0]).toEqual({ type: "DOWNLOAD" });
-    expect(dispatchSpy.mock.calls[1][0]).toEqual({ type: "DISMISS" });
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    expect(dispatchSpy).toHaveBeenCalledWith({ type: "DOWNLOAD" });
+    expect(dispatchSpy).not.toHaveBeenCalledWith({ type: "DISMISS" });
   });
 });
 
 describe("handleKeydown — f → FORMAT_CHANGE in SELECTED", () => {
-  it("cycles markdown→html on plain f", () => {
+  it("cycles markdown→html on plain f and dispatches through the dispatcher", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
     expect(deps.getCurrentFormat()).toBe("markdown");
 
-    const setFormatSpy = vi.fn();
-    const depsWithSpy = makeDeps({ setFormat: setFormatSpy });
-    selectElement(depsWithSpy.machine);
-
-    const dispatchSpy = vi.spyOn(depsWithSpy.machine, "dispatch");
-    handleKeydown(keyEvent({ key: "f" }), depsWithSpy);
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    const machineSpy = vi.spyOn(deps.machine, "dispatch");
+    handleKeydown(keyEvent({ key: "f" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({
       format: "html",
       type: "FORMAT_CHANGE",
     });
-    expect(setFormatSpy).toHaveBeenCalledWith("html");
+    expect(machineSpy).not.toHaveBeenCalled();
   });
 
   it("cycles html→markdown on plain f", () => {
-    let format: "markdown" | "html" = "html";
-    const deps = makeDeps({
-      getCurrentFormat: () => format,
-      setFormat: (f) => {
-        format = f;
-      },
-    });
+    const deps = makeDeps({ getCurrentFormat: () => "html" });
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     handleKeydown(keyEvent({ key: "f" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({
       format: "markdown",
       type: "FORMAT_CHANGE",
     });
-    expect(deps.getCurrentFormat()).toBe("markdown");
   });
 
   it("cycles format on ctrl+shift+f", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     const event = keyEvent({ ctrlKey: true, key: "f", shiftKey: true });
 
     handleKeydown(event, deps);
@@ -262,12 +252,12 @@ describe("handleKeydown — f → FORMAT_CHANGE in SELECTED", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("does not cycle format in HIGHLIGHTING state", () => {
+  it("does not dispatch FORMAT_CHANGE in HIGHLIGHTING state", () => {
     const deps = makeDeps();
     deps.machine.dispatch({ type: "INVOKE" });
     expect(deps.machine.getState()).toBe("HIGHLIGHTING");
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     handleKeydown(keyEvent({ key: "f" }), deps);
 
     // No FORMAT_CHANGE dispatched — falls through to shadowHost re-dispatch.
@@ -278,14 +268,11 @@ describe("handleKeydown — f → FORMAT_CHANGE in SELECTED", () => {
 describe("handleKeydown — input focus guard", () => {
   it("suppresses ctrl+c when an input is focused (does not dispatch COPY)", () => {
     const deps = makeDeps({
-      getActiveElement: () => {
-        const input = document.createElement("input");
-        return input;
-      },
+      getActiveElement: () => document.createElement("input"),
     });
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     const event = keyEvent({ ctrlKey: true, key: "c" });
 
     handleKeydown(event, deps);
@@ -300,26 +287,23 @@ describe("handleKeydown — input focus guard", () => {
     });
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     handleKeydown(keyEvent({ key: "c", metaKey: true }), deps);
 
     expect(dispatchSpy).not.toHaveBeenCalledWith({ type: "COPY" });
   });
 
   it("suppresses plain f when a textarea is focused", () => {
-    const setFormatSpy = vi.fn();
     const deps = makeDeps({
       getActiveElement: () => document.createElement("textarea"),
-      setFormat: setFormatSpy,
     });
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
 
     handleKeydown(keyEvent({ key: "f" }), deps);
 
     expect(dispatchSpy).not.toHaveBeenCalled();
-    expect(setFormatSpy).not.toHaveBeenCalled();
   });
 
   it("still dispatches DISMISS for Escape when input is focused", () => {
@@ -328,20 +312,20 @@ describe("handleKeydown — input focus guard", () => {
     });
     deps.machine.dispatch({ type: "INVOKE" });
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     handleKeydown(keyEvent({ key: "Escape" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "DISMISS" });
   });
 
-  it("does not suppress non-input, non-Escape keys in SELECTED", () => {
+  it("does not dispatch non-shortcut keys in SELECTED", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     handleKeydown(keyEvent({ key: "x" }), deps);
 
-    // Unmatched key — no command dispatched to machine.
+    // Unmatched key — no command dispatched to dispatcher.
     expect(dispatchSpy).not.toHaveBeenCalled();
   });
 });

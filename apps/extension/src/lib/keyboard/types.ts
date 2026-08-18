@@ -1,4 +1,4 @@
-import type { PickerEvent, PickerState } from "../picker.ts";
+import type { PickerState } from "../picker.ts";
 
 /**
  * Output format for converted content.
@@ -35,17 +35,6 @@ export interface ShortcutContext {
   format: Format;
   inputFocused: boolean;
   state: PickerState;
-}
-
-/**
- * A resolved keyboard shortcut command ready for dispatch.
- *
- * @public
- */
-export interface ShortcutCommand {
-  event: PickerEvent;
-  format?: Format;
-  id: string;
 }
 
 /**

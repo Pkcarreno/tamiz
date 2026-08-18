@@ -26,10 +26,7 @@ function makeProps(overrides: Record<string, unknown> = {}) {
   return {
     element: (() => el) as Accessor<Element | null>,
     format,
-    onCancel: vi.fn(),
-    onCopy: vi.fn(),
-    onDownload: vi.fn(),
-    onFormatChange: vi.fn(),
+    onAction: vi.fn(),
     ...overrides,
   };
 }
@@ -38,7 +35,7 @@ describe("FloatingActionBar", () => {
   afterEach(() => cleanup());
 
   describe("renders correctly", () => {
-    it("renders single row with format selector and action buttons", () => {
+    it("renders format selector and action buttons", () => {
       render(() => <FloatingActionBar {...makeProps()} />);
 
       // Format selector
@@ -72,29 +69,29 @@ describe("FloatingActionBar", () => {
     });
   });
 
-  describe("calls callbacks", () => {
-    it("calls onCopy when Copy is clicked", () => {
+  describe("dispatches actions", () => {
+    it("dispatches COPY when Copy is clicked", () => {
       const props = makeProps();
       render(() => <FloatingActionBar {...props} />);
       fireEvent.click(screen.getByRole("button", { name: "Copy" }));
-      expect(props.onCopy).toHaveBeenCalledTimes(1);
+      expect(props.onAction).toHaveBeenCalledWith({ type: "COPY" });
     });
 
-    it("calls onDownload when Download is clicked", () => {
+    it("dispatches DOWNLOAD when Download is clicked", () => {
       const props = makeProps();
       render(() => <FloatingActionBar {...props} />);
       fireEvent.click(screen.getByRole("button", { name: "Download" }));
-      expect(props.onDownload).toHaveBeenCalledTimes(1);
+      expect(props.onAction).toHaveBeenCalledWith({ type: "DOWNLOAD" });
     });
 
-    it("calls onCancel when Cancel is clicked", () => {
+    it("dispatches DISMISS when Cancel is clicked", () => {
       const props = makeProps();
       render(() => <FloatingActionBar {...props} />);
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-      expect(props.onCancel).toHaveBeenCalledTimes(1);
+      expect(props.onAction).toHaveBeenCalledWith({ type: "DISMISS" });
     });
 
-    it("calls onFormatChange with 'html' when HTML is selected", () => {
+    it("dispatches FORMAT_CHANGE with 'html' when HTML is selected", () => {
       const props = makeProps();
       const { container } = render(() => <FloatingActionBar {...props} />);
 
@@ -102,21 +99,25 @@ describe("FloatingActionBar", () => {
         "[data-tamiz-select] select"
       ) as HTMLSelectElement;
       fireEvent.change(select, { target: { value: "html" } });
-      expect(props.onFormatChange).toHaveBeenCalledWith("html");
+      expect(props.onAction).toHaveBeenCalledWith({
+        format: "html",
+        type: "FORMAT_CHANGE",
+      });
     });
 
-    it("calls onFormatChange with 'markdown' when Markdown is selected (from html)", () => {
-      const props = makeProps();
+    it("dispatches FORMAT_CHANGE with 'markdown' when Markdown is selected (from html)", () => {
       const [format] = createSignal<"markdown" | "html">("html");
-      const { container } = render(() => (
-        <FloatingActionBar {...props} format={format} />
-      ));
+      const props = makeProps({ format });
+      const { container } = render(() => <FloatingActionBar {...props} />);
 
       const select = container.querySelector(
         "[data-tamiz-select] select"
       ) as HTMLSelectElement;
       fireEvent.change(select, { target: { value: "markdown" } });
-      expect(props.onFormatChange).toHaveBeenCalledWith("markdown");
+      expect(props.onAction).toHaveBeenCalledWith({
+        format: "markdown",
+        type: "FORMAT_CHANGE",
+      });
     });
   });
 
@@ -135,10 +136,7 @@ describe("FloatingActionBar", () => {
         <FloatingActionBar
           element={elementAccessor}
           format={format}
-          onCancel={vi.fn()}
-          onCopy={vi.fn()}
-          onDownload={vi.fn()}
-          onFormatChange={vi.fn()}
+          onAction={vi.fn()}
         />
       ));
 
@@ -166,10 +164,7 @@ describe("FloatingActionBar", () => {
         <FloatingActionBar
           element={element}
           format={format}
-          onCancel={vi.fn()}
-          onCopy={vi.fn()}
-          onDownload={vi.fn()}
-          onFormatChange={vi.fn()}
+          onAction={vi.fn()}
         />
       ));
 
@@ -191,10 +186,7 @@ describe("FloatingActionBar", () => {
         <FloatingActionBar
           element={element}
           format={format}
-          onCancel={vi.fn()}
-          onCopy={vi.fn()}
-          onDownload={vi.fn()}
-          onFormatChange={vi.fn()}
+          onAction={vi.fn()}
         />
       ));
 
@@ -211,7 +203,7 @@ describe("FloatingActionBar", () => {
   });
 
   describe("layout", () => {
-    it("renders single row with format selector and actions", () => {
+    it("renders format selector and actions", () => {
       render(() => <FloatingActionBar {...makeProps()} />);
       const bar = screen
         .getByRole("button", { name: "Copy" })

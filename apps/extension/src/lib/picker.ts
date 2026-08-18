@@ -4,8 +4,10 @@
  * Manages the lifecycle of visual element selection:
  * IDLE → HIGHLIGHTING → SELECTED
  *
- * Copy, download, scroll, and resize are handled inline without leaving the
- * SELECTED state. DISMISS from any state returns to IDLE with full teardown.
+ * The machine handles ONLY state transitions.  Side effects (clipboard copy,
+ * file download, toasts) are dispatched through the centralized
+ * {@link ActionDispatcher} and executed by action handlers outside the
+ * machine.
  *
  * @public
  */
@@ -13,6 +15,11 @@ export type PickerState = "IDLE" | "HIGHLIGHTING" | "SELECTED";
 
 /**
  * Events that trigger state transitions.
+ *
+ * `COPY` and `DOWNLOAD` are accepted for API compatibility but are no-ops
+ * inside the machine — the actual side effects live in action handlers.
+ * `MOUSEMOVE` and `CLICK` are internal events never dispatched through
+ * the action pipeline.
  *
  * @public
  */
@@ -40,29 +47,20 @@ export class PickerStateMachine {
   private readonly onStateChange?: (state: PickerState) => void;
   private readonly onElementSelected?: (element: Element) => void;
   private readonly onHover?: (element: Element | null) => void;
-  private readonly onCopy?: (content: string) => void;
-  private readonly onDownload?: (content: string, filename: string) => void;
   private readonly onReposition?: () => void;
-  private readonly onTeardown?: () => void;
 
   constructor(
     callbacks: {
       onStateChange?: (state: PickerState) => void;
       onElementSelected?: (element: Element) => void;
       onHover?: (element: Element | null) => void;
-      onCopy?: (content: string) => void;
-      onDownload?: (content: string, filename: string) => void;
       onReposition?: () => void;
-      onTeardown?: () => void;
     } = {}
   ) {
     this.onStateChange = callbacks.onStateChange;
     this.onElementSelected = callbacks.onElementSelected;
     this.onHover = callbacks.onHover;
-    this.onCopy = callbacks.onCopy;
-    this.onDownload = callbacks.onDownload;
     this.onReposition = callbacks.onReposition;
-    this.onTeardown = callbacks.onTeardown;
   }
 
   /**
@@ -131,21 +129,17 @@ export class PickerStateMachine {
   }
 
   private handleSelected(event: PickerEvent): void {
-    if (event.type === "COPY") {
-      this.onCopy?.(this.getSelectedContent());
-    } else if (event.type === "DOWNLOAD") {
-      const content = this.getSelectedContent();
-      const filename = this.generateFilename();
-      this.onDownload?.(content, filename);
-    } else if (event.type === "FORMAT_CHANGE") {
+    if (event.type === "FORMAT_CHANGE") {
       this.format = event.format;
     } else if (event.type === "SCROLL" || event.type === "RESIZE") {
       this.onReposition?.();
     } else if (event.type === "DISMISS") {
       this.transition("IDLE");
     }
-    // CLICK events in SELECTED state are intentionally ignored.
-    // The first click is definitive; re-invoke capture mode to select a new element.
+    // COPY and DOWNLOAD are intentionally no-ops here: side effects are
+    // handled by action handlers in the centralized dispatcher pipeline.
+    // CLICK events in SELECTED are intentionally ignored — the first click
+    // is definitive; re-invoke to select a new element.
   }
 
   private transition(newState: PickerState): void {
@@ -157,21 +151,10 @@ export class PickerStateMachine {
   }
 
   /**
-   * Clear the selected element and invoke the teardown callback, used when
-   * transitioning to IDLE (whether from DISMISS or a state change).
+   * Clear the selected element. Invoked when transitioning to IDLE so that
+   * stale references are not retained across capture cycles.
    */
   private teardown(): void {
     this.selectedElement = null;
-    this.onTeardown?.();
-  }
-
-  private getSelectedContent(): string {
-    return this.selectedElement?.outerHTML ?? "";
-  }
-
-  private generateFilename(): string {
-    const tag = this.selectedElement?.tagName.toLowerCase() ?? "content";
-    const timestamp = Date.now();
-    return `${tag}-${timestamp}`;
   }
 }

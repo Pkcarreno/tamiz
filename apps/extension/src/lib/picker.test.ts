@@ -2,9 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { PickerStateMachine } from "./picker.ts";
 
-/** Matches filenames like `article-1700000000000`. */
-const FILENAME_PATTERN = /^article-\d+$/;
-
 // Helper: advance the machine to SELECTED with a real DOM element.
 function selectElement(
   machine: PickerStateMachine,
@@ -87,74 +84,88 @@ describe("PickerStateMachine", () => {
     });
   });
 
-  describe("SELECTED — inline COPY / DOWNLOAD (no ACTION transition)", () => {
-    it("COPY calls onCopy and stays in SELECTED", () => {
-      const element = document.createElement("div");
-      element.innerHTML = "<p>Hello</p>";
-      const onCopy = vi.fn();
-      const machine = new PickerStateMachine({ onCopy });
+  describe("SELECTED — COPY / DOWNLOAD are no-ops (side effects live in handlers)", () => {
+    it("COPY leaves state SELECTED (no clipboard write inside machine)", () => {
+      const machine = new PickerStateMachine();
+      selectElement(machine);
 
-      selectElement(machine, element);
       machine.dispatch({ type: "COPY" });
 
       expect(machine.getState()).toBe("SELECTED");
-      expect(onCopy).toHaveBeenCalledTimes(1);
-      // Content passed to callback is the element's outerHTML.
-      expect(onCopy).toHaveBeenCalledWith("<div><p>Hello</p></div>");
     });
 
-    it("DOWNLOAD calls onDownload with content and filename and stays SELECTED", () => {
-      const element = document.createElement("article");
-      element.innerHTML = "<span>data</span>";
-      const onDownload = vi.fn();
-      const machine = new PickerStateMachine({ onDownload });
+    it("DOWNLOAD leaves state SELECTED (no file download inside machine)", () => {
+      const machine = new PickerStateMachine();
+      selectElement(machine);
 
-      selectElement(machine, element);
       machine.dispatch({ type: "DOWNLOAD" });
 
       expect(machine.getState()).toBe("SELECTED");
-      expect(onDownload).toHaveBeenCalledTimes(1);
-      const [content, filename] = onDownload.mock.calls[0] as [string, string];
-      expect(content).toBe("<article><span>data</span></article>");
-      expect(filename).toMatch(FILENAME_PATTERN);
+    });
+
+    it("COPY does not transition or call onStateChange", () => {
+      const onStateChange = vi.fn();
+      const machine = new PickerStateMachine({ onStateChange });
+      selectElement(machine);
+
+      machine.dispatch({ type: "COPY" });
+
+      expect(machine.getState()).toBe("SELECTED");
+      expect(onStateChange).not.toHaveBeenCalledWith("IDLE");
+    });
+
+    it("DOWNLOAD does not transition or call onStateChange", () => {
+      const onStateChange = vi.fn();
+      const machine = new PickerStateMachine({ onStateChange });
+      selectElement(machine);
+
+      machine.dispatch({ type: "DOWNLOAD" });
+
+      expect(machine.getState()).toBe("SELECTED");
+      expect(onStateChange).not.toHaveBeenCalledWith("IDLE");
     });
   });
 
   describe("DISMISS — from any state → IDLE with teardown", () => {
-    it("DISMISS from IDLE calls teardown and stays IDLE", () => {
-      const onTeardown = vi.fn();
-      const machine = new PickerStateMachine({ onTeardown });
+    it("DISMISS from IDLE stays IDLE and clears selected element", () => {
+      const machine = new PickerStateMachine();
 
       machine.dispatch({ type: "DISMISS" });
 
       expect(machine.getState()).toBe("IDLE");
-      expect(onTeardown).toHaveBeenCalledTimes(1);
     });
 
-    it("DISMISS from HIGHLIGHTING calls teardown and returns to IDLE", () => {
+    it("DISMISS from HIGHLIGHTING returns to IDLE and clears selected element", () => {
       const onStateChange = vi.fn();
-      const onTeardown = vi.fn();
-      const machine = new PickerStateMachine({ onStateChange, onTeardown });
+      const machine = new PickerStateMachine({ onStateChange });
 
       machine.dispatch({ type: "INVOKE" });
       machine.dispatch({ type: "DISMISS" });
 
       expect(machine.getState()).toBe("IDLE");
       expect(onStateChange).toHaveBeenLastCalledWith("IDLE");
-      expect(onTeardown).toHaveBeenCalledTimes(1);
     });
 
-    it("DISMISS from SELECTED calls teardown and returns to IDLE", () => {
+    it("DISMISS from SELECTED returns to IDLE and clears selected element", () => {
       const onStateChange = vi.fn();
-      const onTeardown = vi.fn();
-      const machine = new PickerStateMachine({ onStateChange, onTeardown });
+      const machine = new PickerStateMachine({ onStateChange });
 
       selectElement(machine);
       machine.dispatch({ type: "DISMISS" });
 
       expect(machine.getState()).toBe("IDLE");
       expect(onStateChange).toHaveBeenLastCalledWith("IDLE");
-      expect(onTeardown).toHaveBeenCalledTimes(1);
+      expect(machine.getSelectedElement()).toBeNull();
+    });
+
+    it("DISMISS from SELECTED calls onStateChange with IDLE", () => {
+      const onStateChange = vi.fn();
+      const machine = new PickerStateMachine({ onStateChange });
+
+      selectElement(machine);
+      machine.dispatch({ type: "DISMISS" });
+
+      expect(onStateChange).toHaveBeenCalledWith("IDLE");
     });
   });
 
@@ -295,20 +306,16 @@ describe("PickerStateMachine", () => {
 
   describe("ignored events in wrong state", () => {
     it("COPY in HIGHLIGHTING is ignored", () => {
-      const onCopy = vi.fn();
-      const machine = new PickerStateMachine({ onCopy });
+      const machine = new PickerStateMachine();
       machine.dispatch({ type: "INVOKE" });
       machine.dispatch({ type: "COPY" });
       expect(machine.getState()).toBe("HIGHLIGHTING");
-      expect(onCopy).not.toHaveBeenCalled();
     });
 
     it("DOWNLOAD in IDLE is ignored", () => {
-      const onDownload = vi.fn();
-      const machine = new PickerStateMachine({ onDownload });
+      const machine = new PickerStateMachine();
       machine.dispatch({ type: "DOWNLOAD" });
       expect(machine.getState()).toBe("IDLE");
-      expect(onDownload).not.toHaveBeenCalled();
     });
 
     it("FORMAT_CHANGE in IDLE is ignored", () => {
@@ -318,15 +325,12 @@ describe("PickerStateMachine", () => {
       expect(machine.getState()).toBe("IDLE");
     });
 
-    it("COPY after DISMISS does not fire callback", () => {
-      const element = document.createElement("div");
-      element.innerHTML = "<p>test</p>";
-      const onCopy = vi.fn();
-      const machine = new PickerStateMachine({ onCopy });
-      selectElement(machine, element);
+    it("COPY after DISMISS does not fire callbacks", () => {
+      const machine = new PickerStateMachine();
+      selectElement(machine);
       machine.dispatch({ type: "DISMISS" });
       machine.dispatch({ type: "COPY" });
-      expect(onCopy).not.toHaveBeenCalled();
+      expect(machine.getState()).toBe("IDLE");
     });
 
     it("multiple SCROLL events each trigger reposition", () => {
@@ -342,22 +346,41 @@ describe("PickerStateMachine", () => {
 
   describe("full capture lifecycle", () => {
     it("supports invoke → select → copy → dismiss → invoke again with new format", () => {
-      const onCopy = vi.fn();
-      const onTeardown = vi.fn();
-      const machine = new PickerStateMachine({ onCopy, onTeardown });
+      const machine = new PickerStateMachine();
 
       selectElement(machine);
       machine.dispatch({ type: "COPY" });
       expect(machine.getState()).toBe("SELECTED");
-      expect(onCopy).toHaveBeenCalledTimes(1);
 
       machine.dispatch({ type: "DISMISS" });
       expect(machine.getState()).toBe("IDLE");
-      expect(onTeardown).toHaveBeenCalledTimes(1);
+      expect(machine.getSelectedElement()).toBeNull();
 
       machine.dispatch({ format: "html", type: "INVOKE" });
       expect(machine.getFormat()).toBe("html");
       expect(machine.getState()).toBe("HIGHLIGHTING");
+    });
+  });
+
+  describe("constructor — only UI callbacks accepted", () => {
+    it("accepts onStateChange only", () => {
+      const onStateChange = vi.fn();
+      const machine = new PickerStateMachine({ onStateChange });
+      expect(machine.getState()).toBe("IDLE");
+    });
+
+    it("accepts onElementSelected, onHover, onReposition only", () => {
+      const machine = new PickerStateMachine({
+        onElementSelected: vi.fn(),
+        onHover: vi.fn(),
+        onReposition: vi.fn(),
+      });
+      expect(machine.getState()).toBe("IDLE");
+    });
+
+    it("accepts no callbacks", () => {
+      const machine = new PickerStateMachine();
+      expect(machine.getState()).toBe("IDLE");
     });
   });
 });

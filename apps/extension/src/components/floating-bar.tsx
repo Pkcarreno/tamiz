@@ -3,6 +3,7 @@ import Download from "lucide-solid/icons/download";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createMemo } from "solid-js";
 
+import type { PickerAction } from "../core/actions/types.ts";
 import { computeBarPosition } from "../lib/position.ts";
 import { Button } from "./ui/button.tsx";
 import { Select, type SelectOption } from "./ui/select.tsx";
@@ -23,14 +24,8 @@ export interface FloatingActionBarProps {
   element: Accessor<Element | null>;
   /** Currently selected output format. */
   format: Accessor<"markdown" | "html">;
-  /** Called when the user clicks Cancel. */
-  onCancel: () => void;
-  /** Called when the user clicks Copy. */
-  onCopy: () => void;
-  /** Called when the user clicks Download. */
-  onDownload: () => void;
-  /** Called when the user selects a different format. */
-  onFormatChange: (format: "markdown" | "html") => void;
+  /** Dispatched when the user clicks Copy, Download, Cancel, or changes format. */
+  onAction: (action: PickerAction) => void;
 }
 
 /**
@@ -64,8 +59,23 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
     );
   });
 
-  function handleFormatChange(value: string) {
-    props.onFormatChange(value as "markdown" | "html");
+  function handleCopy(): void {
+    props.onAction({ type: "COPY" });
+  }
+
+  function handleDownload(): void {
+    props.onAction({ type: "DOWNLOAD" });
+  }
+
+  function handleDismiss(): void {
+    props.onAction({ type: "DISMISS" });
+  }
+
+  function handleFormatChange(value: string): void {
+    props.onAction({
+      format: value as "markdown" | "html",
+      type: "FORMAT_CHANGE",
+    });
   }
 
   return (
@@ -101,7 +111,8 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
       <div class="flex h-[32px] items-center justify-center px-1">
         <Button
           aria-label="Copy"
-          onClick={props.onCopy}
+          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+          onClick={handleCopy}
           size="xs"
           variant="icon"
         >
@@ -109,7 +120,8 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         </Button>
         <Button
           aria-label="Download"
-          onClick={props.onDownload}
+          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+          onClick={handleDownload}
           size="xs"
           variant="icon"
         >
@@ -117,7 +129,8 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         </Button>
         <Button
           aria-label="Cancel"
-          onClick={props.onCancel}
+          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+          onClick={handleDismiss}
           size="xs"
           variant="ghost"
         >

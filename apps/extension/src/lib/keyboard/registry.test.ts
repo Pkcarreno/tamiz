@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_SHORTCUTS, resolveCommand } from "./registry.ts";
-import type { ShortcutContext } from "./types.ts";
+import { resolveCommand } from "./registry.ts";
+import type { Format, ShortcutContext } from "./types.ts";
 
 /** Config describing a keyboard event without instantiating it inline. */
 interface KeyConfig {
@@ -19,8 +19,7 @@ function keyEvent(config: KeyConfig): KeyboardEvent {
 
 /** What a resolved shortcut should look like — null means no match. */
 type Expected = {
-  id: string;
-  eventType: string;
+  actionType: string;
   format?: "markdown" | "html";
 } | null;
 
@@ -43,43 +42,43 @@ function selectedCtx(
 }
 
 const testCases: TestCase[] = [
-  // --- Priority 1: Escape → dismiss (any state, before input guard) ---
+  // --- Escape → dismiss (any state, before input guard) ---
   {
     context: { format: "markdown", inputFocused: false, state: "IDLE" },
     desc: "Escape → dismiss in IDLE",
-    expected: { eventType: "DISMISS", id: "dismiss" },
+    expected: { actionType: "DISMISS" },
     key: { key: "Escape" },
   },
   {
     context: { format: "markdown", inputFocused: false, state: "HIGHLIGHTING" },
     desc: "Escape → dismiss in HIGHLIGHTING",
-    expected: { eventType: "DISMISS", id: "dismiss" },
+    expected: { actionType: "DISMISS" },
     key: { key: "Escape" },
   },
   {
     context: { format: "markdown", inputFocused: false, state: "SELECTED" },
     desc: "Escape → dismiss in SELECTED",
-    expected: { eventType: "DISMISS", id: "dismiss" },
+    expected: { actionType: "DISMISS" },
     key: { key: "Escape" },
   },
   {
     context: { format: "markdown", inputFocused: true, state: "SELECTED" },
     desc: "Escape → dismiss when inputFocused=true (bypasses input guard)",
-    expected: { eventType: "DISMISS", id: "dismiss" },
+    expected: { actionType: "DISMISS" },
     key: { key: "Escape" },
   },
 
-  // --- Priority 2: ctrl/meta + c → copy (SELECTED only) ---
+  // --- Ctrl/Meta + c → copy (SELECTED only) ---
   {
     context: selectedCtx(),
     desc: "ctrl+c → copy in SELECTED",
-    expected: { eventType: "COPY", id: "copy" },
+    expected: { actionType: "COPY" },
     key: { ctrlKey: true, key: "c" },
   },
   {
     context: selectedCtx(),
     desc: "meta+c → copy in SELECTED",
-    expected: { eventType: "COPY", id: "copy" },
+    expected: { actionType: "COPY" },
     key: { key: "c", metaKey: true },
   },
   {
@@ -101,69 +100,49 @@ const testCases: TestCase[] = [
     key: { altKey: true, ctrlKey: true, key: "c" },
   },
 
-  // --- Priority 3: ctrl/meta + s → download (SELECTED only) ---
+  // --- Ctrl/Meta + s → download (SELECTED only) ---
   {
     context: selectedCtx(),
     desc: "ctrl+s → download in SELECTED",
-    expected: { eventType: "DOWNLOAD", id: "download" },
+    expected: { actionType: "DOWNLOAD" },
     key: { ctrlKey: true, key: "s" },
   },
   {
     context: selectedCtx(),
     desc: "meta+s → download in SELECTED",
-    expected: { eventType: "DOWNLOAD", id: "download" },
+    expected: { actionType: "DOWNLOAD" },
     key: { key: "s", metaKey: true },
   },
 
-  // --- Priority 4: ctrl+shift+f → format-cycle (SELECTED only) ---
+  // --- f → format-cycle (SELECTED only) ---
   {
     context: selectedCtx({ format: "markdown" }),
     desc: "ctrl+shift+f → format-cycle (markdown→html)",
-    expected: {
-      eventType: "FORMAT_CHANGE",
-      format: "html",
-      id: "format-cycle",
-    },
+    expected: { actionType: "FORMAT_CHANGE", format: "html" },
     key: { ctrlKey: true, key: "f", shiftKey: true },
   },
   {
     context: selectedCtx({ format: "html" }),
     desc: "ctrl+shift+f → format-cycle (html→markdown)",
-    expected: {
-      eventType: "FORMAT_CHANGE",
-      format: "markdown",
-      id: "format-cycle",
-    },
+    expected: { actionType: "FORMAT_CHANGE", format: "markdown" },
     key: { ctrlKey: true, key: "f", shiftKey: true },
   },
   {
     context: selectedCtx({ format: "markdown" }),
     desc: "ctrl+shift+F (uppercase) → format-cycle — case-insensitive key match",
-    expected: {
-      eventType: "FORMAT_CHANGE",
-      format: "html",
-      id: "format-cycle",
-    },
+    expected: { actionType: "FORMAT_CHANGE", format: "html" },
     key: { ctrlKey: true, key: "F", shiftKey: true },
   },
   {
     context: selectedCtx({ format: "html" }),
     desc: "f without modifier → format-cycle (html→markdown)",
-    expected: {
-      eventType: "FORMAT_CHANGE",
-      format: "markdown",
-      id: "format-cycle",
-    },
+    expected: { actionType: "FORMAT_CHANGE", format: "markdown" },
     key: { key: "f" },
   },
   {
     context: selectedCtx({ format: "markdown" }),
     desc: "f without modifier → format-cycle (markdown→html)",
-    expected: {
-      eventType: "FORMAT_CHANGE",
-      format: "html",
-      id: "format-cycle",
-    },
+    expected: { actionType: "FORMAT_CHANGE", format: "html" },
     key: { key: "f" },
   },
 
@@ -228,16 +207,6 @@ const testCases: TestCase[] = [
   },
 ];
 
-describe("DEFAULT_SHORTCUTS", () => {
-  it("contains all four command ids: dismiss, copy, download, format-cycle", () => {
-    const ids = DEFAULT_SHORTCUTS.map((s) => s.id);
-    expect(ids).toContain("dismiss");
-    expect(ids).toContain("copy");
-    expect(ids).toContain("download");
-    expect(ids).toContain("format-cycle");
-  });
-});
-
 describe("resolveCommand", () => {
   it.each(testCases)("$desc", ({ context, key, expected }) => {
     const result = resolveCommand(context, keyEvent(key));
@@ -249,18 +218,17 @@ describe("resolveCommand", () => {
 
     expect(result).toEqual(
       expect.objectContaining({
-        event: expect.objectContaining({ type: expected.eventType }),
-        id: expected.id,
+        type: expected.actionType,
       })
     );
 
     if (expected.format === undefined) {
-      expect(result?.format).toBeUndefined();
+      expect((result as { format?: Format }).format).toBeUndefined();
     } else {
       expect(result).toEqual(
         expect.objectContaining({
-          event: expect.objectContaining({ format: expected.format }),
           format: expected.format,
+          type: expected.actionType,
         })
       );
     }

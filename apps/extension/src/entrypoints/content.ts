@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import { composeActions } from "../core/actions/composer.ts";
 import {
   clearHighlights,
   clearHoverHighlight,
@@ -73,27 +74,16 @@ export default defineContentScript({
     );
     const [barVisible, setBarVisible] = createSignal(false);
 
-    // Toast API reference — set via ContentApp's onToastReady callback
-    let showToast: ((message: string) => void) | null = null;
+    // Toast API reference — set via ContentApp's onToastReady callback.
+    // The getter on the composeActions deps object reads this at call time so
+    // toasts fire once the Shadow DOM UI mounts and registers the toast API.
+    let showToastApi: ((message: string) => void) | null = null;
 
     // State machine — created before the shadow root UI so that onMount can
     // capture `machine` in its closure.
     let lastHoveredElement: Element | null = null;
 
     const machine = new PickerStateMachine({
-      onCopy: async (content) => {
-        await sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
-        showToast?.("Copied to clipboard");
-      },
-      onDownload: (content, filename) => {
-        sendMessage({ content, filename, type: "DOWNLOAD_FILE" })
-          .then(() => showToast?.("Element downloaded"))
-          .catch((err: unknown) =>
-            showToast?.(
-              `Download failed: ${err instanceof Error ? err.message : String(err)}`
-            )
-          );
-      },
       onElementSelected: (element) => {
         clearHighlights();
         clearHoverHighlight(lastHoveredElement);
@@ -120,6 +110,23 @@ export default defineContentScript({
       },
     });
 
+    // Centralized action dispatcher: all user actions (UI buttons, keyboard
+    // shortcuts, scroll/resize, runtime messages) route through this single
+    // pipeline. The composer wires each action type to its side-effect handler.
+    const { dispatcher } = composeActions({
+      convertElement,
+      format: barFormat,
+      machine,
+      sendMessage,
+      setBarVisible,
+      setFormat: setBarFormat,
+      setSelectedElement,
+      // Getter so the handler always sees the latest toast API once mounted.
+      get showToast() {
+        return showToastApi;
+      },
+    });
+
     // Create shadow root UI for the floating bar and toasts.
     //
     // WXT's createShadowRootUi returns a Promise that resolves to a UI object
@@ -142,51 +149,9 @@ export default defineContentScript({
             ContentApp({
               element: selectedElement,
               format: barFormat,
-              onCancel: () => {
-                machine.dispatch({ type: "DISMISS" });
-              },
-              onCopy: async () => {
-                const el = selectedElement();
-                if (!el) {
-                  return;
-                }
-                try {
-                  const { content } = await convertElement(el, barFormat());
-                  await navigator.clipboard.writeText(content);
-                  showToast?.("Copied to clipboard");
-                } catch (err) {
-                  console.error("Tamiz: copy failed", err);
-                  showToast?.("Copy failed");
-                }
-                machine.dispatch({ type: "DISMISS" });
-              },
-              onDownload: async () => {
-                const el = selectedElement();
-                if (!el) {
-                  return;
-                }
-                try {
-                  const { content, filename } = await convertElement(
-                    el,
-                    barFormat()
-                  );
-                  await sendMessage({
-                    content,
-                    filename,
-                    type: "DOWNLOAD_FILE",
-                  });
-                  showToast?.("Element downloaded");
-                } catch (err) {
-                  console.error("Tamiz: download failed", err);
-                  showToast?.(
-                    `Download failed: ${err instanceof Error ? err.message : String(err)}`
-                  );
-                }
-                machine.dispatch({ type: "DISMISS" });
-              },
-              onFormatChange: setBarFormat,
+              onAction: (action) => dispatcher.dispatch(action),
               onToastReady: (api) => {
-                showToast = api;
+                showToastApi = api;
               },
               visible: barVisible,
             }),
@@ -216,10 +181,10 @@ export default defineContentScript({
     // Keyboard shortcuts resolved through the keyboard registry.
     ctx.addEventListener(document, "keydown", (e) => {
       handleKeydown(e as KeyboardEvent, {
+        dispatcher,
         getActiveElement: () => document.activeElement,
         getCurrentFormat: barFormat,
         machine,
-        setFormat: setBarFormat,
         shadowHost: ui.shadowHost,
       });
     });
@@ -254,7 +219,7 @@ export default defineContentScript({
       "scroll",
       () => {
         if (machine.getState() === "SELECTED") {
-          machine.dispatch({ type: "SCROLL" });
+          dispatcher.dispatch({ type: "SCROLL" });
         }
       },
       { passive: true }
@@ -265,7 +230,7 @@ export default defineContentScript({
       "resize",
       () => {
         if (machine.getState() === "SELECTED") {
-          machine.dispatch({ type: "RESIZE" });
+          dispatcher.dispatch({ type: "RESIZE" });
         }
       },
       { passive: true }
@@ -274,10 +239,11 @@ export default defineContentScript({
     // Listen for messages from popup/background
     onMessage((message) => {
       if (message.type === "INVOKE_PICKER") {
-        if (message.format) {
-          setBarFormat(message.format);
-        }
-        machine.dispatch({ type: "INVOKE" });
+        dispatcher.dispatch(
+          message.format
+            ? { format: message.format, type: "INVOKE" }
+            : { type: "INVOKE" }
+        );
       }
       return Promise.resolve();
     });

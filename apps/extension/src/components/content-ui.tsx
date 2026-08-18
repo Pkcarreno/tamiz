@@ -1,6 +1,7 @@
 import type { Accessor, JSX } from "solid-js";
 import { FloatingActionBar } from "../components/floating-bar.tsx";
 import { ToastProvider, useToast } from "../components/ui/toast.tsx";
+import type { PickerAction } from "../core/actions/types.ts";
 
 /**
  * Props for the ContentApp component.
@@ -12,14 +13,8 @@ export interface ContentAppProps {
   element: Accessor<Element | null>;
   /** Current output format. */
   format: Accessor<"markdown" | "html">;
-  /** Callback when cancel is clicked. */
-  onCancel: () => void;
-  /** Callback when copy is requested. */
-  onCopy: () => void;
-  /** Callback when download is requested. */
-  onDownload: () => void;
-  /** Callback when format changes. */
-  onFormatChange: (format: "markdown" | "html") => void;
+  /** Dispatched when the user clicks a bar button or changes format. */
+  onAction: (action: PickerAction) => void;
   /** Called when the toast API is ready. */
   onToastReady: (showToast: (msg: string) => void) => void;
   /** Whether the floating bar is visible. */
@@ -58,10 +53,7 @@ export function ContentApp(props: ContentAppProps): JSX.Element {
         <FloatingActionBar
           element={props.element}
           format={props.format}
-          onCancel={props.onCancel}
-          onCopy={props.onCopy}
-          onDownload={props.onDownload}
-          onFormatChange={props.onFormatChange}
+          onAction={props.onAction}
         />
       )}
     </ToastProvider>
