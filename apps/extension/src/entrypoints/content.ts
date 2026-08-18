@@ -7,6 +7,7 @@ import {
   hoverHighlight,
   injectHighlightStyles,
 } from "../lib/content-callbacks.ts";
+import { handleKeydown } from "../lib/keyboard/handler.ts";
 import {
   type Message,
   onMessage,
@@ -212,11 +213,15 @@ export default defineContentScript({
     applyDarkMode();
     darkQuery.addEventListener("change", applyDarkMode);
 
-    // Keyboard shortcut to dismiss picker
+    // Keyboard shortcuts resolved through the keyboard registry.
     ctx.addEventListener(document, "keydown", (e) => {
-      if ((e as KeyboardEvent).key === "Escape") {
-        machine.dispatch({ type: "DISMISS" });
-      }
+      handleKeydown(e as KeyboardEvent, {
+        getActiveElement: () => document.activeElement,
+        getCurrentFormat: barFormat,
+        machine,
+        setFormat: setBarFormat,
+        shadowHost: ui.shadowHost,
+      });
     });
 
     // Mouse events for element selection

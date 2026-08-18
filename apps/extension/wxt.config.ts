@@ -26,6 +26,15 @@ export default defineConfig({
         "32": "icons/32.png",
       },
     },
+    /** Keyboard shortcut that mirrors a toolbar-icon click via the reserved
+     * `_execute_action` command. Alt+Shift+G (Grab) avoids conflicts with
+     * common browser shortcuts on all platforms. */
+    commands: {
+      _execute_action: {
+        description: "Toggle element picker",
+        suggested_key: { default: "Alt+Shift+G", mac: "Alt+Shift+G" },
+      },
+    },
     name: "Tamiz",
     permissions: ["activeTab", "contextMenus", "scripting", "downloads"],
   },

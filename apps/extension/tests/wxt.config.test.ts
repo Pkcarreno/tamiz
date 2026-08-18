@@ -26,3 +26,12 @@ describe("wxt.config.ts icon management", () => {
     expect(configSource).toContain("tamiz-assert-icon-source");
   });
 });
+
+describe("wxt.config.ts keyboard commands", () => {
+  it("defines _execute_action command with Alt+Shift+G shortcut and picker description", () => {
+    expect(configSource).toContain("commands");
+    expect(configSource).toContain("_execute_action");
+    expect(configSource).toContain("Alt+Shift+G");
+    expect(configSource).toContain("Toggle element picker");
+  });
+});

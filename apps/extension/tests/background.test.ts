@@ -834,3 +834,103 @@ describe("cross-browser action API selection", () => {
     expect(code).toMatch(RE_BROWSER_ACTION_API);
   });
 });
+
+describe("command listener (keyboard shortcut)", () => {
+  /**
+   * Fresh module + fake-browser setup for commands listener tests.
+   *
+   * Mirrors the pattern in the "module-scope listener registration" suite:
+   * resetModules → overlay unimplemented APIs → dynamic import.
+   */
+  async function setupCommandsModule() {
+    vi.resetModules();
+
+    const { fakeBrowser } = await import("wxt/testing/fake-browser");
+    // commands.onCommand.addListener throws MockNotImplementedError on the
+    // fresh instance — overlay so we can capture the module-scope registration.
+    fakeBrowser.commands.onCommand.addListener = vi.fn();
+    // tabs.query and tabs.sendMessage also throw on the fresh instance.
+    fakeBrowser.tabs.query = vi.fn();
+    fakeBrowser.tabs.sendMessage = vi.fn().mockResolvedValue(undefined);
+
+    const mod = await import("../src/entrypoints/background.ts");
+    return { fakeBrowser, mod };
+  }
+
+  it("registers commands.onCommand listener at module scope (survives SW restarts)", async () => {
+    const { fakeBrowser, mod } = await setupCommandsModule();
+
+    expect(fakeBrowser.commands.onCommand.addListener).toHaveBeenCalledTimes(1);
+    expect(fakeBrowser.commands.onCommand.addListener).toHaveBeenCalledWith(
+      mod.handleCommand
+    );
+  });
+
+  it("relays INVOKE_PICKER to the active tab when _execute_action fires", async () => {
+    const { fakeBrowser, mod } = await setupCommandsModule();
+    fakeBrowser.tabs.query.mockResolvedValue([{ id: 99 }]);
+
+    mod.handleCommand("_execute_action");
+
+    // Flush the tabs.query().then(...) microtask chain.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(fakeBrowser.tabs.query).toHaveBeenCalledWith({
+      active: true,
+      currentWindow: true,
+    });
+    expect(fakeBrowser.tabs.sendMessage).toHaveBeenCalledWith(99, {
+      type: "INVOKE_PICKER",
+    });
+  });
+
+  it("ignores unknown commands (does not query or relay INVOKE_PICKER)", async () => {
+    const { fakeBrowser, mod } = await setupCommandsModule();
+
+    mod.handleCommand("unknown_command");
+
+    // handleCommand returns early — no async behavior should occur.
+    expect(fakeBrowser.tabs.query).not.toHaveBeenCalled();
+    expect(fakeBrowser.tabs.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("does not relay when tabs.query returns no active tab", async () => {
+    const { fakeBrowser, mod } = await setupCommandsModule();
+    fakeBrowser.tabs.query.mockResolvedValue([]); // no active tab
+
+    mod.handleCommand("_execute_action");
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(fakeBrowser.tabs.query).toHaveBeenCalledWith({
+      active: true,
+      currentWindow: true,
+    });
+    expect(fakeBrowser.tabs.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("does not relay when the active tab has no id", async () => {
+    const { fakeBrowser, mod } = await setupCommandsModule();
+    fakeBrowser.tabs.query.mockResolvedValue([{}]); // tab without id
+
+    mod.handleCommand("_execute_action");
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(fakeBrowser.tabs.query).toHaveBeenCalled();
+    expect(fakeBrowser.tabs.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("relays INVOKE_PICKER to tab id 0 (falsy but valid — tests !== undefined guard)", async () => {
+    const { fakeBrowser, mod } = await setupCommandsModule();
+    fakeBrowser.tabs.query.mockResolvedValue([{ id: 0 }]);
+
+    mod.handleCommand("_execute_action");
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(fakeBrowser.tabs.sendMessage).toHaveBeenCalledWith(0, {
+      type: "INVOKE_PICKER",
+    });
+  });
+});

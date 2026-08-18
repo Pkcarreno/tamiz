@@ -229,6 +229,37 @@ export function handleActionClick(tab?: Browser.tabs.Tab): void {
 }
 
 /**
+ * Handle a keyboard shortcut command from `browser.commands.onCommand`.
+ *
+ * The reserved `_execute_action` command fires when the user presses the
+ * toolbar-icon shortcut (Alt+Shift+G). It relays the same `INVOKE_PICKER`
+ * flow as clicking the extension icon, defaulting to the content script's
+ * initial format. All other commands are silently ignored.
+ *
+ * Registered at module scope so it survives MV3 service worker restarts —
+ * `onInstalled` only fires on install/update, not on every restart.
+ *
+ * @param command - The command name from `browser.commands.onCommand`.
+ *
+ * @public
+ */
+export function handleCommand(command: string): void {
+  if (command !== "_execute_action") {
+    return;
+  }
+  browser.tabs
+    .query({ active: true, currentWindow: true })
+    .then(([tab]) => {
+      if (tab?.id !== undefined) {
+        return relayInvokePicker(tab.id);
+      }
+    })
+    .catch((err) =>
+      console.error("Failed to relay INVOKE_PICKER from command:", err)
+    );
+}
+
+/**
  * Create the "Capture readable content" context menu item.
  *
  * Called on install/update via `onInstalled`. Swallows duplicate-id errors so
@@ -275,6 +306,19 @@ const actionApi =
 
 try {
   actionApi.onClicked.addListener(handleActionClick);
+} catch {
+  /* Build-time module evaluation: browser APIs are mocked and unsupported. */
+}
+
+// Register the keyboard shortcut listener at module scope so it survives MV3
+// service worker restarts — `onInstalled` only fires on install/update, not on
+// every restart. The `_execute_action` command mirrors a toolbar-icon click,
+// relaying the same `INVOKE_PICKER` flow to the active tab's content script.
+// In the build-time module-evaluation context the fake browser's commands API
+// throws, so we guard with try/catch — the listener is always registered at
+// runtime in a real browser.
+try {
+  browser.commands.onCommand.addListener(handleCommand);
 } catch {
   /* Build-time module evaluation: browser APIs are mocked and unsupported. */
 }
