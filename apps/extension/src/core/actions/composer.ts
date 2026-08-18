@@ -1,6 +1,6 @@
 import type { ConvertedContent } from "../../lib/content-callbacks.ts";
 import type { Message } from "../../lib/messaging.ts";
-import type { PickerStateMachine } from "../../lib/picker.ts";
+import type { PickerStateMachine } from "../machine/picker.ts";
 import type { ActionDispatcher } from "./dispatcher.ts";
 import { createActionDispatcher } from "./dispatcher.ts";
 import type { ShortcutRegistry } from "./registry.ts";

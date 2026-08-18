@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ConvertedContent } from "../../lib/content-callbacks.ts";
-import { PickerStateMachine } from "../../lib/picker.ts";
+import { PickerStateMachine } from "../machine/picker.ts";
 import type { ActionHandlerDeps } from "./composer.ts";
 import { composeActions } from "./composer.ts";
 import { createActionDispatcher } from "./dispatcher.ts";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PickerStateMachine } from "../../lib/picker.ts";
+import { PickerStateMachine } from "../machine/picker.ts";
 import type { KeyCombo } from "./registry.ts";
 import { createShortcutRegistry } from "./registry.ts";
 

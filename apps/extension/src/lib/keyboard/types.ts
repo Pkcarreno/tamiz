@@ -1,4 +1,4 @@
-import type { PickerState } from "../picker.ts";
+import type { PickerState } from "../../core/machine/picker.ts";
 
 /**
  * Output format for converted content.

@@ -1,5 +1,6 @@
 import { browser } from "wxt/browser";
 import { composeActions } from "../core/actions/composer.ts";
+import { PickerStateMachine } from "../core/machine/picker.ts";
 import {
   clearHighlights,
   clearHoverHighlight,
@@ -15,7 +16,6 @@ import {
   sendMessage,
   setTransport,
 } from "../lib/messaging.ts";
-import { PickerStateMachine } from "../lib/picker.ts";
 
 /**
  * Content script entry point.

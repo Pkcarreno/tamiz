@@ -1,4 +1,4 @@
-import type { PickerStateMachine } from "../../lib/picker.ts";
+import type { PickerStateMachine } from "../machine/picker.ts";
 import type { PickerAction } from "./types.ts";
 
 /**

@@ -1,5 +1,5 @@
 import type { ActionDispatcher } from "../../core/actions/dispatcher.ts";
-import type { PickerStateMachine } from "../picker.ts";
+import type { PickerStateMachine } from "../../core/machine/picker.ts";
 import { resolveCommand } from "./registry.ts";
 import type { Format, ShortcutContext } from "./types.ts";
 import { isInputElement } from "./types.ts";

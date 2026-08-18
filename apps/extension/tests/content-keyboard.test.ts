@@ -11,9 +11,9 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createActionDispatcher } from "../src/core/actions/dispatcher.ts";
+import { PickerStateMachine } from "../src/core/machine/picker.ts";
 import type { KeydownHandlerDeps } from "../src/lib/keyboard/handler.ts";
 import { handleKeydown } from "../src/lib/keyboard/handler.ts";
-import { PickerStateMachine } from "../src/lib/picker.ts";
 
 /** Build a real KeyboardEvent for the given key and modifier state. */
 function keyEvent(config: {
