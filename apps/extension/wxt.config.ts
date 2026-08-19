@@ -48,6 +48,12 @@ export default defineConfig({
     },
     name: "Tamiz",
     permissions: ["activeTab", "contextMenus", "scripting", "downloads"],
+    web_accessible_resources: [
+      {
+        resources: ["main-world.js"],
+        matches: ["<all_urls>"],
+      },
+    ],
   },
   modules: ["@wxt-dev/module-solid", "@wxt-dev/auto-icons"],
   srcDir: "src",
