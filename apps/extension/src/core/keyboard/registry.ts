@@ -90,6 +90,12 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
     label: "F",
     when: (ctx) => ctx.state === "SELECTED",
   },
+  {
+    action: { type: "RESTART" },
+    combo: { alt: false, ctrlOrMeta: false, key: "r", shift: false },
+    label: "R",
+    when: (ctx) => ctx.state === "SELECTED",
+  },
 ];
 
 /**

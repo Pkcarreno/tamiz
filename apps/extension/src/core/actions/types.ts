@@ -11,6 +11,7 @@ export type PickerAction =
   | { type: "COPY" }
   | { type: "DOWNLOAD" }
   | { type: "DISMISS" }
+  | { type: "RESTART" }
   | { type: "FORMAT_CHANGE"; format: "markdown" | "html" }
   | { type: "INVOKE"; format?: "markdown" | "html" }
   | { type: "SCROLL" }

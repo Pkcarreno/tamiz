@@ -31,6 +31,7 @@ export type PickerEvent =
   | { type: "DOWNLOAD" }
   | { type: "FORMAT_CHANGE"; format: "markdown" | "html" }
   | { type: "DISMISS" }
+  | { type: "RESTART" }
   | { type: "SCROLL" }
   | { type: "RESIZE" };
 
@@ -44,23 +45,26 @@ export class PickerStateMachine {
   private selectedElement: Element | null = null;
   private format: "markdown" | "html" = "markdown";
 
-  private readonly onStateChange?: (state: PickerState) => void;
+  private readonly onDeselect?: (element: Element) => void;
   private readonly onElementSelected?: (element: Element) => void;
   private readonly onHover?: (element: Element | null) => void;
   private readonly onReposition?: () => void;
+  private readonly onStateChange?: (state: PickerState) => void;
 
   constructor(
     callbacks: {
-      onStateChange?: (state: PickerState) => void;
+      onDeselect?: (element: Element) => void;
       onElementSelected?: (element: Element) => void;
       onHover?: (element: Element | null) => void;
       onReposition?: () => void;
+      onStateChange?: (state: PickerState) => void;
     } = {}
   ) {
-    this.onStateChange = callbacks.onStateChange;
+    this.onDeselect = callbacks.onDeselect;
     this.onElementSelected = callbacks.onElementSelected;
     this.onHover = callbacks.onHover;
     this.onReposition = callbacks.onReposition;
+    this.onStateChange = callbacks.onStateChange;
   }
 
   /**
@@ -123,7 +127,6 @@ export class PickerStateMachine {
     } else if (event.type === "MOUSEMOVE") {
       this.onHover?.(event.target);
     } else if (event.type === "DISMISS") {
-      this.onHover?.(null);
       this.transition("IDLE");
     }
   }
@@ -135,6 +138,8 @@ export class PickerStateMachine {
       this.onReposition?.();
     } else if (event.type === "DISMISS") {
       this.transition("IDLE");
+    } else if (event.type === "RESTART") {
+      this.transition("HIGHLIGHTING");
     }
     // COPY and DOWNLOAD are intentionally no-ops here: side effects are
     // handled by action handlers in the centralized dispatcher pipeline.
@@ -142,11 +147,39 @@ export class PickerStateMachine {
     // is definitive; re-invoke to select a new element.
   }
 
+  /**
+   * Centralized state transition with cleanup.
+   *
+   * All side effects that depend on the source or target state live here:
+   * - Leaving SELECTED: deselect element (onDeselect) and clear reference.
+   * - Leaving HIGHLIGHTING: clear hover state.
+   * - Entering IDLE: full teardown.
+   *
+   * Handlers only specify the target state; this method owns the cleanup.
+   */
   private transition(newState: PickerState): void {
+    const prev = this.state;
     this.state = newState;
+
+    // Leaving SELECTED: clear the selected element and notify.
+    if (prev === "SELECTED" && newState !== "SELECTED") {
+      if (this.selectedElement) {
+        this.onDeselect?.(this.selectedElement);
+      }
+      this.selectedElement = null;
+    }
+
+    // Leaving HIGHLIGHTING: clear hover feedback.
+    if (prev === "HIGHLIGHTING" && newState !== "HIGHLIGHTING") {
+      this.onHover?.(null);
+    }
+
+    // Entering IDLE: full teardown (redundant if prev was SELECTED, but
+    // covers HIGHLIGHTING → IDLE and residual IDLE → IDLE calls).
     if (newState === "IDLE") {
       this.teardown();
     }
+
     this.onStateChange?.(newState);
   }
 

@@ -69,6 +69,35 @@ describe("FloatingActionBar", () => {
     });
   });
 
+  describe("restart button", () => {
+    it("renders RotateCcw restart button between Download and Cancel", () => {
+      render(() => <FloatingActionBar {...makeProps()} />);
+
+      const restartBtn = screen.getByRole("button", {
+        name: "Restart selection",
+      });
+      expect(restartBtn).toBeTruthy();
+
+      // Verify button order: Copy, Download, Restart, Cancel
+      const buttons = screen.getAllByRole("button");
+      const ariaLabels = buttons.map((b) => b.getAttribute("aria-label"));
+      const downloadIdx = ariaLabels.indexOf("Download");
+      const restartIdx = ariaLabels.indexOf("Restart selection");
+      const cancelIdx = ariaLabels.indexOf("Cancel");
+      expect(downloadIdx).toBeLessThan(restartIdx);
+      expect(restartIdx).toBeLessThan(cancelIdx);
+    });
+
+    it("dispatches RESTART when Restart is clicked", () => {
+      const props = makeProps();
+      render(() => <FloatingActionBar {...props} />);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Restart selection" })
+      );
+      expect(props.onAction).toHaveBeenCalledWith({ type: "RESTART" });
+    });
+  });
+
   describe("dispatches actions", () => {
     it("dispatches COPY when Copy is clicked", () => {
       const props = makeProps();

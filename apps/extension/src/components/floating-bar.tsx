@@ -1,5 +1,6 @@
 import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createMemo } from "solid-js";
 
@@ -71,6 +72,10 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
     props.onAction({ type: "DISMISS" });
   }
 
+  function handleRestart(): void {
+    props.onAction({ type: "RESTART" });
+  }
+
   function handleFormatChange(value: string): void {
     props.onAction({
       format: value as "markdown" | "html",
@@ -126,6 +131,15 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
           variant="icon"
         >
           <Download size={16} />
+        </Button>
+        <Button
+          aria-label="Restart selection"
+          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+          onClick={handleRestart}
+          size="xs"
+          variant="icon"
+        >
+          <RotateCcw size={16} />
         </Button>
         <Button
           aria-label="Cancel"

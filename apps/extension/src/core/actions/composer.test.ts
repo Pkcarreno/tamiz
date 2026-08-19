@@ -288,6 +288,43 @@ describe("DISMISS handler", () => {
   });
 });
 
+describe("RESTART handler", () => {
+  it("transitions machine to HIGHLIGHTING and clears selected element", () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "RESTART" });
+
+    expect(deps.machine.getState()).toBe("HIGHLIGHTING");
+    expect(deps.machine.getSelectedElement()).toBeNull();
+  });
+
+  it("does not call setBarVisible — state drives visibility", () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "RESTART" });
+
+    expect(deps.setBarVisible).not.toHaveBeenCalledWith(false);
+  });
+
+  it("preserves format after RESTART", () => {
+    const deps = makeDeps();
+    deps.setFormat("html");
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "RESTART" });
+
+    expect(deps.machine.getState()).toBe("HIGHLIGHTING");
+    // setFormat was only called once during the initial setup, not during RESTART
+    expect(deps.setFormat).toHaveBeenCalledTimes(1);
+    expect(deps.setFormat).not.toHaveBeenCalledWith("markdown");
+  });
+});
+
 describe("SCROLL / RESIZE handlers", () => {
   it("SCROLL dispatches to machine without side effects", () => {
     const deps = makeDeps();

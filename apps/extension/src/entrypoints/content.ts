@@ -105,6 +105,10 @@ export default defineContentScript({
         if (state === "IDLE") {
           setBarVisible(false);
           setSelectedElement(null);
+        } else if (state === "HIGHLIGHTING") {
+          // RESTART transitions to HIGHLIGHTING — clear the selected element
+          // signal so the bar disappears and the user can hover freely.
+          setSelectedElement(null);
         }
       },
     });

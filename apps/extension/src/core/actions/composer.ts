@@ -58,7 +58,7 @@ export interface ComposedActions {
 }
 
 /**
- * Wire all seven `PickerAction` handlers onto a fresh dispatcher.
+ * Wire all eight `PickerAction` handlers onto a fresh dispatcher.
  *
  * Each handler reads state from the machine and calls the injected side-effect
  * collaborators (`htmlConverter`, `sendMessage`, `showToast`). After a
@@ -149,6 +149,14 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
     deps.setBarVisible(false);
   };
 
+  const handleRestart = (): void => {
+    // Dispatch RESTART to the machine — it transitions to HIGHLIGHTING
+    // and clears the selected element.  Bar visibility is driven by the
+    // state machine via the onStateChange callback, so we do NOT call
+    // setBarVisible here.
+    deps.machine.dispatch({ type: "RESTART" });
+  };
+
   const handleScroll = (): void => {
     deps.machine.dispatch({ type: "SCROLL" });
   };
@@ -162,6 +170,7 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
     dispatcher.on("FORMAT_CHANGE", handleFormatChange),
     dispatcher.on("INVOKE", handleInvoke),
     dispatcher.on("DISMISS", handleDismiss),
+    dispatcher.on("RESTART", handleRestart),
     dispatcher.on("DOWNLOAD", handleDownload),
     dispatcher.on("RESIZE", handleResize),
     dispatcher.on("SCROLL", handleScroll),

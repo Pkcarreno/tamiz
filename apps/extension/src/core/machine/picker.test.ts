@@ -3,11 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 import { PickerStateMachine } from "./picker.ts";
 
 // Helper: advance the machine to SELECTED with a real DOM element.
+// If already in HIGHLIGHTING, only dispatches CLICK (preserves format).
 function selectElement(
   machine: PickerStateMachine,
   element: Element = document.createElement("div")
 ): void {
-  machine.dispatch({ type: "INVOKE" });
+  if (machine.getState() === "IDLE") {
+    machine.dispatch({ type: "INVOKE" });
+  }
   machine.dispatch({ target: element, type: "CLICK" });
 }
 
@@ -359,6 +362,109 @@ describe("PickerStateMachine", () => {
       machine.dispatch({ format: "html", type: "INVOKE" });
       expect(machine.getFormat()).toBe("html");
       expect(machine.getState()).toBe("HIGHLIGHTING");
+    });
+  });
+
+  describe("RESTART — from SELECTED → HIGHLIGHTING with element teardown", () => {
+    it("RESTART from SELECTED returns to HIGHLIGHTING and clears selected element", () => {
+      const onStateChange = vi.fn();
+      const onDeselect = vi.fn();
+      const machine = new PickerStateMachine({ onDeselect, onStateChange });
+
+      selectElement(machine);
+      machine.dispatch({ type: "RESTART" });
+
+      expect(machine.getState()).toBe("HIGHLIGHTING");
+      expect(machine.getSelectedElement()).toBeNull();
+      expect(onStateChange).toHaveBeenLastCalledWith("HIGHLIGHTING");
+      expect(onDeselect).toHaveBeenCalledTimes(1);
+    });
+
+    it("RESTART from SELECTED preserves the format", () => {
+      const machine = new PickerStateMachine();
+
+      machine.dispatch({ format: "html", type: "INVOKE" });
+      selectElement(machine);
+      expect(machine.getFormat()).toBe("html");
+
+      machine.dispatch({ type: "RESTART" });
+
+      expect(machine.getFormat()).toBe("html");
+    });
+
+    it("RESTART is a no-op in IDLE — no state change or callback", () => {
+      const onStateChange = vi.fn();
+      const machine = new PickerStateMachine({ onStateChange });
+
+      machine.dispatch({ type: "RESTART" });
+
+      expect(machine.getState()).toBe("IDLE");
+      expect(onStateChange).not.toHaveBeenCalled();
+    });
+
+    it("RESTART is a no-op in HIGHLIGHTING — no state change or callback", () => {
+      const onStateChange = vi.fn();
+      const machine = new PickerStateMachine({ onStateChange });
+
+      machine.dispatch({ type: "INVOKE" });
+      expect(machine.getState()).toBe("HIGHLIGHTING");
+
+      machine.dispatch({ type: "RESTART" });
+
+      expect(machine.getState()).toBe("HIGHLIGHTING");
+      expect(onStateChange).not.toHaveBeenCalledWith("IDLE");
+    });
+
+    it("format survives two consecutive restarts", () => {
+      const machine = new PickerStateMachine();
+
+      // First cycle: select with html format, then restart
+      machine.dispatch({ format: "html", type: "INVOKE" });
+      selectElement(machine);
+      expect(machine.getFormat()).toBe("html");
+      machine.dispatch({ type: "RESTART" });
+      expect(machine.getState()).toBe("HIGHLIGHTING");
+      expect(machine.getFormat()).toBe("html");
+
+      // Second cycle: click to select again, then restart
+      machine.dispatch({
+        target: document.createElement("div"),
+        type: "CLICK",
+      });
+      machine.dispatch({ type: "RESTART" });
+
+      expect(machine.getFormat()).toBe("html");
+      expect(machine.getState()).toBe("HIGHLIGHTING");
+    });
+
+    it("RESTART calls onHover with null to clear hover state", () => {
+      const onHover = vi.fn();
+      const machine = new PickerStateMachine({ onHover });
+
+      selectElement(machine);
+      machine.dispatch({ type: "RESTART" });
+
+      expect(onHover).toHaveBeenCalledWith(null);
+    });
+
+    it("after RESTART, hovering and clicking selects a new element", () => {
+      const onElementSelected = vi.fn();
+      const machine = new PickerStateMachine({ onElementSelected });
+
+      selectElement(machine);
+      machine.dispatch({ type: "RESTART" });
+      expect(machine.getState()).toBe("HIGHLIGHTING");
+
+      // Simulate hover
+      const newElement = document.createElement("span");
+      machine.dispatch({ target: newElement, type: "MOUSEMOVE" });
+      expect(machine.getState()).toBe("HIGHLIGHTING");
+
+      // Click to select
+      machine.dispatch({ target: newElement, type: "CLICK" });
+      expect(machine.getState()).toBe("SELECTED");
+      expect(machine.getSelectedElement()).toBe(newElement);
+      expect(onElementSelected).toHaveBeenCalledWith(newElement);
     });
   });
 

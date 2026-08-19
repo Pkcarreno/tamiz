@@ -333,6 +333,53 @@ describe("handleKeydown — input focus guard", () => {
   });
 });
 
+describe("handleKeydown — R → RESTART in SELECTED", () => {
+  it("dispatches RESTART through the dispatcher on plain r in SELECTED", () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    const event = keyEvent({ key: "r" });
+    handleKeydown(event, deps);
+
+    expect(dispatchSpy).toHaveBeenCalledWith({ type: "RESTART" });
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("does not dispatch RESTART in HIGHLIGHTING state", () => {
+    const deps = makeDeps();
+    deps.machine.dispatch({ type: "INVOKE" });
+    expect(deps.machine.getState()).toBe("HIGHLIGHTING");
+
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    handleKeydown(keyEvent({ key: "r" }), deps);
+
+    expect(dispatchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not dispatch RESTART in IDLE state", () => {
+    const deps = makeDeps();
+    expect(deps.machine.getState()).toBe("IDLE");
+
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    handleKeydown(keyEvent({ key: "r" }), deps);
+
+    expect(dispatchSpy).not.toHaveBeenCalled();
+  });
+
+  it("ctrl+r does not dispatch RESTART (browser reload shortcut)", () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    const event = keyEvent({ ctrlKey: true, key: "r" });
+    handleKeydown(event, deps);
+
+    expect(dispatchSpy).not.toHaveBeenCalledWith({ type: "RESTART" });
+    expect(event.defaultPrevented).toBe(false);
+  });
+});
+
 describe("handleKeydown — unmatched keys re-dispatched via shadowHost", () => {
   it("re-dispatches unmatched key on shadowHost with bubbles and composed", () => {
     const deps = makeDeps();

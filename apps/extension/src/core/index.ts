@@ -54,6 +54,11 @@ export function createPickerCore(callbacks: PickerCoreCallbacks): PickerCore {
   const registry = createShortcutRegistry();
 
   const machine = new PickerStateMachineImpl({
+    onDeselect: () => {
+      // Clear all highlight and hover styles when the selection is discarded
+      // (e.g. on RESTART) so stale visual indicators do not linger.
+      highlight.clearAll();
+    },
     onElementSelected: (element) => {
       highlight.selectElement(element);
       callbacks.onElementSelected(element);
