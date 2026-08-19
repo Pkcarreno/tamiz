@@ -1,8 +1,7 @@
 import { browser } from "wxt/browser";
 import { composeActions } from "../core/actions/composer.ts";
-import { createHighlightController } from "../core/highlight.ts";
+import { createPickerCore } from "../core/index.ts";
 import { handleKeydown } from "../core/keyboard/handler.ts";
-import { PickerStateMachine } from "../core/machine/picker.ts";
 import { extractContent } from "../lib/extract-content.ts";
 import {
   type Message,
@@ -23,12 +22,6 @@ function injectHighlightStyles(): void {
   }
   const style = document.createElement("style");
   style.id = "tamiz-highlight-styles";
-  // Hex values are hardcoded because these styles are injected into the host
-  // page (not Shadow DOM), so CSS variables are unavailable. They are kept in
-  // sync with design tokens defined in content.css :root:
-  //   #2563eb            — --tz-accent (light)
-  //   rgba(37,99,235,.12) — --tz-accent-dim (light)
-  //   #3b82f6            — --tz-accent-bright (light)
   style.textContent = `
     .tamiz-highlight {
       box-shadow: 0 0 0 2px #2563eb !important;
@@ -45,15 +38,13 @@ function injectHighlightStyles(): void {
 /**
  * Content script entry point.
  *
- * Implements the element picker state machine with a floating action bar
- * rendered inside a Shadow DOM for style and event isolation.
- *
- * All SolidJS and client-only imports are deferred inside {@link main} to
- * avoid WXT's SSR-like build evaluation triggering server-side errors.
+ * Thin shell: transport setup, core creation, shadow root mount, event
+ * delegation. All domain logic lives in `core/`.
  */
 export default defineContentScript({
   cssInjectionMode: "ui",
   async main(ctx) {
+    // 1. Configure transport (browser API bridge).
     setTransport({
       onMessage: (handler) => {
         browser.runtime.onMessage.addListener(
@@ -79,6 +70,7 @@ export default defineContentScript({
       sendMessage: (msg) => browser.runtime.sendMessage(msg),
     });
 
+    // 2. Import SolidJS and UI.
     const [{ createSignal }, { render }, { ContentApp }] = await Promise.all([
       import("solid-js"),
       import("solid-js/web"),
@@ -87,10 +79,10 @@ export default defineContentScript({
 
     await import("../styles/content.css");
 
-    // Inject highlight styles into the main document (shadow DOM CSS won't reach it)
+    // 3. Inject highlight CSS into host document.
     injectHighlightStyles();
 
-    // State for the floating bar
+    // 4. Create UI signals.
     const [selectedElement, setSelectedElement] = createSignal<Element | null>(
       null
     );
@@ -98,38 +90,26 @@ export default defineContentScript({
       "markdown"
     );
     const [barVisible, setBarVisible] = createSignal(false);
-
-    // Toast API reference — set via ContentApp's onToastReady callback.
-    // The getter on the composeActions deps object reads this at call time so
-    // toasts fire once the Shadow DOM UI mounts and registers the toast API.
     let showToastApi: ((message: string) => void) | null = null;
 
-    // Highlight controller — manages hover, selection, and highlight state.
-    const highlight = createHighlightController();
-
-    // State machine — created before the shadow root UI so that onMount can
-    // capture `machine` in its closure.
-    const machine = new PickerStateMachine({
+    // 5. Create core (domain collaborators wired together).
+    const core = createPickerCore({
       onElementSelected: (element) => {
-        highlight.selectElement(element);
         setSelectedElement(element);
         setBarVisible(true);
       },
-      onHover: (element) => {
-        highlight.setHoverTarget(element);
+      onHover: () => {
+        // Hover feedback handled by highlight controller via machine callbacks.
       },
       onStateChange: (state) => {
         if (state === "IDLE") {
-          highlight.clearAll();
           setBarVisible(false);
           setSelectedElement(null);
         }
       },
     });
 
-    // Centralized action dispatcher: all user actions (UI buttons, keyboard
-    // shortcuts, scroll/resize, runtime messages) route through this single
-    // pipeline. The composer wires each action type to its side-effect handler.
+    // 6. Compose action handlers (wires SolidJS signal setters).
     const { dispatcher } = composeActions({
       format: barFormat,
       htmlConverter: {
@@ -139,30 +119,17 @@ export default defineContentScript({
         },
         extractContent,
       },
-      machine,
+      machine: core.machine,
       sendMessage,
       setBarVisible,
       setFormat: setBarFormat,
       setSelectedElement,
-      // Getter so the handler always sees the latest toast API once mounted.
       get showToast() {
         return showToastApi;
       },
     });
 
-    // Create shadow root UI for the floating bar and toasts.
-    //
-    // WXT's createShadowRootUi returns a Promise that resolves to a UI object
-    // with a `mount()` method. The onMount callback receives the container
-    // div inside the shadow root and is responsible for rendering the SolidJS
-    // app into it. The returned disposer is stored via onRemove for cleanup.
-    //
-    // "click" is intentionally excluded from isolateEvents: SolidJS uses
-    // document-level event delegation for onClick, and stopPropagation on the
-    // shadow root would prevent bar button clicks from reaching the delegated
-    // listener. Click isolation is still handled by checking the machine state
-    // (only HIGHLIGHTING processes clicks) and the shadow host being 0×0
-    // during that state.
+    // 7. Mount shadow root UI.
     const ui = await createShadowRootUi(ctx, {
       isolateEvents: ["mousemove", "keydown"],
       name: "tamiz-picker",
@@ -188,9 +155,7 @@ export default defineContentScript({
 
     ui.mount();
 
-    // Dark mode: detect prefers-color-scheme and toggle .dark on shadow root host.
-    // CSS custom properties pierce shadow DOM, so .dark on :root inside the
-    // shadow root activates the dark token set from content.css.
+    // 8. Dark mode.
     const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
     function applyDarkMode() {
       const host = ui.shadowHost;
@@ -201,47 +166,43 @@ export default defineContentScript({
     applyDarkMode();
     darkQuery.addEventListener("change", applyDarkMode);
 
-    // Keyboard shortcuts resolved through the keyboard registry.
+    // 9. Event listeners — thin delegation to core.
     ctx.addEventListener(document, "keydown", (e) => {
       handleKeydown(e as KeyboardEvent, {
         dispatcher,
         getActiveElement: () => document.activeElement,
         getCurrentFormat: barFormat,
-        machine,
+        machine: core.machine,
+        registry: core.registry,
         shadowHost: ui.shadowHost,
       });
     });
 
-    // Mouse events for element selection
     ctx.addEventListener(document, "mousemove", (e) => {
-      if (machine.getState() === "HIGHLIGHTING") {
+      if (core.machine.getState() === "HIGHLIGHTING") {
         const target = (e as MouseEvent).target as Element;
         if (target && target !== document.documentElement) {
-          machine.dispatch({ target, type: "MOUSEMOVE" });
+          core.machine.dispatch({ target, type: "MOUSEMOVE" });
         }
       }
     });
 
-    // Click events for element selection — only during HIGHLIGHTING.
-    // SELECTED is excluded so clicking elsewhere does NOT re-select
-    // (capture lock: first click is definitive; re-invoke to select again).
     ctx.addEventListener(document, "click", (e) => {
-      if (machine.getState() === "HIGHLIGHTING") {
+      if (core.machine.getState() === "HIGHLIGHTING") {
         const target = (e as MouseEvent).target as Element;
         if (target && target !== document.documentElement) {
           e.preventDefault();
           e.stopPropagation();
-          machine.dispatch({ target, type: "CLICK" });
+          core.machine.dispatch({ target, type: "CLICK" });
         }
       }
     });
 
-    // Scroll/resize repositioning
     ctx.addEventListener(
       window,
       "scroll",
       () => {
-        if (machine.getState() === "SELECTED") {
+        if (core.machine.getState() === "SELECTED") {
           dispatcher.dispatch({ type: "SCROLL" });
         }
       },
@@ -252,14 +213,14 @@ export default defineContentScript({
       window,
       "resize",
       () => {
-        if (machine.getState() === "SELECTED") {
+        if (core.machine.getState() === "SELECTED") {
           dispatcher.dispatch({ type: "RESIZE" });
         }
       },
       { passive: true }
     );
 
-    // Listen for messages from popup/background
+    // 10. Runtime messages.
     onMessage((message) => {
       if (message.type === "INVOKE_PICKER") {
         dispatcher.dispatch(
@@ -271,10 +232,7 @@ export default defineContentScript({
       return Promise.resolve();
     });
 
-    // Announce readiness so the background can flush any pending INVOKE_PICKER
-    // that arrived before the content script registered its message listener.
-    // Guarded so setup failures never break the picker on tabs where the
-    // background page is unavailable.
+    // 11. Announce readiness.
     try {
       await sendMessage({ type: "CONTENT_READY" });
     } catch {

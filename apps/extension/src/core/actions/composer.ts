@@ -1,9 +1,9 @@
 import type { Message } from "../../lib/messaging.ts";
+import type { ShortcutRegistry } from "../keyboard/registry.ts";
+import { createShortcutRegistry } from "../keyboard/registry.ts";
 import type { PickerStateMachine } from "../machine/picker.ts";
 import type { ActionDispatcher } from "./dispatcher.ts";
 import { createActionDispatcher } from "./dispatcher.ts";
-import type { ShortcutRegistry } from "./registry.ts";
-import { createShortcutRegistry } from "./registry.ts";
 import type { PickerAction } from "./types.ts";
 
 /** File extension for each output format. */

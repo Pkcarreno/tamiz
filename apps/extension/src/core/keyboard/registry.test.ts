@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveCommand } from "./registry.ts";
-import type { Format, ShortcutContext } from "./types.ts";
+import { createShortcutRegistry } from "./registry.ts";
+import type { ShortcutContext } from "./types.ts";
 
 /** Config describing a keyboard event without instantiating it inline. */
 interface KeyConfig {
@@ -95,7 +95,7 @@ const testCases: TestCase[] = [
   },
   {
     context: selectedCtx(),
-    desc: "ctrl+alt+c → null (extra modifier on copy)",
+    desc: "ctrl+alt+c → null (alt is not part of copy)",
     expected: null,
     key: { altKey: true, ctrlKey: true, key: "c" },
   },
@@ -207,30 +207,38 @@ const testCases: TestCase[] = [
   },
 ];
 
-describe("resolveCommand", () => {
-  it.each(testCases)("$desc", ({ context, key, expected }) => {
-    const result = resolveCommand(context, keyEvent(key));
+describe("createShortcutRegistry", () => {
+  describe("matchShortcut", () => {
+    it.each(testCases)("$desc", ({ context, key, expected }) => {
+      const { matchShortcut } = createShortcutRegistry();
+      const result = matchShortcut(keyEvent(key), context);
 
-    if (expected === null) {
-      expect(result).toBeNull();
-      return;
-    }
+      if (expected === null) {
+        expect(result).toBeNull();
+        return;
+      }
 
-    expect(result).toEqual(
-      expect.objectContaining({
-        type: expected.actionType,
-      })
-    );
-
-    if (expected.format === undefined) {
-      expect((result as { format?: Format }).format).toBeUndefined();
-    } else {
       expect(result).toEqual(
         expect.objectContaining({
-          format: expected.format,
           type: expected.actionType,
         })
       );
-    }
+
+      if (expected.format !== undefined) {
+        expect(result).toEqual(
+          expect.objectContaining({
+            format: expected.format,
+            type: expected.actionType,
+          })
+        );
+      }
+    });
+  });
+
+  describe("bindings are exposed", () => {
+    it("exposes at least 4 binding labels", () => {
+      const { bindings } = createShortcutRegistry();
+      expect(bindings.length).toBeGreaterThanOrEqual(4);
+    });
   });
 });

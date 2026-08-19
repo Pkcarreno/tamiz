@@ -14,6 +14,7 @@ import { createActionDispatcher } from "../actions/dispatcher.ts";
 import { PickerStateMachine } from "../machine/picker.ts";
 import type { KeydownHandlerDeps } from "./handler.ts";
 import { handleKeydown } from "./handler.ts";
+import { createShortcutRegistry } from "./registry.ts";
 
 /** Build a real KeyboardEvent for the given key and modifier state. */
 function keyEvent(config: {
@@ -40,12 +41,14 @@ function makeDeps(
   const machine = new PickerStateMachine();
   const shadowHost = document.createElement("div");
   const dispatcher = createActionDispatcher();
+  const registry = createShortcutRegistry();
 
   return {
     dispatcher,
     getActiveElement: () => null,
     getCurrentFormat: () => "markdown",
     machine,
+    registry,
     shadowHost,
     ...overrides,
   };

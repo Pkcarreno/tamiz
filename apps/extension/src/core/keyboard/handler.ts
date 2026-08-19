@@ -1,6 +1,6 @@
 import type { ActionDispatcher } from "../actions/dispatcher.ts";
 import type { PickerStateMachine } from "../machine/picker.ts";
-import { resolveCommand } from "./registry.ts";
+import type { ShortcutRegistry } from "./registry.ts";
 import type { Format, ShortcutContext } from "./types.ts";
 import { isInputElement } from "./types.ts";
 
@@ -21,6 +21,8 @@ export interface KeydownHandlerDeps {
   getCurrentFormat: () => Format;
   /** The picker state machine for reading state context. */
   machine: PickerStateMachine;
+  /** The shortcut registry for resolving key combos to actions. */
+  registry: ShortcutRegistry;
   /** The shadow host element for re-dispatching unmatched key events. */
   shadowHost: Element | null;
 }
@@ -28,7 +30,7 @@ export interface KeydownHandlerDeps {
 /**
  * Intercept a `keydown` event and resolve it against the shortcut registry.
  *
- * Resolution follows {@link resolveCommand}'s priority table:
+ * Resolution follows the registry's priority table:
  *
  * 1. Escape → DISMISS (fires even during input focus).
  * 2. While an input, textarea, select, or contentEditable element is focused,
@@ -48,7 +50,7 @@ export interface KeydownHandlerDeps {
  * that the content script's `isolateEvents: ["keydown"]` would otherwise hide.
  *
  * @param event - The raw `keydown` event from the content script listener.
- * @param deps  - Runtime dependencies (dispatcher, machine, shadow host).
+ * @param deps  - Runtime dependencies (dispatcher, machine, registry, shadow host).
  *
  * @public
  */
@@ -62,7 +64,7 @@ export function handleKeydown(
     state: deps.machine.getState(),
   };
 
-  const command = resolveCommand(context, event);
+  const command = deps.registry.matchShortcut(event, context);
 
   if (command) {
     event.preventDefault();

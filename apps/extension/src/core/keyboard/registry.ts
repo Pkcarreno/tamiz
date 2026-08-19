@@ -1,100 +1,138 @@
 import type { PickerAction } from "../actions/types.ts";
-import type { Format, ModifierSet, ShortcutContext } from "./types.ts";
-import { getModifiers, modifiersEqual } from "./types.ts";
-
-/** Expected modifier sets for exact matching. */
-const NONE: ModifierSet = {
-  alt: false,
-  ctrl: false,
-  meta: false,
-  shift: false,
-};
-const CTRL: ModifierSet = { alt: false, ctrl: true, meta: false, shift: false };
-const META: ModifierSet = { alt: false, ctrl: false, meta: true, shift: false };
-const CTRL_SHIFT: ModifierSet = {
-  alt: false,
-  ctrl: true,
-  meta: false,
-  shift: true,
-};
+import type { ShortcutContext } from "./types.ts";
 
 /**
- * Resolve a keyboard event against the shortcut priority table.
+ * Platform-agnostic keyboard combination.
  *
- * Algorithm (matching the priority table):
- *
- * 1. Escape → `DISMISS` — returned before the input-focus guard so it always
- *    fires regardless of whether a form field has focus.
- * 2. `inputFocused` → `null` — suppress all other shortcuts while the user is
- *    typing in an input, textarea, select, or contentEditable element.
- * 3. Only the `SELECTED` picker state can trigger copy / download / format-cycle.
- * 4. `c` with **exactly** ctrl or meta (no extra modifiers) → `COPY`.
- * 5. `s` with **exactly** ctrl or meta → `DOWNLOAD`.
- * 6. `f` with **exactly** ctrl+shift → `FORMAT_CHANGE` (cycles format).
- * 7. `f` with **no** modifiers → `FORMAT_CHANGE` (cycles format).
- * 8. Anything else → `null`.
- *
- * The function is pure: it reads from the event and context but performs no
- * DOM mutations or side effects.
- *
- * @param context - The current picker context (state, format, focus).
- * @param event   - The raw keyboard event to evaluate.
- * @returns The matched `PickerAction`, or `null` when no shortcut applies.
+ * `ctrlOrMeta` collapses Ctrl and Meta into a single flag because the
+ * extension treats them identically (Cmd on macOS, Ctrl on Windows/Linux).
  *
  * @public
  */
-export function resolveCommand(
-  context: ShortcutContext,
-  event: KeyboardEvent
-): PickerAction | null {
-  // Priority 1 — Escape always wins, even during input focus.
-  // Lowercase the key so Ctrl+Shift+F (where browsers report "F") matches.
+export interface KeyCombo {
+  alt: boolean;
+  ctrlOrMeta: boolean;
+  key: string;
+  shift: boolean;
+}
+
+/**
+ * Declarative binding between a key combination and an action.
+ *
+ * `action` is a static value rather than a factory because all Tamiz
+ * shortcuts produce fixed actions (FORMAT_CHANGE cycles are resolved
+ * by the registry at match time, not by the binding).
+ *
+ * @public
+ */
+export interface ShortcutBinding {
+  action: PickerAction;
+  combo: KeyCombo;
+  label: string;
+  when?: (context: ShortcutContext) => boolean;
+}
+
+/**
+ * Lookup table resolving key combos to picker actions.
+ *
+ * Follows the Glyphide composition pattern: a stateless registry created
+ * once and injected where shortcut resolution is needed.
+ *
+ * @public
+ */
+export interface ShortcutRegistry {
+  bindings: readonly ShortcutBinding[];
+  matchShortcut: (
+    event: KeyboardEvent,
+    context: ShortcutContext
+  ) => PickerAction | null;
+}
+
+/** True when every modifier flag on the combo matches the binding. */
+function combosMatch(event: KeyboardEvent, combo: KeyCombo): boolean {
   const key = event.key.toLowerCase();
-  if (key === "escape") {
-    return { type: "DISMISS" };
-  }
+  return (
+    key === combo.key &&
+    event.altKey === combo.alt &&
+    (event.ctrlKey || event.metaKey) === combo.ctrlOrMeta &&
+    event.shiftKey === combo.shift
+  );
+}
 
-  // Guard: do not intercept keystrokes while the user is editing a form field.
-  if (context.inputFocused) {
-    return null;
-  }
+/** The canonical catalogue of keyboard shortcut bindings. */
+const DEFAULT_BINDINGS: ShortcutBinding[] = [
+  {
+    action: { type: "DISMISS" },
+    combo: { alt: false, ctrlOrMeta: false, key: "escape", shift: false },
+    label: "Esc",
+  },
+  {
+    action: { type: "COPY" },
+    combo: { alt: false, ctrlOrMeta: true, key: "c", shift: false },
+    label: "Ctrl+C",
+    when: (ctx) => ctx.state === "SELECTED",
+  },
+  {
+    action: { type: "DOWNLOAD" },
+    combo: { alt: false, ctrlOrMeta: true, key: "s", shift: false },
+    label: "Ctrl+S",
+    when: (ctx) => ctx.state === "SELECTED",
+  },
+  {
+    action: { format: "html", type: "FORMAT_CHANGE" },
+    combo: { alt: false, ctrlOrMeta: true, key: "f", shift: true },
+    label: "Ctrl+Shift+F",
+    when: (ctx) => ctx.state === "SELECTED",
+  },
+  {
+    action: { format: "html", type: "FORMAT_CHANGE" },
+    combo: { alt: false, ctrlOrMeta: false, key: "f", shift: false },
+    label: "F",
+    when: (ctx) => ctx.state === "SELECTED",
+  },
+];
 
-  // Only SELECTED state supports copy / download / format-cycle.
-  if (context.state !== "SELECTED") {
-    return null;
-  }
+/**
+ * Create a {@link ShortcutRegistry} with the canonical shortcut bindings.
+ *
+ * `matchShortcut` is pure: it reads only from the event and the context,
+ * performing no DOM access or side effects.
+ *
+ * Input focus suppression is handled internally: when `context.inputFocused`
+ * is true, all bindings except Escape are skipped.
+ *
+ * FORMAT_CHANGE actions are resolved dynamically: the registry computes the
+ * next format (markdown↔html cycle) from `context.format` at match time.
+ *
+ * @returns A new `ShortcutRegistry`.
+ *
+ * @public
+ */
+export function createShortcutRegistry(): ShortcutRegistry {
+  return {
+    bindings: DEFAULT_BINDINGS,
 
-  const modifiers = getModifiers(event);
-
-  // Priority 2 — c with ctrl OR meta (no extra modifiers).
-  if (
-    key === "c" &&
-    (modifiersEqual(modifiers, CTRL) || modifiersEqual(modifiers, META))
-  ) {
-    return { type: "COPY" };
-  }
-
-  // Priority 3 — s with ctrl OR meta (no extra modifiers).
-  if (
-    key === "s" &&
-    (modifiersEqual(modifiers, CTRL) || modifiersEqual(modifiers, META))
-  ) {
-    return { type: "DOWNLOAD" };
-  }
-
-  // Format-cycling uses the next format in the markdown ↔ html cycle.
-  const nextFormat: Format =
-    context.format === "markdown" ? "html" : "markdown";
-
-  // Priority 4 & 5 — f triggers format-cycle with ctrl+shift (exact) or no
-  // modifiers (exact).  The two modifier sets are mutually exclusive, so
-  // order does not affect the outcome.
-  if (
-    key === "f" &&
-    (modifiersEqual(modifiers, CTRL_SHIFT) || modifiersEqual(modifiers, NONE))
-  ) {
-    return { format: nextFormat, type: "FORMAT_CHANGE" };
-  }
-
-  return null;
+    matchShortcut(event, context) {
+      for (const binding of DEFAULT_BINDINGS) {
+        if (!combosMatch(event, binding.combo)) {
+          continue;
+        }
+        // Escape always fires, even during input focus.
+        if (binding.combo.key !== "escape" && context.inputFocused) {
+          continue;
+        }
+        if (binding.when && !binding.when(context)) {
+          continue;
+        }
+        // FORMAT_CHANGE cycles format dynamically.
+        if (binding.action.type === "FORMAT_CHANGE") {
+          const nextFormat =
+            context.format === "markdown" ? "html" : "markdown";
+          return { format: nextFormat, type: "FORMAT_CHANGE" };
+        }
+        return binding.action;
+      }
+      return null;
+    },
+  };
 }
