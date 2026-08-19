@@ -1,3 +1,5 @@
+import { createRequire } from "node:module";
+
 import type { DomParser } from "./types.ts";
 
 /**
@@ -67,7 +69,7 @@ function loadLinkedom(): LinkedomModule {
     return linkedomModule;
   }
 
-  linkedomModule = import.meta.require("linkedom") as LinkedomModule;
+  linkedomModule = createRequire(import.meta.url)("linkedom") as LinkedomModule;
 
   return linkedomModule;
 }

@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
+import { describe, expect, test } from "vitest";
 import { getDomParser } from "../../src/dom.ts";
 import { htmlStrategy } from "../../src/strategies/html.ts";
 
