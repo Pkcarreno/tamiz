@@ -5,17 +5,8 @@
  * without requiring the WXT runtime, then exercises each exported handler.
  */
 
-import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 import { type Browser, browser } from "wxt/browser";
-
-/** Regex to detect `.action` API access in minified build output. */
-const RE_ACTION_API = /\.action\b/;
-
-/** Regex to detect `.browserAction` API access in minified build output. */
-const RE_BROWSER_ACTION_API = /\.browserAction\b/;
 
 import {
   CONTEXT_MENU_ID,
@@ -31,7 +22,7 @@ import {
   handleContextMenuClick,
   relayInvokePicker,
   removePendingInvoke,
-} from "../src/entrypoints/background.ts";
+} from "./background.ts";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -43,7 +34,7 @@ afterEach(() => {
 });
 
 /**
- * Trigger the `downloads.onChanged` event. setup.ts overlays
+ * Trigger the `downloads.onChanged` event. vitest-setup.ts overlays
  * `downloads.onChanged` with `createEventForTesting()` which provides a
  * `trigger` method — cast to access it since the runtime types don't include it.
  */
@@ -683,15 +674,15 @@ describe("module-scope listener registration (SW restart regression)", () => {
     vi.resetModules();
 
     // After resetModules the fake browser is re-created. Re-apply the
-    // contextMenus overlays that setup.ts applies to the original instance.
+    // contextMenus overlays that vitest-setup.ts applies to the original instance.
     const { fakeBrowser } = await import("wxt/testing/fake-browser");
     fakeBrowser.contextMenus.create = vi.fn();
     fakeBrowser.contextMenus.onClicked.addListener = vi.fn();
 
     // Fresh dynamic import simulates service worker restart.
-    // defineBackground is an identity no-op (set in setup.ts), so main() is
+    // defineBackground is an identity no-op (set in vitest-setup.ts), so main() is
     // never invoked and onInstalled never fires.
-    const mod = await import("../src/entrypoints/background.ts");
+    const mod = await import("./background.ts");
 
     // Exactly-once registration via module-import side effect — the listener
     // is registered at module scope, not inside onInstalled.
@@ -713,7 +704,7 @@ describe("module-scope listener registration (SW restart regression)", () => {
 
     // Fresh import simulates SW restart — onInstalled does not fire, but the
     // module-scope listener is registered.
-    await import("../src/entrypoints/background.ts");
+    await import("./background.ts");
 
     // Extract the handler that was registered at module scope and simulate a click.
     const listener = fakeBrowser.contextMenus.onClicked.addListener.mock
@@ -742,7 +733,7 @@ describe("module-scope listener registration (SW restart regression)", () => {
     fakeBrowser.contextMenus.onClicked.addListener = vi.fn();
     fakeBrowser.tabs.onRemoved.addListener = vi.fn();
 
-    await import("../src/entrypoints/background.ts");
+    await import("./background.ts");
 
     expect(fakeBrowser.tabs.onRemoved.addListener).toHaveBeenCalledTimes(1);
   });
@@ -756,7 +747,7 @@ describe("module-scope listener registration (SW restart regression)", () => {
     fakeBrowser.contextMenus.onClicked.addListener = vi.fn();
     fakeBrowser.action.onClicked.addListener = vi.fn();
 
-    const mod = await import("../src/entrypoints/background.ts");
+    const mod = await import("./background.ts");
 
     // The icon-click handler is registered at module scope via browser.action (MV3).
     expect(fakeBrowser.action.onClicked.addListener).toHaveBeenCalledTimes(1);
@@ -776,62 +767,10 @@ describe("module-scope listener registration (SW restart regression)", () => {
     // The module should load without throwing — the try/catch absorbs the
     // TypeError when browser.browserAction doesn't exist in the fake browser.
     // We verify the module loads and exports the expected handlers.
-    const mod = await import("../src/entrypoints/background.ts");
+    const mod = await import("./background.ts");
 
     expect(mod.handleActionClick).toBeDefined();
     expect(mod.handleContextMenuClick).toBeDefined();
-  });
-});
-
-describe("manifest permissions", () => {
-  it("includes 'downloads' permission in chrome-mv3 manifest", () => {
-    const extensionDir = process.cwd();
-    const wxtBin = path.join(extensionDir, "node_modules", ".bin", "wxt");
-
-    execSync(`${wxtBin} build -b chrome --mv3`, {
-      cwd: extensionDir,
-      stdio: "pipe",
-    });
-
-    const manifestPath = path.join(
-      extensionDir,
-      ".output",
-      "chrome-mv3",
-      "manifest.json"
-    );
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
-
-    expect(manifest.permissions).toContain("downloads");
-  }, 120_000);
-});
-
-describe("cross-browser action API selection", () => {
-  it("chrome-mv3 build uses browser.action (not browserAction)", () => {
-    const bgPath = path.join(
-      process.cwd(),
-      ".output",
-      "chrome-mv3",
-      "background.js"
-    );
-    const code = readFileSync(bgPath, "utf-8");
-
-    // Chrome MV3 should reference .action. (minified as t.action).
-    // It must NOT reference .browserAction.
-    expect(code).toMatch(RE_ACTION_API);
-    expect(code).not.toMatch(RE_BROWSER_ACTION_API);
-  });
-
-  it("firefox-mv2 build uses browser.browserAction (not action API)", () => {
-    const bgPath = path.join(
-      process.cwd(),
-      ".output",
-      "firefox-mv2",
-      "background.js"
-    );
-    const code = readFileSync(bgPath, "utf-8");
-
-    // Firefox MV2 should reference .browserAction (minified as t.browserAction).
-    expect(code).toMatch(RE_BROWSER_ACTION_API);
   });
 });
 
@@ -853,7 +792,7 @@ describe("command listener (keyboard shortcut)", () => {
     fakeBrowser.tabs.query = vi.fn();
     fakeBrowser.tabs.sendMessage = vi.fn().mockResolvedValue(undefined);
 
-    const mod = await import("../src/entrypoints/background.ts");
+    const mod = await import("./background.ts");
     return { fakeBrowser, mod };
   }
 

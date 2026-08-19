@@ -10,7 +10,7 @@ import { WxtVitest } from "wxt/testing/vitest-plugin";
  * alias `wxt/browser` to `@webext-core/fake-browser`, stub the `browser`/`chrome`
  * globals, wire up tsconfig path aliases, and enable auto-imports.
  *
- * The setup file (./tests/setup.ts) imports `fakeBrowser` directly, attaches
+ * The setup file (./vitest-setup.ts) imports `fakeBrowser` directly, attaches
  * `vi.fn()` overlays for unimplemented APIs (contextMenus, downloads, scripting,
  * tabs.sendMessage), and registers a global `beforeEach(fakeBrowser.reset)` for
  * state isolation.
@@ -20,6 +20,6 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./tests/setup.ts"],
+    setupFiles: ["./vitest-setup.ts"],
   },
 });

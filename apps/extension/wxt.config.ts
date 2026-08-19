@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "wxt";
 
+const RE_TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
+
 export default defineConfig({
   autoIcons: {
     baseIconPath: "assets/icon.svg",
@@ -16,6 +18,15 @@ export default defineConfig({
             strict_min_version: "109.0",
           },
         };
+      }
+    },
+    "entrypoints:found": (_wxt, entrypointInfos) => {
+      // WXT's glob patterns (*.test.ts) match colocated test files as
+      // entrypoints. Filter them out before the duplicate-name check runs.
+      for (let i = entrypointInfos.length - 1; i >= 0; i -= 1) {
+        if (RE_TEST_FILE.test(entrypointInfos[i].inputPath)) {
+          entrypointInfos.splice(i, 1);
+        }
       }
     },
   },
