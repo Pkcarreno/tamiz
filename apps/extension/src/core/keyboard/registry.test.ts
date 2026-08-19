@@ -68,24 +68,30 @@ const testCases: TestCase[] = [
     key: { key: "Escape" },
   },
 
-  // --- Ctrl/Meta + c → copy (SELECTED only) ---
+  // --- c → copy (SELECTED only, single key) ---
   {
     context: selectedCtx(),
-    desc: "ctrl+c → copy in SELECTED",
+    desc: "c → copy in SELECTED",
     expected: { actionType: "COPY" },
+    key: { key: "c" },
+  },
+  {
+    context: selectedCtx(),
+    desc: "C (uppercase) → copy — case-insensitive key match",
+    expected: { actionType: "COPY" },
+    key: { key: "C" },
+  },
+  {
+    context: selectedCtx(),
+    desc: "ctrl+c → null (modifier on single-key copy)",
+    expected: null,
     key: { ctrlKey: true, key: "c" },
   },
   {
     context: selectedCtx(),
-    desc: "meta+c → copy in SELECTED",
-    expected: { actionType: "COPY" },
-    key: { key: "c", metaKey: true },
-  },
-  {
-    context: selectedCtx(),
-    desc: "c without modifier → null in SELECTED",
+    desc: "meta+c → null (modifier on single-key copy)",
     expected: null,
-    key: { key: "c" },
+    key: { key: "c", metaKey: true },
   },
   {
     context: selectedCtx(),
@@ -95,42 +101,48 @@ const testCases: TestCase[] = [
   },
   {
     context: selectedCtx(),
-    desc: "ctrl+alt+c → null (alt is not part of copy)",
+    desc: "alt+c → null (alt is not part of copy)",
     expected: null,
-    key: { altKey: true, ctrlKey: true, key: "c" },
+    key: { altKey: true, key: "c" },
   },
 
-  // --- Ctrl/Meta + s → download (SELECTED only) ---
+  // --- s → download (SELECTED only, single key) ---
   {
     context: selectedCtx(),
-    desc: "ctrl+s → download in SELECTED",
+    desc: "s → download in SELECTED",
     expected: { actionType: "DOWNLOAD" },
+    key: { key: "s" },
+  },
+  {
+    context: selectedCtx(),
+    desc: "S (uppercase) → download — case-insensitive key match",
+    expected: { actionType: "DOWNLOAD" },
+    key: { key: "S" },
+  },
+  {
+    context: selectedCtx(),
+    desc: "ctrl+s → null (modifier on single-key download)",
+    expected: null,
     key: { ctrlKey: true, key: "s" },
   },
   {
     context: selectedCtx(),
-    desc: "meta+s → download in SELECTED",
-    expected: { actionType: "DOWNLOAD" },
+    desc: "meta+s → null (modifier on single-key download)",
+    expected: null,
     key: { key: "s", metaKey: true },
   },
 
-  // --- f → format-cycle (SELECTED only) ---
+  // --- Ctrl+Shift+F → removed (binding deleted) ---
   {
     context: selectedCtx({ format: "markdown" }),
-    desc: "ctrl+shift+f → format-cycle (markdown→html)",
-    expected: { actionType: "FORMAT_CHANGE", format: "html" },
+    desc: "ctrl+shift+f → null (binding removed)",
+    expected: null,
     key: { ctrlKey: true, key: "f", shiftKey: true },
   },
   {
     context: selectedCtx({ format: "html" }),
-    desc: "ctrl+shift+f → format-cycle (html→markdown)",
-    expected: { actionType: "FORMAT_CHANGE", format: "markdown" },
-    key: { ctrlKey: true, key: "f", shiftKey: true },
-  },
-  {
-    context: selectedCtx({ format: "markdown" }),
-    desc: "ctrl+shift+F (uppercase) → format-cycle — case-insensitive key match",
-    expected: { actionType: "FORMAT_CHANGE", format: "html" },
+    desc: "ctrl+shift+F (uppercase) → null (binding removed)",
+    expected: null,
     key: { ctrlKey: true, key: "F", shiftKey: true },
   },
   {
@@ -155,6 +167,18 @@ const testCases: TestCase[] = [
   },
   {
     context: { format: "markdown", inputFocused: false, state: "IDLE" },
+    desc: "c in IDLE → null (state guard on single-key copy)",
+    expected: null,
+    key: { key: "c" },
+  },
+  {
+    context: { format: "markdown", inputFocused: false, state: "IDLE" },
+    desc: "s in IDLE → null (state guard on single-key download)",
+    expected: null,
+    key: { key: "s" },
+  },
+  {
+    context: { format: "markdown", inputFocused: false, state: "IDLE" },
     desc: "ctrl+c in IDLE → null",
     expected: null,
     key: { ctrlKey: true, key: "c" },
@@ -169,15 +193,15 @@ const testCases: TestCase[] = [
   // --- Input focus guard: inputFocused blocks everything except Escape ---
   {
     context: selectedCtx({ inputFocused: true }),
-    desc: "ctrl+c when inputFocused → null",
+    desc: "c when inputFocused → null",
     expected: null,
-    key: { ctrlKey: true, key: "c" },
+    key: { key: "c" },
   },
   {
     context: selectedCtx({ inputFocused: true }),
-    desc: "ctrl+s when inputFocused → null",
+    desc: "s when inputFocused → null",
     expected: null,
-    key: { ctrlKey: true, key: "s" },
+    key: { key: "s" },
   },
   {
     context: selectedCtx({ inputFocused: true }),

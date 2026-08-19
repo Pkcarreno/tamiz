@@ -68,20 +68,14 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
   },
   {
     action: { type: "COPY" },
-    combo: { alt: false, ctrlOrMeta: true, key: "c", shift: false },
-    label: "Ctrl+C",
+    combo: { alt: false, ctrlOrMeta: false, key: "c", shift: false },
+    label: "C",
     when: (ctx) => ctx.state === "SELECTED",
   },
   {
     action: { type: "DOWNLOAD" },
-    combo: { alt: false, ctrlOrMeta: true, key: "s", shift: false },
-    label: "Ctrl+S",
-    when: (ctx) => ctx.state === "SELECTED",
-  },
-  {
-    action: { format: "html", type: "FORMAT_CHANGE" },
-    combo: { alt: false, ctrlOrMeta: true, key: "f", shift: true },
-    label: "Ctrl+Shift+F",
+    combo: { alt: false, ctrlOrMeta: false, key: "s", shift: false },
+    label: "S",
     when: (ctx) => ctx.state === "SELECTED",
   },
   {

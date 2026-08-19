@@ -123,14 +123,14 @@ describe("handleKeydown — Escape", () => {
   });
 });
 
-describe("handleKeydown — Ctrl+c / Meta+c → COPY in SELECTED", () => {
-  it("dispatches COPY through the dispatcher on ctrl+c in SELECTED", () => {
+describe("handleKeydown — c → COPY in SELECTED", () => {
+  it("dispatches COPY through the dispatcher on plain c in SELECTED", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
     const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
     const machineSpy = vi.spyOn(deps.machine, "dispatch");
-    const event = keyEvent({ ctrlKey: true, key: "c" });
+    const event = keyEvent({ key: "c" });
 
     handleKeydown(event, deps);
 
@@ -139,12 +139,12 @@ describe("handleKeydown — Ctrl+c / Meta+c → COPY in SELECTED", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("dispatches COPY through the dispatcher on meta+c in SELECTED", () => {
+  it("dispatches COPY on uppercase C — case-insensitive match", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
     const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
-    handleKeydown(keyEvent({ key: "c", metaKey: true }), deps);
+    handleKeydown(keyEvent({ key: "C" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "COPY" });
   });
@@ -154,7 +154,7 @@ describe("handleKeydown — Ctrl+c / Meta+c → COPY in SELECTED", () => {
     selectElement(deps.machine);
 
     const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
-    handleKeydown(keyEvent({ ctrlKey: true, key: "c" }), deps);
+    handleKeydown(keyEvent({ key: "c" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "COPY" });
   });
@@ -164,21 +164,31 @@ describe("handleKeydown — Ctrl+c / Meta+c → COPY in SELECTED", () => {
     selectElement(deps.machine);
 
     const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
-    handleKeydown(keyEvent({ ctrlKey: true, key: "c" }), deps);
+    handleKeydown(keyEvent({ key: "c" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "COPY" });
     expect(dispatchSpy).not.toHaveBeenCalledWith({ type: "DISMISS" });
   });
-});
 
-describe("handleKeydown — Ctrl+s / Meta+s → DOWNLOAD in SELECTED", () => {
-  it("dispatches DOWNLOAD through the dispatcher on ctrl+s in SELECTED", () => {
+  it("does not dispatch COPY when ctrl modifier is present", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
     const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
-    const event = keyEvent({ ctrlKey: true, key: "s" });
+    handleKeydown(keyEvent({ ctrlKey: true, key: "c" }), deps);
+
+    expect(dispatchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleKeydown — s → DOWNLOAD in SELECTED", () => {
+  it("dispatches DOWNLOAD through the dispatcher on plain s in SELECTED", () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    const event = keyEvent({ key: "s" });
 
     handleKeydown(event, deps);
 
@@ -186,12 +196,12 @@ describe("handleKeydown — Ctrl+s / Meta+s → DOWNLOAD in SELECTED", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("dispatches DOWNLOAD through the dispatcher on meta+s in SELECTED", () => {
+  it("dispatches DOWNLOAD on uppercase S — case-insensitive match", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
     const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
-    handleKeydown(keyEvent({ key: "s", metaKey: true }), deps);
+    handleKeydown(keyEvent({ key: "S" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "DOWNLOAD" });
   });
@@ -201,11 +211,21 @@ describe("handleKeydown — Ctrl+s / Meta+s → DOWNLOAD in SELECTED", () => {
     selectElement(deps.machine);
 
     const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
-    handleKeydown(keyEvent({ ctrlKey: true, key: "s" }), deps);
+    handleKeydown(keyEvent({ key: "s" }), deps);
 
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "DOWNLOAD" });
     expect(dispatchSpy).not.toHaveBeenCalledWith({ type: "DISMISS" });
+  });
+
+  it("does not dispatch DOWNLOAD when ctrl modifier is present", () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    handleKeydown(keyEvent({ ctrlKey: true, key: "s" }), deps);
+
+    expect(dispatchSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -239,7 +259,7 @@ describe("handleKeydown — f → FORMAT_CHANGE in SELECTED", () => {
     });
   });
 
-  it("cycles format on ctrl+shift+f", () => {
+  it("ctrl+shift+f does not dispatch FORMAT_CHANGE (binding removed)", () => {
     const deps = makeDeps();
     selectElement(deps.machine);
 
@@ -248,11 +268,9 @@ describe("handleKeydown — f → FORMAT_CHANGE in SELECTED", () => {
 
     handleKeydown(event, deps);
 
-    expect(dispatchSpy).toHaveBeenCalledWith({
-      format: "html",
-      type: "FORMAT_CHANGE",
-    });
-    expect(event.defaultPrevented).toBe(true);
+    // ctrl+shift+f no longer matches — falls through to shadowHost re-dispatch.
+    expect(dispatchSpy).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("does not dispatch FORMAT_CHANGE in HIGHLIGHTING state", () => {
@@ -269,14 +287,14 @@ describe("handleKeydown — f → FORMAT_CHANGE in SELECTED", () => {
 });
 
 describe("handleKeydown — input focus guard", () => {
-  it("suppresses ctrl+c when an input is focused (does not dispatch COPY)", () => {
+  it("suppresses plain c when an input is focused (does not dispatch COPY)", () => {
     const deps = makeDeps({
       getActiveElement: () => document.createElement("input"),
     });
     selectElement(deps.machine);
 
     const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
-    const event = keyEvent({ ctrlKey: true, key: "c" });
+    const event = keyEvent({ key: "c" });
 
     handleKeydown(event, deps);
 
@@ -284,16 +302,16 @@ describe("handleKeydown — input focus guard", () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it("suppresses meta+c when an input is focused", () => {
+  it("suppresses plain s when an input is focused (does not dispatch DOWNLOAD)", () => {
     const deps = makeDeps({
       getActiveElement: () => document.createElement("input"),
     });
     selectElement(deps.machine);
 
     const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
-    handleKeydown(keyEvent({ key: "c", metaKey: true }), deps);
+    handleKeydown(keyEvent({ key: "s" }), deps);
 
-    expect(dispatchSpy).not.toHaveBeenCalledWith({ type: "COPY" });
+    expect(dispatchSpy).not.toHaveBeenCalledWith({ type: "DOWNLOAD" });
   });
 
   it("suppresses plain f when a textarea is focused", () => {
@@ -431,7 +449,7 @@ describe("handleKeydown — unmatched keys re-dispatched via shadowHost", () => 
     selectElement(deps.machine);
 
     const dispatchSpy = vi.spyOn(deps.shadowHost as Element, "dispatchEvent");
-    handleKeydown(keyEvent({ ctrlKey: true, key: "c" }), deps);
+    handleKeydown(keyEvent({ key: "c" }), deps);
 
     expect(dispatchSpy).not.toHaveBeenCalled();
   });

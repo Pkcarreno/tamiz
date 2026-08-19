@@ -35,7 +35,7 @@ export interface KeydownHandlerDeps {
  * 1. Escape → DISMISS (fires even during input focus).
  * 2. While an input, textarea, select, or contentEditable element is focused,
  *    all non-Escape keys are suppressed.
- * 3. In the SELECTED state only: Ctrl/Meta+c → COPY, Ctrl/Meta+s → DOWNLOAD,
+ * 3. In the SELECTED state only: c → COPY, s → DOWNLOAD,
  *    f → FORMAT_CHANGE (cycles markdown↔html).
  *
  * When a shortcut matches, the event is consumed (`preventDefault`,
