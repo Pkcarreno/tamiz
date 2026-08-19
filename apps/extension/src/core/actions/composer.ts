@@ -1,4 +1,3 @@
-import type { ConvertedContent } from "../../lib/content-callbacks.ts";
 import type { Message } from "../../lib/messaging.ts";
 import type { PickerStateMachine } from "../machine/picker.ts";
 import type { ActionDispatcher } from "./dispatcher.ts";
@@ -6,6 +5,12 @@ import { createActionDispatcher } from "./dispatcher.ts";
 import type { ShortcutRegistry } from "./registry.ts";
 import { createShortcutRegistry } from "./registry.ts";
 import type { PickerAction } from "./types.ts";
+
+/** File extension for each output format. */
+const FORMAT_EXTENSION: Record<"markdown" | "html", string> = {
+  html: "html",
+  markdown: "md",
+};
 
 /**
  * Runtime dependencies for the {@link composeActions} action handlers.
@@ -17,13 +22,15 @@ import type { PickerAction } from "./types.ts";
  * @public
  */
 export interface ActionHandlerDeps {
-  /** Convert a selected element into markdown or HTML content. */
-  convertElement: (
-    element: Element,
-    format: "markdown" | "html"
-  ) => Promise<ConvertedContent>;
   /** Current output format signal getter. */
   format: () => "markdown" | "html";
+  /** HTML converter with extract and convert capabilities. */
+  htmlConverter: {
+    /** Convert HTML string to target format. */
+    convert: (html: string, options: { strategy: unknown }) => Promise<string>;
+    /** Extract clean HTML from a DOM element. */
+    extractContent: (element: Element) => string;
+  };
   /** The picker state machine for reading state and dispatching transitions. */
   machine: PickerStateMachine;
   /** Send a message to the background script. */
@@ -54,7 +61,7 @@ export interface ComposedActions {
  * Wire all seven `PickerAction` handlers onto a fresh dispatcher.
  *
  * Each handler reads state from the machine and calls the injected side-effect
- * collaborators (`convertElement`, `sendMessage`, `showToast`).  After a
+ * collaborators (`htmlConverter`, `sendMessage`, `showToast`). After a
  * successful COPY or DOWNLOAD the handler dispatches DISMISS to close the
  * picker — the keyboard handler never needs to dispatch DISMISS itself.
  *
@@ -73,7 +80,16 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
       return;
     }
     try {
-      const { content } = await deps.convertElement(element, deps.format());
+      const html = deps.htmlConverter.extractContent(element);
+      const strategy =
+        deps.format() === "markdown"
+          ? await import("@tamiz/html-converter/strategies/markdown").then(
+              (m) => m.markdownStrategy
+            )
+          : await import("@tamiz/html-converter/strategies/html").then(
+              (m) => m.htmlStrategy
+            );
+      const content = await deps.htmlConverter.convert(html, { strategy });
       await deps.sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
       deps.showToast?.("Copied to clipboard");
       dispatcher.dispatch({ type: "DISMISS" });
@@ -88,10 +104,20 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
       return;
     }
     try {
-      const { content, filename } = await deps.convertElement(
-        element,
-        deps.format()
-      );
+      const html = deps.htmlConverter.extractContent(element);
+      const strategy =
+        deps.format() === "markdown"
+          ? await import("@tamiz/html-converter/strategies/markdown").then(
+              (m) => m.markdownStrategy
+            )
+          : await import("@tamiz/html-converter/strategies/html").then(
+              (m) => m.htmlStrategy
+            );
+      const content = await deps.htmlConverter.convert(html, { strategy });
+      const tag = element.tagName.toLowerCase();
+      const timestamp = Date.now();
+      const extension = FORMAT_EXTENSION[deps.format()];
+      const filename = `${tag}-${timestamp}.${extension}`;
       await deps.sendMessage({ content, filename, type: "DOWNLOAD_FILE" });
       deps.showToast?.("Element downloaded");
       dispatcher.dispatch({ type: "DISMISS" });

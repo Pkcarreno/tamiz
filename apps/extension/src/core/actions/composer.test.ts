@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ConvertedContent } from "../../lib/content-callbacks.ts";
 import { PickerStateMachine } from "../machine/picker.ts";
 import type { ActionHandlerDeps } from "./composer.ts";
 import { composeActions } from "./composer.ts";
@@ -25,11 +24,11 @@ function makeDeps(
   const machine = new PickerStateMachine();
 
   const deps: ActionHandlerDeps = {
-    convertElement: vi.fn().mockResolvedValue({
-      content: "converted-content",
-      filename: "div-0.md",
-    } satisfies ConvertedContent),
     format: () => format,
+    htmlConverter: {
+      convert: vi.fn().mockResolvedValue("converted-content"),
+      extractContent: vi.fn().mockReturnValue("<div>test</div>"),
+    },
     machine,
     sendMessage: vi.fn().mockResolvedValue(undefined),
     setBarVisible: vi.fn(),
@@ -69,10 +68,10 @@ describe("COPY handler", () => {
       expect(deps.showToast).toHaveBeenCalledWith("Copied to clipboard");
     });
 
-    expect(deps.convertElement).toHaveBeenCalledWith(
-      expect.any(Element),
-      "markdown"
+    expect(deps.htmlConverter.extractContent).toHaveBeenCalledWith(
+      expect.any(Element)
     );
+    expect(deps.htmlConverter.convert).toHaveBeenCalled();
     expect(deps.sendMessage).toHaveBeenCalledWith({
       content: "converted-content",
       type: "COPY_TO_CLIPBOARD",
@@ -89,10 +88,8 @@ describe("COPY handler", () => {
 
     dispatcher.dispatch({ type: "COPY" });
 
-    await vi.waitFor(() => expect(deps.convertElement).toHaveBeenCalled());
-    expect(deps.convertElement).toHaveBeenCalledWith(
-      expect.any(Element),
-      "markdown"
+    await vi.waitFor(() =>
+      expect(deps.htmlConverter.convert).toHaveBeenCalled()
     );
   });
 
@@ -104,10 +101,8 @@ describe("COPY handler", () => {
 
     dispatcher.dispatch({ type: "COPY" });
 
-    await vi.waitFor(() => expect(deps.convertElement).toHaveBeenCalled());
-    expect(deps.convertElement).toHaveBeenCalledWith(
-      expect.any(Element),
-      "html"
+    await vi.waitFor(() =>
+      expect(deps.htmlConverter.convert).toHaveBeenCalled()
     );
   });
 
@@ -121,14 +116,18 @@ describe("COPY handler", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(deps.convertElement).not.toHaveBeenCalled();
+    expect(deps.htmlConverter.extractContent).not.toHaveBeenCalled();
+    expect(deps.htmlConverter.convert).not.toHaveBeenCalled();
     expect(deps.sendMessage).not.toHaveBeenCalled();
     expect(deps.showToast).not.toHaveBeenCalled();
   });
 
-  it("shows error toast when convertElement throws", async () => {
+  it("shows error toast when convert throws", async () => {
     const deps = makeDeps({
-      convertElement: vi.fn().mockRejectedValue(new Error("boom")),
+      htmlConverter: {
+        convert: vi.fn().mockRejectedValue(new Error("boom")),
+        extractContent: vi.fn().mockReturnValue("<div>test</div>"),
+      },
     });
     selectElement(deps.machine);
     const { dispatcher } = composeActions(deps);
@@ -156,12 +155,14 @@ describe("DOWNLOAD handler", () => {
       expect(deps.showToast).toHaveBeenCalledWith("Element downloaded");
     });
 
-    expect(deps.convertElement).toHaveBeenCalledTimes(1);
-    expect(deps.sendMessage).toHaveBeenCalledWith({
-      content: "converted-content",
-      filename: "div-0.md",
-      type: "DOWNLOAD_FILE",
-    });
+    expect(deps.htmlConverter.extractContent).toHaveBeenCalledTimes(1);
+    expect(deps.htmlConverter.convert).toHaveBeenCalled();
+    expect(deps.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "converted-content",
+        type: "DOWNLOAD_FILE",
+      })
+    );
     expect(deps.machine.getState()).toBe("IDLE");
     expect(deps.setBarVisible).toHaveBeenCalledWith(false);
   });
@@ -176,7 +177,8 @@ describe("DOWNLOAD handler", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(deps.convertElement).not.toHaveBeenCalled();
+    expect(deps.htmlConverter.extractContent).not.toHaveBeenCalled();
+    expect(deps.htmlConverter.convert).not.toHaveBeenCalled();
     expect(deps.sendMessage).not.toHaveBeenCalled();
   });
 

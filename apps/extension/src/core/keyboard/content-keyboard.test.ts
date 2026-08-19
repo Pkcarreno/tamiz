@@ -10,10 +10,10 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createActionDispatcher } from "../src/core/actions/dispatcher.ts";
-import { PickerStateMachine } from "../src/core/machine/picker.ts";
-import type { KeydownHandlerDeps } from "../src/lib/keyboard/handler.ts";
-import { handleKeydown } from "../src/lib/keyboard/handler.ts";
+import { createActionDispatcher } from "../actions/dispatcher.ts";
+import { PickerStateMachine } from "../machine/picker.ts";
+import type { KeydownHandlerDeps } from "./handler.ts";
+import { handleKeydown } from "./handler.ts";
 
 /** Build a real KeyboardEvent for the given key and modifier state. */
 function keyEvent(config: {
@@ -75,7 +75,7 @@ describe("handleKeydown — Escape", () => {
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "DISMISS" });
     expect(machineSpy).not.toHaveBeenCalled();
-    expect(dispatchSpy.mock.calls[0][0]).toEqual({ type: "DISMISS" });
+    expect(dispatchSpy.mock.calls[0]?.[0]).toEqual({ type: "DISMISS" });
   });
 
   it("dispatches DISMISS through the dispatcher in SELECTED state", () => {
@@ -335,13 +335,14 @@ describe("handleKeydown — unmatched keys re-dispatched via shadowHost", () => 
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.shadowHost, "dispatchEvent");
+    const dispatchSpy = vi.spyOn(deps.shadowHost as Element, "dispatchEvent");
     const event = keyEvent({ key: "x" });
 
     handleKeydown(event, deps);
 
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
-    const reDispatched = dispatchSpy.mock.calls[0][0] as KeyboardEvent;
+    const reDispatched = dispatchSpy.mock
+      .calls[0]?.[0] as unknown as KeyboardEvent;
     expect(reDispatched).toBeInstanceOf(KeyboardEvent);
     expect(reDispatched.bubbles).toBe(true);
     expect(reDispatched.composed).toBe(true);
@@ -353,13 +354,14 @@ describe("handleKeydown — unmatched keys re-dispatched via shadowHost", () => 
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.shadowHost, "dispatchEvent");
+    const dispatchSpy = vi.spyOn(deps.shadowHost as Element, "dispatchEvent");
     handleKeydown(
       keyEvent({ altKey: true, ctrlKey: true, key: "z", shiftKey: true }),
       deps
     );
 
-    const reDispatched = dispatchSpy.mock.calls[0][0] as KeyboardEvent;
+    const reDispatched = dispatchSpy.mock
+      .calls[0]?.[0] as unknown as KeyboardEvent;
     expect(reDispatched.ctrlKey).toBe(true);
     expect(reDispatched.altKey).toBe(true);
     expect(reDispatched.shiftKey).toBe(true);
@@ -378,7 +380,7 @@ describe("handleKeydown — unmatched keys re-dispatched via shadowHost", () => 
     const deps = makeDeps();
     selectElement(deps.machine);
 
-    const dispatchSpy = vi.spyOn(deps.shadowHost, "dispatchEvent");
+    const dispatchSpy = vi.spyOn(deps.shadowHost as Element, "dispatchEvent");
     handleKeydown(keyEvent({ ctrlKey: true, key: "c" }), deps);
 
     expect(dispatchSpy).not.toHaveBeenCalled();

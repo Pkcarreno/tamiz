@@ -1,4 +1,4 @@
-import type { PickerAction } from "../../core/actions/types.ts";
+import type { PickerAction } from "../actions/types.ts";
 import type { Format, ModifierSet, ShortcutContext } from "./types.ts";
 import { getModifiers, modifiersEqual } from "./types.ts";
 

@@ -1,21 +1,46 @@
 import { browser } from "wxt/browser";
 import { composeActions } from "../core/actions/composer.ts";
+import { createHighlightController } from "../core/highlight.ts";
+import { handleKeydown } from "../core/keyboard/handler.ts";
 import { PickerStateMachine } from "../core/machine/picker.ts";
-import {
-  clearHighlights,
-  clearHoverHighlight,
-  convertElement,
-  highlight,
-  hoverHighlight,
-  injectHighlightStyles,
-} from "../lib/content-callbacks.ts";
-import { handleKeydown } from "../lib/keyboard/handler.ts";
+import { extractContent } from "../lib/extract-content.ts";
 import {
   type Message,
   onMessage,
   sendMessage,
   setTransport,
 } from "../lib/messaging.ts";
+
+/**
+ * Inject highlight and hover CSS into the main document.
+ *
+ * Shadow DOM styles don't reach the host document, so we need to inject
+ * the highlight classes directly into the page's `<head>`.
+ */
+function injectHighlightStyles(): void {
+  if (document.getElementById("tamiz-highlight-styles")) {
+    return;
+  }
+  const style = document.createElement("style");
+  style.id = "tamiz-highlight-styles";
+  // Hex values are hardcoded because these styles are injected into the host
+  // page (not Shadow DOM), so CSS variables are unavailable. They are kept in
+  // sync with design tokens defined in content.css :root:
+  //   #2563eb            — --tz-accent (light)
+  //   rgba(37,99,235,.12) — --tz-accent-dim (light)
+  //   #3b82f6            — --tz-accent-bright (light)
+  style.textContent = `
+    .tamiz-highlight {
+      box-shadow: 0 0 0 2px #2563eb !important;
+      background-color: rgba(37, 99, 235, 0.12) !important;
+    }
+    .tamiz-hover {
+      box-shadow: inset 0 0 0 2px #3b82f6 !important;
+      background-color: rgba(59, 130, 246, 0.08) !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 /**
  * Content script entry point.
@@ -79,31 +104,23 @@ export default defineContentScript({
     // toasts fire once the Shadow DOM UI mounts and registers the toast API.
     let showToastApi: ((message: string) => void) | null = null;
 
+    // Highlight controller — manages hover, selection, and highlight state.
+    const highlight = createHighlightController();
+
     // State machine — created before the shadow root UI so that onMount can
     // capture `machine` in its closure.
-    let lastHoveredElement: Element | null = null;
-
     const machine = new PickerStateMachine({
       onElementSelected: (element) => {
-        clearHighlights();
-        clearHoverHighlight(lastHoveredElement);
-        lastHoveredElement = null;
-        highlight(element);
+        highlight.selectElement(element);
         setSelectedElement(element);
         setBarVisible(true);
       },
       onHover: (element) => {
-        clearHoverHighlight(lastHoveredElement);
-        if (element) {
-          hoverHighlight(element);
-        }
-        lastHoveredElement = element;
+        highlight.setHoverTarget(element);
       },
       onStateChange: (state) => {
         if (state === "IDLE") {
-          clearHighlights();
-          clearHoverHighlight(lastHoveredElement);
-          lastHoveredElement = null;
+          highlight.clearAll();
           setBarVisible(false);
           setSelectedElement(null);
         }
@@ -114,8 +131,14 @@ export default defineContentScript({
     // shortcuts, scroll/resize, runtime messages) route through this single
     // pipeline. The composer wires each action type to its side-effect handler.
     const { dispatcher } = composeActions({
-      convertElement,
       format: barFormat,
+      htmlConverter: {
+        convert: async (html, { strategy }) => {
+          const { convert } = await import("@tamiz/html-converter");
+          return convert(html, { strategy: strategy as never });
+        },
+        extractContent,
+      },
       machine,
       sendMessage,
       setBarVisible,
