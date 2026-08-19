@@ -16,16 +16,16 @@ import {
 // Protocol constants (shared with main-world.ts)
 // ---------------------------------------------------------------------------
 
-/** Main → Content: script loaded and listeners registered. */
+/** Main → Content: script loaded and listeners registered. @public */
 export const TAMIZ_BLOCKING_READY = "tamiz:blocking-ready" as const;
 
-/** Main → Content: intercepted click relayed with coordinates. */
+/** Main → Content: intercepted click relayed with coordinates. @public */
 export const TAMIZ_BLOCKING_CLICK = "tamiz:blocking-click" as const;
 
-/** Attribute marker for Tamiz UI elements (excluded from blocking). */
+/** Attribute marker for Tamiz UI elements (excluded from blocking). @public */
 export const TAMIZ_UI_MARKER = "data-tamiz-ui" as const;
 
-/** Time to wait for main-world ready signal before marking unavailable. */
+/** Time to wait for main-world ready signal before marking unavailable. @public */
 export const READY_TIMEOUT_MS = 500;
 
 // ---------------------------------------------------------------------------

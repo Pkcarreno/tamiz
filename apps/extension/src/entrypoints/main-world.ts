@@ -13,19 +13,19 @@ import { defineUnlistedScript } from "wxt/utils/define-unlisted-script";
 // Protocol event names
 // ---------------------------------------------------------------------------
 
-/** Content → Main: activate event interception. */
+/** Content → Main: activate event interception. @public */
 export const TAMIZ_BLOCKING_ENABLE = "tamiz:blocking-enable" as const;
 
-/** Content → Main: deactivate event interception. */
+/** Content → Main: deactivate event interception. @public */
 export const TAMIZ_BLOCKING_DISABLE = "tamiz:blocking-disable" as const;
 
-/** Main → Content: script loaded and listeners registered. */
+/** Main → Content: script loaded and listeners registered. @public */
 export const TAMIZ_BLOCKING_READY = "tamiz:blocking-ready" as const;
 
-/** Main → Content: intercepted click relayed with coordinates. */
+/** Main → Content: intercepted click relayed with coordinates. @public */
 export const TAMIZ_BLOCKING_CLICK = "tamiz:blocking-click" as const;
 
-/** Attribute marker for Tamiz UI elements (excluded from blocking). */
+/** Attribute marker for Tamiz UI elements (excluded from blocking). @public */
 export const TAMIZ_UI_MARKER = "data-tamiz-ui" as const;
 
 /** Event types that the blocker intercepts. */
