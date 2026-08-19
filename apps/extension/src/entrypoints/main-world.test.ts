@@ -122,7 +122,6 @@ describe("listener lifecycle", () => {
   });
 
   it("click relay detail contains only coordinates, no DOM node", () => {
-    const button = document.createElement("button");
     const detail = { clientX: 100, clientY: 200 };
     const event = new CustomEvent(TAMIZ_BLOCKING_CLICK, { detail });
 

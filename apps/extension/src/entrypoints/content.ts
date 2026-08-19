@@ -1,7 +1,9 @@
 import { browser } from "wxt/browser";
+import { injectScript } from "wxt/utils/inject-script";
 import { composeActions } from "../core/actions/composer.ts";
 import { createPickerCore } from "../core/index.ts";
 import { handleKeydown } from "../core/keyboard/handler.ts";
+import type { PickerStateMachine } from "../core/machine/picker.ts";
 import { extractContent } from "../lib/extract-content.ts";
 import {
   type Message,
@@ -9,6 +11,76 @@ import {
   sendMessage,
   setTransport,
 } from "../lib/messaging.ts";
+
+// ---------------------------------------------------------------------------
+// Protocol constants (shared with main-world.ts)
+// ---------------------------------------------------------------------------
+
+/** Main → Content: script loaded and listeners registered. */
+export const TAMIZ_BLOCKING_READY = "tamiz:blocking-ready" as const;
+
+/** Main → Content: intercepted click relayed with coordinates. */
+export const TAMIZ_BLOCKING_CLICK = "tamiz:blocking-click" as const;
+
+/** Attribute marker for Tamiz UI elements (excluded from blocking). */
+export const TAMIZ_UI_MARKER = "data-tamiz-ui" as const;
+
+/** Time to wait for main-world ready signal before marking unavailable. */
+export const READY_TIMEOUT_MS = 500;
+
+// ---------------------------------------------------------------------------
+// Content-script helpers (exported for unit testing)
+// ---------------------------------------------------------------------------
+
+/**
+ * Process a relayed click from the main-world blocker.
+ *
+ * Resolves the target element via `elementFromPoint` using the coordinates
+ * carried by the `tamiz:blocking-click` CustomEvent, then dispatches a
+ * `CLICK` event to the picker state machine.
+ *
+ * @param event  - The `tamiz:blocking-click` CustomEvent with `{ clientX, clientY }`.
+ * @param machine - The picker state machine instance.
+ *
+ * @public
+ */
+export function handleRelayedClick(
+  event: CustomEvent,
+  machine: PickerStateMachine
+): void {
+  if (machine.getState() !== "HIGHLIGHTING") {
+    return;
+  }
+
+  const { clientX, clientY } = event.detail;
+  const target = document.elementFromPoint(clientX, clientY);
+
+  // Ignore clicks on the document root (background, outside viewport, etc.)
+  if (!target || target === document.documentElement) {
+    return;
+  }
+
+  machine.dispatch({ target, type: "CLICK" });
+}
+
+/**
+ * Synchronize main-world blocking state with the picker state machine.
+ *
+ * Dispatches `tamiz:blocking-enable` on HIGHLIGHTING, `tamiz:blocking-disable`
+ * on IDLE, and nothing on SELECTED (blocking stays as-is).
+ *
+ * @param state - The new picker state.
+ *
+ * @public
+ */
+export function syncBlockingState(state: string): void {
+  if (state === "HIGHLIGHTING") {
+    document.dispatchEvent(new CustomEvent("tamiz:blocking-enable"));
+  } else if (state === "IDLE") {
+    document.dispatchEvent(new CustomEvent("tamiz:blocking-disable"));
+  }
+  // SELECTED: no-op — blocking remains active through selection.
+}
 
 /**
  * Inject highlight and hover CSS into the main document.
@@ -70,6 +142,28 @@ export default defineContentScript({
       sendMessage: (msg) => browser.runtime.sendMessage(msg),
     });
 
+    // 2. Inject main-world blocker (fail-open: log and continue if CSP blocks).
+    let blockingAvailable = false;
+    try {
+      await injectScript("/main-world.js");
+      // Wait for ready signal; mark unavailable after timeout.
+      const readyPromise = new Promise<boolean>((resolve) => {
+        const handler = () => {
+          document.removeEventListener(TAMIZ_BLOCKING_READY, handler);
+          resolve(true);
+        };
+        document.addEventListener(TAMIZ_BLOCKING_READY, handler, {
+          once: true,
+        });
+        setTimeout(() => resolve(false), READY_TIMEOUT_MS);
+      });
+      blockingAvailable = await readyPromise;
+    } catch {
+      console.warn(
+        "[tamiz] main-world script injection failed — operating without event blocking"
+      );
+    }
+
     // 2. Import SolidJS and UI.
     const [{ createSignal }, { render }, { ContentApp }] = await Promise.all([
       import("solid-js"),
@@ -109,6 +203,10 @@ export default defineContentScript({
           // RESTART transitions to HIGHLIGHTING — clear the selected element
           // signal so the bar disappears and the user can hover freely.
           setSelectedElement(null);
+        }
+        // Synchronize main-world blocking with picker state.
+        if (blockingAvailable) {
+          syncBlockingState(state);
         }
       },
     });
@@ -159,6 +257,16 @@ export default defineContentScript({
 
     ui.mount();
 
+    // Mark shadow host so the main-world blocker excludes UI clicks.
+    ui.shadowHost?.setAttribute(TAMIZ_UI_MARKER, "");
+
+    // Disable blocking when the content script unloads (extension update, etc.).
+    ctx.onInvalidated(() => {
+      if (blockingAvailable) {
+        document.dispatchEvent(new CustomEvent("tamiz:blocking-disable"));
+      }
+    });
+
     // 8. Dark mode.
     const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
     function applyDarkMode() {
@@ -191,16 +299,14 @@ export default defineContentScript({
       }
     });
 
-    ctx.addEventListener(document, "click", (e) => {
-      if (core.machine.getState() === "HIGHLIGHTING") {
-        const target = (e as MouseEvent).target as Element;
-        if (target && target !== document.documentElement) {
-          e.preventDefault();
-          e.stopPropagation();
-          core.machine.dispatch({ target, type: "CLICK" });
-        }
-      }
-    });
+    // Relay blocked clicks from the main-world blocker. The main-world script
+    // intercepts clicks during HIGHLIGHTING and dispatches coordinate payloads;
+    // we resolve the target via elementFromPoint and dispatch CLICK to the machine.
+    if (blockingAvailable) {
+      document.addEventListener(TAMIZ_BLOCKING_CLICK, ((e: CustomEvent) => {
+        handleRelayedClick(e, core.machine);
+      }) as EventListener);
+    }
 
     ctx.addEventListener(
       window,

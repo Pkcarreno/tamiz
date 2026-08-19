@@ -51,9 +51,11 @@ const BLOCKED_TYPES = ["click", "mousedown", "mouseup", "submit"] as const;
 export function shouldBlock(
   enabled: boolean,
   path: EventTarget[],
-  type: string
+  _type: string
 ): boolean {
-  if (!enabled) return false;
+  if (!enabled) {
+    return false;
+  }
   return !path.some(
     (el) => el instanceof Element && el.hasAttribute(TAMIZ_UI_MARKER)
   );
@@ -69,8 +71,10 @@ const GLOBAL_KEY = "__tamizBlockerInstalled" as const;
 export default defineUnlistedScript({
   main() {
     // Idempotency: bail if already installed.
-    if ((window as Record<string, unknown>)[GLOBAL_KEY]) return;
-    (window as Record<string, unknown>)[GLOBAL_KEY] = true;
+    if ((window as unknown as Record<string, unknown>)[GLOBAL_KEY]) {
+      return;
+    }
+    (window as unknown as Record<string, unknown>)[GLOBAL_KEY] = true;
 
     let blockingEnabled = false;
 
@@ -90,21 +94,26 @@ export default defineUnlistedScript({
       document.addEventListener(
         eventType,
         (e) => {
-          if (!blockingEnabled) return;
+          if (!blockingEnabled) {
+            return;
+          }
 
           // Build composed path — includes shadow DOM ancestors.
           const path = e.composedPath();
 
-          if (!shouldBlock(blockingEnabled, path, eventType)) return;
+          if (!shouldBlock(blockingEnabled, path, eventType)) {
+            return;
+          }
 
           e.preventDefault();
           e.stopImmediatePropagation();
 
           // Relay click coordinates to the content script.
           if (eventType === "click") {
+            const mouse = e as MouseEvent;
             document.dispatchEvent(
               new CustomEvent(TAMIZ_BLOCKING_CLICK, {
-                detail: { clientX: e.clientX, clientY: e.clientY },
+                detail: { clientX: mouse.clientX, clientY: mouse.clientY },
               })
             );
           }
