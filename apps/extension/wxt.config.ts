@@ -50,8 +50,8 @@ export default defineConfig({
     permissions: ["activeTab", "contextMenus", "scripting", "downloads"],
     web_accessible_resources: [
       {
-        resources: ["main-world.js"],
         matches: ["<all_urls>"],
+        resources: ["main-world.js"],
       },
     ],
   },

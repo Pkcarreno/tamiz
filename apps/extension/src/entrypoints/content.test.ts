@@ -9,11 +9,15 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PickerStateMachine } from "../core/machine/picker.ts";
+import type { BlockingClickMessage } from "../lib/cross-world-protocol.ts";
 import {
-  handleRelayedClick,
   READY_TIMEOUT_MS,
-  syncBlockingState,
-} from "./content.ts";
+  TAMIZ_BLOCKING_CLICK,
+  TAMIZ_BLOCKING_DISABLE,
+  TAMIZ_BLOCKING_ENABLE,
+  TAMIZ_BLOCKING_SHUTDOWN,
+} from "../lib/cross-world-protocol.ts";
+import { handleRelayedClick, syncBlockingState } from "./content.ts";
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -43,10 +47,11 @@ function createMockMachine(state: string): PickerStateMachine {
   } as unknown as PickerStateMachine;
 }
 
-function createRelayEvent(clientX: number, clientY: number): CustomEvent {
-  return new CustomEvent("tamiz:blocking-click", {
-    detail: { clientX, clientY },
-  });
+function createRelayEvent(
+  clientX: number,
+  clientY: number
+): BlockingClickMessage {
+  return { clientX, clientY, type: TAMIZ_BLOCKING_CLICK };
 }
 
 // ---------------------------------------------------------------------------
@@ -143,70 +148,70 @@ describe("syncBlockingState", () => {
     vi.restoreAllMocks();
   });
 
-  it("dispatches enable event when state transitions to HIGHLIGHTING", () => {
-    const dispatchEventSpy = vi
-      .spyOn(document, "dispatchEvent")
-      .mockReturnValue(true);
+  it("posts enable message when state transitions to HIGHLIGHTING", () => {
+    const postMessageSpy = vi
+      .spyOn(window, "postMessage")
+      .mockReturnValue(undefined as never);
 
     syncBlockingState("HIGHLIGHTING");
 
-    expect(dispatchEventSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "tamiz:blocking-enable",
-      })
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      { type: TAMIZ_BLOCKING_ENABLE },
+      "*"
     );
   });
 
-  it("dispatches disable event when state transitions to IDLE", () => {
-    const dispatchEventSpy = vi
-      .spyOn(document, "dispatchEvent")
-      .mockReturnValue(true);
+  it("posts disable message when state transitions to IDLE", () => {
+    const postMessageSpy = vi
+      .spyOn(window, "postMessage")
+      .mockReturnValue(undefined as never);
 
     syncBlockingState("IDLE");
 
-    expect(dispatchEventSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "tamiz:blocking-disable",
-      })
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      { type: TAMIZ_BLOCKING_DISABLE },
+      "*"
     );
   });
 
-  it("does not dispatch any event when state is SELECTED", () => {
-    const dispatchEventSpy = vi
-      .spyOn(document, "dispatchEvent")
-      .mockReturnValue(true);
+  it("does not post any message when state is SELECTED", () => {
+    const postMessageSpy = vi
+      .spyOn(window, "postMessage")
+      .mockReturnValue(undefined as never);
 
     syncBlockingState("SELECTED");
 
-    const blockingEvents = dispatchEventSpy.mock.calls.filter(
-      ([event]) =>
-        event instanceof CustomEvent &&
-        (event.type === "tamiz:blocking-enable" ||
-          event.type === "tamiz:blocking-disable")
+    const blockingCalls = postMessageSpy.mock.calls.filter(
+      ([data]) =>
+        typeof data === "object" &&
+        data !== null &&
+        "type" in data &&
+        ((data as { type: string }).type === TAMIZ_BLOCKING_ENABLE ||
+          (data as { type: string }).type === TAMIZ_BLOCKING_DISABLE)
     );
-    expect(blockingEvents).toHaveLength(0);
+    expect(blockingCalls).toHaveLength(0);
   });
 
-  it("enable event has no detail payload", () => {
-    const dispatchEventSpy = vi
-      .spyOn(document, "dispatchEvent")
-      .mockReturnValue(true);
+  it("enable message has type field only", () => {
+    const postMessageSpy = vi
+      .spyOn(window, "postMessage")
+      .mockReturnValue(undefined as never);
 
     syncBlockingState("HIGHLIGHTING");
 
-    const enableEvent = dispatchEventSpy.mock.calls[0]?.[0] as CustomEvent;
-    expect(enableEvent.detail).toBeFalsy();
+    const [enableCall] = postMessageSpy.mock.calls;
+    expect(enableCall[0]).toEqual({ type: TAMIZ_BLOCKING_ENABLE });
   });
 
-  it("disable event has no detail payload", () => {
-    const dispatchEventSpy = vi
-      .spyOn(document, "dispatchEvent")
-      .mockReturnValue(true);
+  it("disable message has type field only", () => {
+    const postMessageSpy = vi
+      .spyOn(window, "postMessage")
+      .mockReturnValue(undefined as never);
 
     syncBlockingState("IDLE");
 
-    const disableEvent = dispatchEventSpy.mock.calls[0]?.[0] as CustomEvent;
-    expect(disableEvent.detail).toBeFalsy();
+    const [disableCall] = postMessageSpy.mock.calls;
+    expect(disableCall[0]).toEqual({ type: TAMIZ_BLOCKING_DISABLE });
   });
 });
 
@@ -217,5 +222,24 @@ describe("syncBlockingState", () => {
 describe("content constants", () => {
   it("READY_TIMEOUT_MS is 500", () => {
     expect(READY_TIMEOUT_MS).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Shutdown lifecycle
+// ---------------------------------------------------------------------------
+
+describe("shutdown lifecycle", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("shutdown message constant is defined", () => {
+    expect(TAMIZ_BLOCKING_SHUTDOWN).toBe("tamiz:blocking-shutdown");
+  });
+
+  it("shutdown message has correct shape", () => {
+    const message = { type: TAMIZ_BLOCKING_SHUTDOWN };
+    expect(message).toEqual({ type: "tamiz:blocking-shutdown" });
   });
 });

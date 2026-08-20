@@ -4,6 +4,16 @@ import { composeActions } from "../core/actions/composer.ts";
 import { createPickerCore } from "../core/index.ts";
 import { handleKeydown } from "../core/keyboard/handler.ts";
 import type { PickerStateMachine } from "../core/machine/picker.ts";
+import {
+  type BlockingClickMessage,
+  READY_TIMEOUT_MS,
+  TAMIZ_BLOCKING_CLICK,
+  TAMIZ_BLOCKING_DISABLE,
+  TAMIZ_BLOCKING_ENABLE,
+  TAMIZ_BLOCKING_READY,
+  TAMIZ_BLOCKING_SHUTDOWN,
+  TAMIZ_UI_MARKER,
+} from "../lib/cross-world-protocol.ts";
 import { extractContent } from "../lib/extract-content.ts";
 import {
   type Message,
@@ -13,22 +23,6 @@ import {
 } from "../lib/messaging.ts";
 
 // ---------------------------------------------------------------------------
-// Protocol constants (shared with main-world.ts)
-// ---------------------------------------------------------------------------
-
-/** Main → Content: script loaded and listeners registered. @public */
-export const TAMIZ_BLOCKING_READY = "tamiz:blocking-ready" as const;
-
-/** Main → Content: intercepted click relayed with coordinates. @public */
-export const TAMIZ_BLOCKING_CLICK = "tamiz:blocking-click" as const;
-
-/** Attribute marker for Tamiz UI elements (excluded from blocking). @public */
-export const TAMIZ_UI_MARKER = "data-tamiz-ui" as const;
-
-/** Time to wait for main-world ready signal before marking unavailable. @public */
-export const READY_TIMEOUT_MS = 500;
-
-// ---------------------------------------------------------------------------
 // Content-script helpers (exported for unit testing)
 // ---------------------------------------------------------------------------
 
@@ -36,23 +30,23 @@ export const READY_TIMEOUT_MS = 500;
  * Process a relayed click from the main-world blocker.
  *
  * Resolves the target element via `elementFromPoint` using the coordinates
- * carried by the `tamiz:blocking-click` CustomEvent, then dispatches a
- * `CLICK` event to the picker state machine.
+ * carried by the `tamiz:blocking-click` message, then dispatches a `CLICK`
+ * event to the picker state machine.
  *
- * @param event  - The `tamiz:blocking-click` CustomEvent with `{ clientX, clientY }`.
+ * @param event   - The `tamiz:blocking-click` message with `{ clientX, clientY }`.
  * @param machine - The picker state machine instance.
  *
  * @public
  */
 export function handleRelayedClick(
-  event: CustomEvent,
+  event: BlockingClickMessage,
   machine: PickerStateMachine
 ): void {
   if (machine.getState() !== "HIGHLIGHTING") {
     return;
   }
 
-  const { clientX, clientY } = event.detail;
+  const { clientX, clientY } = event;
   const target = document.elementFromPoint(clientX, clientY);
 
   // Ignore clicks on the document root (background, outside viewport, etc.)
@@ -75,9 +69,9 @@ export function handleRelayedClick(
  */
 export function syncBlockingState(state: string): void {
   if (state === "HIGHLIGHTING") {
-    document.dispatchEvent(new CustomEvent("tamiz:blocking-enable"));
+    window.postMessage({ type: TAMIZ_BLOCKING_ENABLE }, "*");
   } else if (state === "IDLE") {
-    document.dispatchEvent(new CustomEvent("tamiz:blocking-disable"));
+    window.postMessage({ type: TAMIZ_BLOCKING_DISABLE }, "*");
   }
   // SELECTED: no-op — blocking remains active through selection.
 }
@@ -146,16 +140,19 @@ export default defineContentScript({
     let blockingAvailable = false;
     try {
       await injectScript("/main-world.js");
-      // Wait for ready signal; mark unavailable after timeout.
+      // Wait for ready signal via postMessage; mark unavailable after timeout.
       const readyPromise = new Promise<boolean>((resolve) => {
-        const handler = () => {
-          document.removeEventListener(TAMIZ_BLOCKING_READY, handler);
-          resolve(true);
+        const handler = (e: MessageEvent) => {
+          if (e.data?.type === TAMIZ_BLOCKING_READY) {
+            window.removeEventListener("message", handler);
+            resolve(true);
+          }
         };
-        document.addEventListener(TAMIZ_BLOCKING_READY, handler, {
-          once: true,
-        });
-        setTimeout(() => resolve(false), READY_TIMEOUT_MS);
+        window.addEventListener("message", handler);
+        setTimeout(() => {
+          window.removeEventListener("message", handler);
+          resolve(false);
+        }, READY_TIMEOUT_MS);
       });
       blockingAvailable = await readyPromise;
     } catch {
@@ -164,7 +161,7 @@ export default defineContentScript({
       );
     }
 
-    // 2. Import SolidJS and UI.
+    // 3. Import SolidJS and UI.
     const [{ createSignal }, { render }, { ContentApp }] = await Promise.all([
       import("solid-js"),
       import("solid-js/web"),
@@ -173,10 +170,10 @@ export default defineContentScript({
 
     await import("../styles/content.css");
 
-    // 3. Inject highlight CSS into host document.
+    // 4. Inject highlight CSS into host document.
     injectHighlightStyles();
 
-    // 4. Create UI signals.
+    // 5. Create UI signals.
     const [selectedElement, setSelectedElement] = createSignal<Element | null>(
       null
     );
@@ -263,7 +260,10 @@ export default defineContentScript({
     // Disable blocking when the content script unloads (extension update, etc.).
     ctx.onInvalidated(() => {
       if (blockingAvailable) {
-        document.dispatchEvent(new CustomEvent("tamiz:blocking-disable"));
+        // Send shutdown to clear the install guard — allows fresh re-injection
+        // when the extension is reloaded without a page refresh.
+        window.postMessage({ type: TAMIZ_BLOCKING_SHUTDOWN }, "*");
+        window.postMessage({ type: TAMIZ_BLOCKING_DISABLE }, "*");
       }
     });
 
@@ -300,11 +300,13 @@ export default defineContentScript({
     });
 
     // Relay blocked clicks from the main-world blocker. The main-world script
-    // intercepts clicks during HIGHLIGHTING and dispatches coordinate payloads;
+    // intercepts clicks during HIGHLIGHTING and posts coordinate payloads;
     // we resolve the target via elementFromPoint and dispatch CLICK to the machine.
     if (blockingAvailable) {
-      document.addEventListener(TAMIZ_BLOCKING_CLICK, ((e: CustomEvent) => {
-        handleRelayedClick(e, core.machine);
+      window.addEventListener("message", ((e: MessageEvent) => {
+        if (e.data?.type === TAMIZ_BLOCKING_CLICK) {
+          handleRelayedClick(e.data as BlockingClickMessage, core.machine);
+        }
       }) as EventListener);
     }
 

@@ -8,25 +8,14 @@
  */
 
 import { defineUnlistedScript } from "wxt/utils/define-unlisted-script";
-
-// ---------------------------------------------------------------------------
-// Protocol event names
-// ---------------------------------------------------------------------------
-
-/** Content → Main: activate event interception. @public */
-export const TAMIZ_BLOCKING_ENABLE = "tamiz:blocking-enable" as const;
-
-/** Content → Main: deactivate event interception. @public */
-export const TAMIZ_BLOCKING_DISABLE = "tamiz:blocking-disable" as const;
-
-/** Main → Content: script loaded and listeners registered. @public */
-export const TAMIZ_BLOCKING_READY = "tamiz:blocking-ready" as const;
-
-/** Main → Content: intercepted click relayed with coordinates. @public */
-export const TAMIZ_BLOCKING_CLICK = "tamiz:blocking-click" as const;
-
-/** Attribute marker for Tamiz UI elements (excluded from blocking). @public */
-export const TAMIZ_UI_MARKER = "data-tamiz-ui" as const;
+import {
+  TAMIZ_BLOCKING_CLICK,
+  TAMIZ_BLOCKING_DISABLE,
+  TAMIZ_BLOCKING_ENABLE,
+  TAMIZ_BLOCKING_READY,
+  TAMIZ_BLOCKING_SHUTDOWN,
+  TAMIZ_UI_MARKER,
+} from "../lib/cross-world-protocol.ts";
 
 /** Event types that the blocker intercepts. */
 const BLOCKED_TYPES = ["click", "mousedown", "mouseup", "submit"] as const;
@@ -78,14 +67,20 @@ export default defineUnlistedScript({
 
     let blockingEnabled = false;
 
-    // --- Protocol listeners (content → main) ---
+    // --- Protocol listeners (content → main) via postMessage ---
+    // CustomEvents cannot cross the isolated-world / main-world boundary,
+    // so all cross-world communication uses window.postMessage.
 
-    document.addEventListener(TAMIZ_BLOCKING_ENABLE, () => {
-      blockingEnabled = true;
-    });
-
-    document.addEventListener(TAMIZ_BLOCKING_DISABLE, () => {
-      blockingEnabled = false;
+    window.addEventListener("message", (e: MessageEvent) => {
+      if (e.data?.type === TAMIZ_BLOCKING_ENABLE) {
+        blockingEnabled = true;
+      } else if (e.data?.type === TAMIZ_BLOCKING_DISABLE) {
+        blockingEnabled = false;
+      } else if (e.data?.type === TAMIZ_BLOCKING_SHUTDOWN) {
+        // Extension invalidated — clear the install guard so a fresh
+        // content-script injection can re-register listeners.
+        (window as unknown as Record<string, unknown>)[GLOBAL_KEY] = false;
+      }
     });
 
     // --- Capturing listeners (event interception) ---
@@ -108,13 +103,17 @@ export default defineUnlistedScript({
           e.preventDefault();
           e.stopImmediatePropagation();
 
-          // Relay click coordinates to the content script.
+          // Relay click coordinates to the content script via postMessage.
+          // CustomEvents cannot cross the isolated/main world boundary.
           if (eventType === "click") {
             const mouse = e as MouseEvent;
-            document.dispatchEvent(
-              new CustomEvent(TAMIZ_BLOCKING_CLICK, {
-                detail: { clientX: mouse.clientX, clientY: mouse.clientY },
-              })
+            window.postMessage(
+              {
+                clientX: mouse.clientX,
+                clientY: mouse.clientY,
+                type: TAMIZ_BLOCKING_CLICK,
+              },
+              "*"
             );
           }
         },
@@ -122,8 +121,8 @@ export default defineUnlistedScript({
       );
     }
 
-    // --- Announce readiness ---
+    // --- Announce readiness via postMessage ---
 
-    document.dispatchEvent(new CustomEvent(TAMIZ_BLOCKING_READY));
+    window.postMessage({ type: TAMIZ_BLOCKING_READY }, "*");
   },
 });
