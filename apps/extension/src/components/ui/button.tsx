@@ -19,7 +19,7 @@ export type ButtonVariant = "ghost" | "icon";
  *
  * @public
  */
-export type ButtonSize = "xs" | "sm";
+export type ButtonSize = "xs" | "sm" | "slim";
 
 /**
  * Props for the {@link Button} component.
@@ -48,10 +48,12 @@ const buttonVariants = cva(
     compoundVariants: [
       { class: "size-[32px]", size: "xs", variant: "icon" },
       { class: "size-[32px]", size: "sm", variant: "icon" },
+      { class: "size-[24px]", size: "slim", variant: "icon" },
     ],
     defaultVariants: { size: "xs", variant: "ghost" },
     variants: {
       size: {
+        slim: "h-[24px] px-1 text-[10px]",
         sm: "h-[32px] px-2 text-[12px]",
         xs: "h-[32px] px-1.5 text-[11px]",
       },

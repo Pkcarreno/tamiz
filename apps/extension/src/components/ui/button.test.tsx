@@ -61,6 +61,14 @@ describe("Button", () => {
     expect(btn.classList.contains("px-2")).toBe(true);
   });
 
+  it("renders slim size", () => {
+    render(() => <Button size="slim">Slim</Button>);
+    const btn = screen.getByText("Slim") as HTMLButtonElement;
+    expect(btn.classList.contains("h-[24px]")).toBe(true);
+    expect(btn.classList.contains("px-1")).toBe(true);
+    expect(btn.classList.contains("text-[10px]")).toBe(true);
+  });
+
   it("passes through arbitrary attributes", () => {
     render(() => (
       <Button id="my-btn" type="submit">
@@ -97,6 +105,16 @@ describe("Button", () => {
     ));
     const btn = screen.getByText("Icon").closest("button") as HTMLButtonElement;
     expect(btn.classList.contains("size-[32px]")).toBe(true);
+  });
+
+  it("renders icon variant with slim square dimensions when size is slim", () => {
+    render(() => (
+      <Button size="slim" variant="icon">
+        <span>Icon</span>
+      </Button>
+    ));
+    const btn = screen.getByText("Icon").closest("button") as HTMLButtonElement;
+    expect(btn.classList.contains("size-[24px]")).toBe(true);
   });
 
   it("uses text-accent on hover for ghost variant", () => {
