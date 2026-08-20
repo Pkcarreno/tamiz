@@ -4,6 +4,8 @@ import type { ShortcutRegistry } from "./keyboard/registry.ts";
 import { createShortcutRegistry } from "./keyboard/registry.ts";
 import type { PickerStateMachine } from "./machine/picker.ts";
 import { PickerStateMachine as PickerStateMachineImpl } from "./machine/picker.ts";
+import type { ScrimController } from "./scrim.ts";
+import { createScrimController } from "./scrim.ts";
 
 /**
  * Callbacks invoked by the picker core when state changes.
@@ -35,6 +37,7 @@ export interface PickerCore {
   highlight: HighlightController;
   machine: PickerStateMachine;
   registry: ShortcutRegistry;
+  scrim: ScrimController;
 }
 
 /**
@@ -52,6 +55,7 @@ export interface PickerCore {
 export function createPickerCore(callbacks: PickerCoreCallbacks): PickerCore {
   const highlight = createHighlightController();
   const registry = createShortcutRegistry();
+  const scrim = createScrimController();
 
   const machine = new PickerStateMachineImpl({
     onDeselect: () => {
@@ -75,5 +79,5 @@ export function createPickerCore(callbacks: PickerCoreCallbacks): PickerCore {
     },
   });
 
-  return { highlight, machine, registry };
+  return { highlight, machine, registry, scrim };
 }

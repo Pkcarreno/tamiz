@@ -4,6 +4,7 @@ import { composeActions } from "../core/actions/composer.ts";
 import { createPickerCore } from "../core/index.ts";
 import { handleKeydown } from "../core/keyboard/handler.ts";
 import type { PickerStateMachine } from "../core/machine/picker.ts";
+import type { ScrimController } from "../core/scrim.ts";
 import { extractContent } from "../lib/extract-content.ts";
 import { PostMessageChannel } from "../lib/messaging/adapters/postmessage.ts";
 import { RuntimeChannel } from "../lib/messaging/adapters/runtime.ts";
@@ -77,12 +78,44 @@ export function syncBlockingState(
 }
 
 /**
+ * Synchronize visual feedback (scrim overlay and instruction pill) with
+ * the picker state machine.
+ *
+ * HIGHLIGHTING shows both scrim and pill. SELECTED hides the pill but
+ * keeps the scrim to maintain visual focus on the selected element.
+ * IDLE hides both.
+ *
+ * @param state              - The new picker state.
+ * @param scrim              - The scrim controller for the overlay.
+ * @param setIndicatorVisible - Signal setter for the instruction pill.
+ *
+ * @public
+ */
+export function syncVisualFeedback(
+  state: string,
+  scrim: ScrimController,
+  setIndicatorVisible: (value: boolean) => void
+): void {
+  if (state === "HIGHLIGHTING") {
+    scrim.show();
+    setIndicatorVisible(true);
+  } else if (state === "SELECTED") {
+    setIndicatorVisible(false);
+  } else if (state === "IDLE") {
+    scrim.hide();
+    setIndicatorVisible(false);
+  }
+}
+
+/**
  * Inject highlight and hover CSS into the main document.
  *
  * Shadow DOM styles don't reach the host document, so we need to inject
  * the highlight classes directly into the page's `<head>`.
+ *
+ * @public
  */
-function injectHighlightStyles(): void {
+export function injectHighlightStyles(): void {
   if (document.getElementById("tamiz-highlight-styles")) {
     return;
   }
@@ -90,10 +123,12 @@ function injectHighlightStyles(): void {
   style.id = "tamiz-highlight-styles";
   style.textContent = `
     .tamiz-highlight {
+      z-index: 2147483647 !important;
       box-shadow: 0 0 0 2px #2563eb !important;
       background-color: rgba(37, 99, 235, 0.12) !important;
     }
     .tamiz-hover {
+      z-index: 2147483647 !important;
       box-shadow: inset 0 0 0 2px #3b82f6 !important;
       background-color: rgba(59, 130, 246, 0.08) !important;
     }
@@ -140,10 +175,16 @@ export default defineContentScript({
     }
 
     // 3. Import SolidJS and UI.
-    const [{ createSignal }, { render }, { ContentApp }] = await Promise.all([
+    const [
+      { createSignal },
+      { render },
+      { ContentApp },
+      { SelectionIndicator },
+    ] = await Promise.all([
       import("solid-js"),
       import("solid-js/web"),
       import("../components/content-ui.tsx"),
+      import("../components/selection-indicator.tsx"),
     ]);
 
     await import("../styles/content.css");
@@ -159,6 +200,7 @@ export default defineContentScript({
       "markdown"
     );
     const [barVisible, setBarVisible] = createSignal(false);
+    const [indicatorVisible, setIndicatorVisible] = createSignal(false);
     let showToastApi: ((message: string) => void) | null = null;
 
     // 5. Create core (domain collaborators wired together).
@@ -179,6 +221,8 @@ export default defineContentScript({
           // signal so the bar disappears and the user can hover freely.
           setSelectedElement(null);
         }
+        // Synchronize visual feedback with picker state.
+        syncVisualFeedback(state, core.scrim, setIndicatorVisible);
         // Synchronize main-world blocking with picker state.
         if (blockingAvailable) {
           syncBlockingState(state, blockingChannel);
@@ -207,21 +251,29 @@ export default defineContentScript({
     });
 
     // 7. Mount shadow root UI.
+    const handleDismiss = () => dispatcher.dispatch({ type: "DISMISS" });
     const ui = await createShadowRootUi(ctx, {
       isolateEvents: ["mousemove", "keydown"],
       name: "tamiz-picker",
       onMount: (container) =>
         render(
-          () =>
-            ContentApp({
-              element: selectedElement,
-              format: barFormat,
-              onAction: (action) => dispatcher.dispatch(action),
-              onToastReady: (api) => {
-                showToastApi = api;
-              },
-              visible: barVisible,
-            }),
+          () => (
+            <>
+              {ContentApp({
+                element: selectedElement,
+                format: barFormat,
+                onAction: (action) => dispatcher.dispatch(action),
+                onToastReady: (api) => {
+                  showToastApi = api;
+                },
+                visible: barVisible,
+              })}
+              <SelectionIndicator
+                onDismiss={handleDismiss}
+                visible={indicatorVisible}
+              />
+            </>
+          ),
           container
         ),
       onRemove: (dispose) => {
@@ -235,8 +287,9 @@ export default defineContentScript({
     // Mark shadow host so the main-world blocker excludes UI clicks.
     ui.shadowHost?.setAttribute(TAMIZ_UI_MARKER, "");
 
-    // Disable blocking when the content script unloads (extension update, etc.).
+    // Disable blocking and clean up scrim when the content script unloads.
     ctx.onInvalidated(() => {
+      core.scrim.dispose();
       if (blockingAvailable) {
         // Send shutdown to clear the install guard — allows fresh re-injection
         // when the extension is reloaded without a page refresh.

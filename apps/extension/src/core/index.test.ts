@@ -10,12 +10,20 @@ function makeCallbacks() {
 }
 
 describe("createPickerCore", () => {
-  it("returns an object with highlight, machine, and registry", () => {
+  it("returns an object with highlight, machine, registry, and scrim", () => {
     const core = createPickerCore(makeCallbacks());
 
     expect(core).toHaveProperty("highlight");
     expect(core).toHaveProperty("machine");
     expect(core).toHaveProperty("registry");
+    expect(core).toHaveProperty("scrim");
+  });
+
+  it("scrim exposes show, hide, and dispose methods", () => {
+    const core = createPickerCore(makeCallbacks());
+    expect(typeof core.scrim.show).toBe("function");
+    expect(typeof core.scrim.hide).toBe("function");
+    expect(typeof core.scrim.dispose).toBe("function");
   });
 
   it("machine starts in IDLE state", () => {
