@@ -1,4 +1,4 @@
-import type { Message } from "../../lib/messaging.ts";
+import type { Message } from "../../lib/messaging/types.ts";
 import type { ShortcutRegistry } from "../keyboard/registry.ts";
 import { createShortcutRegistry } from "../keyboard/registry.ts";
 import type { PickerStateMachine } from "../machine/picker.ts";

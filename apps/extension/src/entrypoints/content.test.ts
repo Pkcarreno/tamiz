@@ -9,14 +9,14 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PickerStateMachine } from "../core/machine/picker.ts";
-import type { BlockingClickMessage } from "../lib/cross-world-protocol.ts";
 import {
   READY_TIMEOUT_MS,
   TAMIZ_BLOCKING_CLICK,
   TAMIZ_BLOCKING_DISABLE,
   TAMIZ_BLOCKING_ENABLE,
   TAMIZ_BLOCKING_SHUTDOWN,
-} from "../lib/cross-world-protocol.ts";
+} from "../lib/messaging/constants.ts";
+import type { BlockingClickMessage } from "../lib/messaging/types.ts";
 import { handleRelayedClick, syncBlockingState } from "./content.ts";
 
 // ---------------------------------------------------------------------------
@@ -148,70 +148,38 @@ describe("syncBlockingState", () => {
     vi.restoreAllMocks();
   });
 
+  function createMockChannel() {
+    return { send: vi.fn().mockResolvedValue(undefined) };
+  }
+
   it("posts enable message when state transitions to HIGHLIGHTING", () => {
-    const postMessageSpy = vi
-      .spyOn(window, "postMessage")
-      .mockReturnValue(undefined as never);
-
-    syncBlockingState("HIGHLIGHTING");
-
-    expect(postMessageSpy).toHaveBeenCalledWith(
-      { type: TAMIZ_BLOCKING_ENABLE },
-      "*"
-    );
+    const channel = createMockChannel();
+    syncBlockingState("HIGHLIGHTING", channel as never);
+    expect(channel.send).toHaveBeenCalledWith({ type: TAMIZ_BLOCKING_ENABLE });
   });
 
   it("posts disable message when state transitions to IDLE", () => {
-    const postMessageSpy = vi
-      .spyOn(window, "postMessage")
-      .mockReturnValue(undefined as never);
-
-    syncBlockingState("IDLE");
-
-    expect(postMessageSpy).toHaveBeenCalledWith(
-      { type: TAMIZ_BLOCKING_DISABLE },
-      "*"
-    );
+    const channel = createMockChannel();
+    syncBlockingState("IDLE", channel as never);
+    expect(channel.send).toHaveBeenCalledWith({ type: TAMIZ_BLOCKING_DISABLE });
   });
 
   it("does not post any message when state is SELECTED", () => {
-    const postMessageSpy = vi
-      .spyOn(window, "postMessage")
-      .mockReturnValue(undefined as never);
-
-    syncBlockingState("SELECTED");
-
-    const blockingCalls = postMessageSpy.mock.calls.filter(
-      ([data]) =>
-        typeof data === "object" &&
-        data !== null &&
-        "type" in data &&
-        ((data as { type: string }).type === TAMIZ_BLOCKING_ENABLE ||
-          (data as { type: string }).type === TAMIZ_BLOCKING_DISABLE)
-    );
-    expect(blockingCalls).toHaveLength(0);
+    const channel = createMockChannel();
+    syncBlockingState("SELECTED", channel as never);
+    expect(channel.send).not.toHaveBeenCalled();
   });
 
   it("enable message has type field only", () => {
-    const postMessageSpy = vi
-      .spyOn(window, "postMessage")
-      .mockReturnValue(undefined as never);
-
-    syncBlockingState("HIGHLIGHTING");
-
-    const [enableCall] = postMessageSpy.mock.calls;
-    expect(enableCall[0]).toEqual({ type: TAMIZ_BLOCKING_ENABLE });
+    const channel = createMockChannel();
+    syncBlockingState("HIGHLIGHTING", channel as never);
+    expect(channel.send).toHaveBeenCalledWith({ type: TAMIZ_BLOCKING_ENABLE });
   });
 
   it("disable message has type field only", () => {
-    const postMessageSpy = vi
-      .spyOn(window, "postMessage")
-      .mockReturnValue(undefined as never);
-
-    syncBlockingState("IDLE");
-
-    const [disableCall] = postMessageSpy.mock.calls;
-    expect(disableCall[0]).toEqual({ type: TAMIZ_BLOCKING_DISABLE });
+    const channel = createMockChannel();
+    syncBlockingState("IDLE", channel as never);
+    expect(channel.send).toHaveBeenCalledWith({ type: TAMIZ_BLOCKING_DISABLE });
   });
 });
 

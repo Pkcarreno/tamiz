@@ -1,6 +1,7 @@
 import { type Browser, browser } from "wxt/browser";
 
-import { type Message, onMessage, setTransport } from "../lib/messaging.ts";
+import { RuntimeChannel } from "../lib/messaging/adapters/runtime.ts";
+import type { Message } from "../lib/messaging/types.ts";
 
 /** ID used for the "Capture readable content" context menu item. */
 export const CONTEXT_MENU_ID = "tamiz-capture";
@@ -499,32 +500,9 @@ export async function handleBackgroundMessage(
  */
 export default defineBackground({
   main() {
-    setTransport({
-      onMessage: (handler) => {
-        browser.runtime.onMessage.addListener(
-          (
-            message: unknown,
-            sender: unknown,
-            sendResponse: (response?: unknown) => void
-          ) => {
-            handler(message as Message, sender)
-              .then((result) => sendResponse(result))
-              .catch((err) => {
-                console.error("[tamiz] message handler error:", err);
-                const errorMsg =
-                  err instanceof Error
-                    ? err.message
-                    : String(err ?? "Unknown error");
-                sendResponse({ __error: errorMsg });
-              });
-            return true;
-          }
-        );
-      },
-      sendMessage: (msg) => browser.runtime.sendMessage(msg),
-    });
+    const runtimeChannel = new RuntimeChannel({ browser });
     browser.runtime.onInstalled.addListener(createContextMenu);
-    onMessage(async (message, sender) => {
+    runtimeChannel.onMessage(async (message, sender) => {
       await handleBackgroundMessage(
         message,
         sender as Browser.runtime.MessageSender

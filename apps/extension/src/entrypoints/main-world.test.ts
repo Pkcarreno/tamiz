@@ -14,7 +14,7 @@ import {
   TAMIZ_BLOCKING_READY,
   TAMIZ_BLOCKING_SHUTDOWN,
   TAMIZ_UI_MARKER,
-} from "../lib/cross-world-protocol.ts";
+} from "../lib/messaging/constants.ts";
 import { shouldBlock } from "./main-world.ts";
 
 // ---------------------------------------------------------------------------

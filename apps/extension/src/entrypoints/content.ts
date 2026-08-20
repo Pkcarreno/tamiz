@@ -4,8 +4,10 @@ import { composeActions } from "../core/actions/composer.ts";
 import { createPickerCore } from "../core/index.ts";
 import { handleKeydown } from "../core/keyboard/handler.ts";
 import type { PickerStateMachine } from "../core/machine/picker.ts";
+import { extractContent } from "../lib/extract-content.ts";
+import { PostMessageChannel } from "../lib/messaging/adapters/postmessage.ts";
+import { RuntimeChannel } from "../lib/messaging/adapters/runtime.ts";
 import {
-  type BlockingClickMessage,
   READY_TIMEOUT_MS,
   TAMIZ_BLOCKING_CLICK,
   TAMIZ_BLOCKING_DISABLE,
@@ -13,14 +15,8 @@ import {
   TAMIZ_BLOCKING_READY,
   TAMIZ_BLOCKING_SHUTDOWN,
   TAMIZ_UI_MARKER,
-} from "../lib/cross-world-protocol.ts";
-import { extractContent } from "../lib/extract-content.ts";
-import {
-  type Message,
-  onMessage,
-  sendMessage,
-  setTransport,
-} from "../lib/messaging.ts";
+} from "../lib/messaging/constants.ts";
+import type { BlockingClickMessage } from "../lib/messaging/types.ts";
 
 // ---------------------------------------------------------------------------
 // Content-script helpers (exported for unit testing)
@@ -63,15 +59,19 @@ export function handleRelayedClick(
  * Dispatches `tamiz:blocking-enable` on HIGHLIGHTING, `tamiz:blocking-disable`
  * on IDLE, and nothing on SELECTED (blocking stays as-is).
  *
- * @param state - The new picker state.
+ * @param state    - The new picker state.
+ * @param channel  - The postMessage channel to the main world.
  *
  * @public
  */
-export function syncBlockingState(state: string): void {
+export function syncBlockingState(
+  state: string,
+  channel: PostMessageChannel
+): void {
   if (state === "HIGHLIGHTING") {
-    window.postMessage({ type: TAMIZ_BLOCKING_ENABLE }, "*");
+    channel.send({ type: TAMIZ_BLOCKING_ENABLE });
   } else if (state === "IDLE") {
-    window.postMessage({ type: TAMIZ_BLOCKING_DISABLE }, "*");
+    channel.send({ type: TAMIZ_BLOCKING_DISABLE });
   }
   // SELECTED: no-op — blocking remains active through selection.
 }
@@ -110,31 +110,9 @@ function injectHighlightStyles(): void {
 export default defineContentScript({
   cssInjectionMode: "ui",
   async main(ctx) {
-    // 1. Configure transport (browser API bridge).
-    setTransport({
-      onMessage: (handler) => {
-        browser.runtime.onMessage.addListener(
-          (
-            message: unknown,
-            sender: unknown,
-            sendResponse: (response?: unknown) => void
-          ) => {
-            handler(message as Message, sender)
-              .then((result) => sendResponse(result))
-              .catch((err) => {
-                console.error("[tamiz] message handler error:", err);
-                const errorMsg =
-                  err instanceof Error
-                    ? err.message
-                    : String(err ?? "Unknown error");
-                sendResponse({ __error: errorMsg });
-              });
-            return true;
-          }
-        );
-      },
-      sendMessage: (msg) => browser.runtime.sendMessage(msg),
-    });
+    // 1. Configure channels.
+    const runtimeChannel = new RuntimeChannel({ browser });
+    const blockingChannel = new PostMessageChannel();
 
     // 2. Inject main-world blocker (fail-open: log and continue if CSP blocks).
     let blockingAvailable = false;
@@ -203,7 +181,7 @@ export default defineContentScript({
         }
         // Synchronize main-world blocking with picker state.
         if (blockingAvailable) {
-          syncBlockingState(state);
+          syncBlockingState(state, blockingChannel);
         }
       },
     });
@@ -219,7 +197,7 @@ export default defineContentScript({
         extractContent,
       },
       machine: core.machine,
-      sendMessage,
+      sendMessage: (msg) => runtimeChannel.send(msg),
       setBarVisible,
       setFormat: setBarFormat,
       setSelectedElement,
@@ -262,8 +240,8 @@ export default defineContentScript({
       if (blockingAvailable) {
         // Send shutdown to clear the install guard — allows fresh re-injection
         // when the extension is reloaded without a page refresh.
-        window.postMessage({ type: TAMIZ_BLOCKING_SHUTDOWN }, "*");
-        window.postMessage({ type: TAMIZ_BLOCKING_DISABLE }, "*");
+        blockingChannel.send({ type: TAMIZ_BLOCKING_SHUTDOWN });
+        blockingChannel.send({ type: TAMIZ_BLOCKING_DISABLE });
       }
     });
 
@@ -303,11 +281,12 @@ export default defineContentScript({
     // intercepts clicks during HIGHLIGHTING and posts coordinate payloads;
     // we resolve the target via elementFromPoint and dispatch CLICK to the machine.
     if (blockingAvailable) {
-      window.addEventListener("message", ((e: MessageEvent) => {
-        if (e.data?.type === TAMIZ_BLOCKING_CLICK) {
-          handleRelayedClick(e.data as BlockingClickMessage, core.machine);
+      blockingChannel.onMessage((msg) => {
+        if (msg.type === TAMIZ_BLOCKING_CLICK) {
+          handleRelayedClick(msg as BlockingClickMessage, core.machine);
         }
-      }) as EventListener);
+        return Promise.resolve();
+      });
     }
 
     ctx.addEventListener(
@@ -333,7 +312,7 @@ export default defineContentScript({
     );
 
     // 10. Runtime messages.
-    onMessage((message) => {
+    runtimeChannel.onMessage((message) => {
       if (message.type === "INVOKE_PICKER") {
         dispatcher.dispatch(
           message.format
@@ -346,7 +325,7 @@ export default defineContentScript({
 
     // 11. Announce readiness.
     try {
-      await sendMessage({ type: "CONTENT_READY" });
+      await runtimeChannel.send({ type: "CONTENT_READY" });
     } catch {
       /* Background may be unavailable on some tabs — silently ignore. */
     }

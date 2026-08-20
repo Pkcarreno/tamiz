@@ -8,6 +8,7 @@
  */
 
 import { defineUnlistedScript } from "wxt/utils/define-unlisted-script";
+import { PostMessageChannel } from "../lib/messaging/adapters/postmessage.ts";
 import {
   TAMIZ_BLOCKING_CLICK,
   TAMIZ_BLOCKING_DISABLE,
@@ -15,7 +16,7 @@ import {
   TAMIZ_BLOCKING_READY,
   TAMIZ_BLOCKING_SHUTDOWN,
   TAMIZ_UI_MARKER,
-} from "../lib/cross-world-protocol.ts";
+} from "../lib/messaging/constants.ts";
 
 /** Event types that the blocker intercepts. */
 const BLOCKED_TYPES = ["click", "mousedown", "mouseup", "submit"] as const;
@@ -66,21 +67,23 @@ export default defineUnlistedScript({
     (window as unknown as Record<string, unknown>)[GLOBAL_KEY] = true;
 
     let blockingEnabled = false;
+    const channel = new PostMessageChannel();
 
     // --- Protocol listeners (content → main) via postMessage ---
     // CustomEvents cannot cross the isolated-world / main-world boundary,
     // so all cross-world communication uses window.postMessage.
 
-    window.addEventListener("message", (e: MessageEvent) => {
-      if (e.data?.type === TAMIZ_BLOCKING_ENABLE) {
+    channel.onMessage((msg) => {
+      if (msg.type === TAMIZ_BLOCKING_ENABLE) {
         blockingEnabled = true;
-      } else if (e.data?.type === TAMIZ_BLOCKING_DISABLE) {
+      } else if (msg.type === TAMIZ_BLOCKING_DISABLE) {
         blockingEnabled = false;
-      } else if (e.data?.type === TAMIZ_BLOCKING_SHUTDOWN) {
+      } else if (msg.type === TAMIZ_BLOCKING_SHUTDOWN) {
         // Extension invalidated — clear the install guard so a fresh
         // content-script injection can re-register listeners.
         (window as unknown as Record<string, unknown>)[GLOBAL_KEY] = false;
       }
+      return Promise.resolve();
     });
 
     // --- Capturing listeners (event interception) ---
@@ -107,14 +110,11 @@ export default defineUnlistedScript({
           // CustomEvents cannot cross the isolated/main world boundary.
           if (eventType === "click") {
             const mouse = e as MouseEvent;
-            window.postMessage(
-              {
-                clientX: mouse.clientX,
-                clientY: mouse.clientY,
-                type: TAMIZ_BLOCKING_CLICK,
-              },
-              "*"
-            );
+            channel.send({
+              clientX: mouse.clientX,
+              clientY: mouse.clientY,
+              type: TAMIZ_BLOCKING_CLICK,
+            });
           }
         },
         { capture: true }
@@ -123,6 +123,6 @@ export default defineUnlistedScript({
 
     // --- Announce readiness via postMessage ---
 
-    window.postMessage({ type: TAMIZ_BLOCKING_READY }, "*");
+    channel.send({ type: TAMIZ_BLOCKING_READY });
   },
 });
