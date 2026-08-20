@@ -3,11 +3,11 @@ import { type Browser, browser } from "wxt/browser";
 import { RuntimeChannel } from "../lib/messaging/adapters/runtime.ts";
 import type { Message } from "../lib/messaging/types.ts";
 
-/** ID used for the "Capture readable content" context menu item. */
-export const CONTEXT_MENU_ID = "tamiz-capture";
+/** ID used for the "Grab element..." context menu item. */
+export const CONTEXT_MENU_ID = "tamiz-grab";
 
 /** Title displayed for the context menu item. */
-export const CONTEXT_MENU_TITLE = "Capture readable content";
+export const CONTEXT_MENU_TITLE = "Grab element...";
 
 /**
  * Bundle path for the content script, injected as a fall-back when
@@ -192,7 +192,7 @@ function handleDownloadChange(delta: Browser.downloads.DownloadDelta): void {
 }
 
 /**
- * Handle a click on the "Capture readable content" context menu item.
+ * Handle a click on the "Grab element..." context menu item.
  *
  * Relays an `INVOKE_PICKER` message to the content script in the clicked tab.
  * Clicks on other menu items and clicks without a valid tab id are silently
@@ -261,7 +261,7 @@ export function handleCommand(command: string): void {
 }
 
 /**
- * Create the "Capture readable content" context menu item.
+ * Create the "Grab element..." context menu item.
  *
  * Called on install/update via `onInstalled`. Swallows duplicate-id errors so
  * the call is idempotent when `onInstalled` fires again after an update — the

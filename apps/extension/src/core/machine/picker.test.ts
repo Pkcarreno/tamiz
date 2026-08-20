@@ -250,7 +250,7 @@ describe("PickerStateMachine", () => {
     });
   });
 
-  describe("CLICK in SELECTED — capture lock", () => {
+  describe("CLICK in SELECTED — grab lock", () => {
     it("ignores CLICK and does not re-select or reposition", () => {
       const elementA = document.createElement("div");
       const elementB = document.createElement("section");
@@ -347,7 +347,7 @@ describe("PickerStateMachine", () => {
     });
   });
 
-  describe("full capture lifecycle", () => {
+  describe("full grab lifecycle", () => {
     it("supports invoke → select → copy → dismiss → invoke again with new format", () => {
       const machine = new PickerStateMachine();
 
