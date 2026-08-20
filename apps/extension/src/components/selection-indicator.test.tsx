@@ -59,14 +59,25 @@ describe("SelectionIndicator", () => {
       unmount();
     });
 
-    it("renders the × character as close button content", () => {
+    it("renders the Lucide X icon as close button content", () => {
       const { unmount } = render(() => (
         <SelectionIndicator onDismiss={noop} visible={alwaysVisible} />
       ));
       const button = screen.getByRole("button", {
         name: "Dismiss selection (Esc)",
       });
-      expect(button.textContent).toBe("×");
+      expect(button.querySelector("svg")).not.toBeNull();
+      unmount();
+    });
+
+    it("renders the dismiss button at slim size (24px height)", () => {
+      const { unmount } = render(() => (
+        <SelectionIndicator onDismiss={noop} visible={alwaysVisible} />
+      ));
+      const button = screen.getByRole("button", {
+        name: "Dismiss selection (Esc)",
+      });
+      expect(button.className).toContain("h-[24px]");
       unmount();
     });
 

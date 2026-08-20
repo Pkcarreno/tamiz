@@ -1,3 +1,4 @@
+import { X } from "lucide-solid";
 import {
   type Accessor,
   createEffect,
@@ -75,10 +76,10 @@ export function SelectionIndicator(
           aria-label="Dismiss selection (Esc)"
           data-tamiz-ui
           onClick={props.onDismiss}
-          size="xs"
+          size="slim"
           variant="ghost"
         >
-          ×
+          <X size={14} />
         </Button>
       </div>
     </Show>
