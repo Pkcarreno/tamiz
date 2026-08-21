@@ -17,6 +17,7 @@
     "zip:firefox": "wxt zip -b firefox"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.8.0",
     "@tamiz/html-converter": "workspace:*",
     "@wxt-dev/browser": "^0.2.5",
     "class-variance-authority": "^0.7.1",

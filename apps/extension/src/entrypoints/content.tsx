@@ -342,28 +342,6 @@ export default defineContentScript({
       });
     }
 
-    ctx.addEventListener(
-      window,
-      "scroll",
-      () => {
-        if (core.machine.getState() === "SELECTED") {
-          dispatcher.dispatch({ type: "SCROLL" });
-        }
-      },
-      { passive: true }
-    );
-
-    ctx.addEventListener(
-      window,
-      "resize",
-      () => {
-        if (core.machine.getState() === "SELECTED") {
-          dispatcher.dispatch({ type: "RESIZE" });
-        }
-      },
-      { passive: true }
-    );
-
     // 10. Runtime messages.
     runtimeChannel.onMessage((message) => {
       if (message.type === "INVOKE_PICKER") {

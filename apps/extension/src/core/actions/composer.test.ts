@@ -325,30 +325,6 @@ describe("RESTART handler", () => {
   });
 });
 
-describe("SCROLL / RESIZE handlers", () => {
-  it("SCROLL dispatches to machine without side effects", () => {
-    const deps = makeDeps();
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
-    const { dispatcher } = composeActions(deps);
-
-    dispatcher.dispatch({ type: "SCROLL" });
-
-    expect(dispatchSpy).toHaveBeenCalledWith({ type: "SCROLL" });
-    expect(deps.machine.getState()).toBe("IDLE");
-  });
-
-  it("RESIZE dispatches to machine without side effects", () => {
-    const deps = makeDeps();
-    const dispatchSpy = vi.spyOn(deps.machine, "dispatch");
-    const { dispatcher } = composeActions(deps);
-
-    dispatcher.dispatch({ type: "RESIZE" });
-
-    expect(dispatchSpy).toHaveBeenCalledWith({ type: "RESIZE" });
-    expect(deps.machine.getState()).toBe("IDLE");
-  });
-});
-
 describe("unknown action handling", () => {
   it("does not throw when dispatching an action with no handler", () => {
     // A bare dispatcher with no handlers registered — every action type is

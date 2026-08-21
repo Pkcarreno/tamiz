@@ -58,7 +58,7 @@ export interface ComposedActions {
 }
 
 /**
- * Wire all eight `PickerAction` handlers onto a fresh dispatcher.
+ * Wire all six `PickerAction` handlers onto a fresh dispatcher.
  *
  * Each handler reads state from the machine and calls the injected side-effect
  * collaborators (`htmlConverter`, `sendMessage`, `showToast`). After a
@@ -157,14 +157,6 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
     deps.machine.dispatch({ type: "RESTART" });
   };
 
-  const handleScroll = (): void => {
-    deps.machine.dispatch({ type: "SCROLL" });
-  };
-
-  const handleResize = (): void => {
-    deps.machine.dispatch({ type: "RESIZE" });
-  };
-
   const subscriptions: Array<() => void> = [
     dispatcher.on("COPY", handleCopy),
     dispatcher.on("FORMAT_CHANGE", handleFormatChange),
@@ -172,8 +164,6 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
     dispatcher.on("DISMISS", handleDismiss),
     dispatcher.on("RESTART", handleRestart),
     dispatcher.on("DOWNLOAD", handleDownload),
-    dispatcher.on("RESIZE", handleResize),
-    dispatcher.on("SCROLL", handleScroll),
   ];
 
   return {

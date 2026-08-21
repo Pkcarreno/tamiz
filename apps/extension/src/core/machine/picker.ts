@@ -31,9 +31,7 @@ export type PickerEvent =
   | { type: "DOWNLOAD" }
   | { type: "FORMAT_CHANGE"; format: "markdown" | "html" }
   | { type: "DISMISS" }
-  | { type: "RESTART" }
-  | { type: "SCROLL" }
-  | { type: "RESIZE" };
+  | { type: "RESTART" };
 
 /**
  * State machine for the element picker.
@@ -48,7 +46,6 @@ export class PickerStateMachine {
   private readonly onDeselect?: (element: Element) => void;
   private readonly onElementSelected?: (element: Element) => void;
   private readonly onHover?: (element: Element | null) => void;
-  private readonly onReposition?: () => void;
   private readonly onStateChange?: (state: PickerState) => void;
 
   constructor(
@@ -56,14 +53,12 @@ export class PickerStateMachine {
       onDeselect?: (element: Element) => void;
       onElementSelected?: (element: Element) => void;
       onHover?: (element: Element | null) => void;
-      onReposition?: () => void;
       onStateChange?: (state: PickerState) => void;
     } = {}
   ) {
     this.onDeselect = callbacks.onDeselect;
     this.onElementSelected = callbacks.onElementSelected;
     this.onHover = callbacks.onHover;
-    this.onReposition = callbacks.onReposition;
     this.onStateChange = callbacks.onStateChange;
   }
 
@@ -134,8 +129,6 @@ export class PickerStateMachine {
   private handleSelected(event: PickerEvent): void {
     if (event.type === "FORMAT_CHANGE") {
       this.format = event.format;
-    } else if (event.type === "SCROLL" || event.type === "RESIZE") {
-      this.onReposition?.();
     } else if (event.type === "DISMISS") {
       this.transition("IDLE");
     } else if (event.type === "RESTART") {

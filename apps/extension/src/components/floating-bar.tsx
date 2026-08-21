@@ -2,10 +2,10 @@ import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import X from "lucide-solid/icons/x";
-import { type Accessor, createMemo } from "solid-js";
+import { type Accessor, createSignal } from "solid-js";
 
 import type { PickerAction } from "../core/actions/types.ts";
-import { computeBarPosition } from "../lib/position.ts";
+import { useFloatingPosition } from "../lib/floating-position.ts";
 import { Button } from "./ui/button.tsx";
 import { Select, type SelectOption } from "./ui/select.tsx";
 
@@ -40,24 +40,12 @@ export interface FloatingActionBarProps {
  * @public
  */
 export function FloatingActionBar(props: FloatingActionBarProps) {
-  // biome-ignore lint/suspicious/noUnassignedVariables: SolidJS ref callback assigns this
-  let barRef: HTMLDivElement | undefined;
+  const [barRef, setBarRef] = createSignal<HTMLDivElement | null>(null);
 
-  const position = createMemo(() => {
-    const el = props.element();
-    if (!el) {
-      return { left: 0, top: 0 };
-    }
-    const targetRect = el.getBoundingClientRect();
-    const barWidth = barRef?.getBoundingClientRect().width ?? 200;
-    const barHeight = 64; // 32px × 2 rows
-    return computeBarPosition(
-      targetRect,
-      barWidth,
-      barHeight,
-      window.innerWidth,
-      window.innerHeight
-    );
+  const { left, top } = useFloatingPosition(props.element, {
+    floatingRef: barRef,
+    placement: "right-start",
+    strategy: "fixed",
   });
 
   function handleCopy(): void {
@@ -87,10 +75,10 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
     <div
       class="group/bar fixed z-[2147483647] flex w-fit flex-col rounded-md border border-border bg-ground-raised shadow-md [animation:tz-lens-appear_var(--tz-duration-slow)_var(--tz-ease-out)]"
       data-tamiz-bar
-      ref={barRef}
+      ref={setBarRef}
       style={{
-        left: `${position().left}px`,
-        top: `${position().top}px`,
+        left: `${left()}px`,
+        top: `${top()}px`,
       }}
     >
       {/* Row 1: Format selector */}

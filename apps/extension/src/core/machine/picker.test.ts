@@ -172,51 +172,6 @@ describe("PickerStateMachine", () => {
     });
   });
 
-  describe("SCROLL / RESIZE — reposition while SELECTED", () => {
-    it("SCROLL calls onReposition and stays SELECTED", () => {
-      const onReposition = vi.fn();
-      const machine = new PickerStateMachine({ onReposition });
-
-      selectElement(machine);
-      machine.dispatch({ type: "SCROLL" });
-
-      expect(machine.getState()).toBe("SELECTED");
-      expect(onReposition).toHaveBeenCalledTimes(1);
-    });
-
-    it("RESIZE calls onReposition and stays SELECTED", () => {
-      const onReposition = vi.fn();
-      const machine = new PickerStateMachine({ onReposition });
-
-      selectElement(machine);
-      machine.dispatch({ type: "RESIZE" });
-
-      expect(machine.getState()).toBe("SELECTED");
-      expect(onReposition).toHaveBeenCalledTimes(1);
-    });
-
-    it("SCROLL in IDLE is a no-op (no reposition)", () => {
-      const onReposition = vi.fn();
-      const machine = new PickerStateMachine({ onReposition });
-
-      machine.dispatch({ type: "SCROLL" });
-
-      expect(machine.getState()).toBe("IDLE");
-      expect(onReposition).not.toHaveBeenCalled();
-    });
-
-    it("RESIZE in HIGHLIGHTING is a no-op", () => {
-      const onReposition = vi.fn();
-      const machine = new PickerStateMachine({ onReposition });
-
-      machine.dispatch({ type: "INVOKE" });
-      machine.dispatch({ type: "RESIZE" });
-
-      expect(machine.getState()).toBe("HIGHLIGHTING");
-      expect(onReposition).not.toHaveBeenCalled();
-    });
-  });
-
   describe("HIGHLIGHTING — MOUSEMOVE hover feedback", () => {
     it("calls onHover with the target element on MOUSEMOVE", () => {
       const onHover = vi.fn();
@@ -251,14 +206,12 @@ describe("PickerStateMachine", () => {
   });
 
   describe("CLICK in SELECTED — grab lock", () => {
-    it("ignores CLICK and does not re-select or reposition", () => {
+    it("ignores CLICK and does not re-select", () => {
       const elementA = document.createElement("div");
       const elementB = document.createElement("section");
-      const onReposition = vi.fn();
       const onElementSelected = vi.fn();
       const machine = new PickerStateMachine({
         onElementSelected,
-        onReposition,
       });
 
       selectElement(machine, elementA);
@@ -268,29 +221,6 @@ describe("PickerStateMachine", () => {
       expect(machine.getSelectedElement()).toBe(elementA);
       expect(onElementSelected).toHaveBeenCalledTimes(1);
       expect(onElementSelected).toHaveBeenLastCalledWith(elementA);
-      expect(onReposition).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("IDLE → SCROLL/RESIZE no-op", () => {
-    it("SCROLL in IDLE does not change state or call callbacks", () => {
-      const onStateChange = vi.fn();
-      const machine = new PickerStateMachine({ onStateChange });
-
-      machine.dispatch({ type: "SCROLL" });
-
-      expect(machine.getState()).toBe("IDLE");
-      expect(onStateChange).not.toHaveBeenCalled();
-    });
-
-    it("RESIZE in IDLE does not change state or call callbacks", () => {
-      const onStateChange = vi.fn();
-      const machine = new PickerStateMachine({ onStateChange });
-
-      machine.dispatch({ type: "RESIZE" });
-
-      expect(machine.getState()).toBe("IDLE");
-      expect(onStateChange).not.toHaveBeenCalled();
     });
   });
 
@@ -334,16 +264,6 @@ describe("PickerStateMachine", () => {
       machine.dispatch({ type: "DISMISS" });
       machine.dispatch({ type: "COPY" });
       expect(machine.getState()).toBe("IDLE");
-    });
-
-    it("multiple SCROLL events each trigger reposition", () => {
-      const onReposition = vi.fn();
-      const machine = new PickerStateMachine({ onReposition });
-      selectElement(machine);
-      machine.dispatch({ type: "SCROLL" });
-      machine.dispatch({ type: "SCROLL" });
-      machine.dispatch({ type: "RESIZE" });
-      expect(onReposition).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -475,11 +395,10 @@ describe("PickerStateMachine", () => {
       expect(machine.getState()).toBe("IDLE");
     });
 
-    it("accepts onElementSelected, onHover, onReposition only", () => {
+    it("accepts onElementSelected and onHover only", () => {
       const machine = new PickerStateMachine({
         onElementSelected: vi.fn(),
         onHover: vi.fn(),
-        onReposition: vi.fn(),
       });
       expect(machine.getState()).toBe("IDLE");
     });

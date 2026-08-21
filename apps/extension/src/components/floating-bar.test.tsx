@@ -1,8 +1,21 @@
 import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
 import { type Accessor, createSignal } from "solid-js";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@floating-ui/dom", () => ({
+  autoUpdate: vi.fn(),
+  computePosition: vi.fn(),
+  flip: vi.fn(() => ({ name: "flip" })),
+  offset: vi.fn(() => ({ name: "offset" })),
+  shift: vi.fn(() => ({ name: "shift" })),
+}));
+
+import { autoUpdate, computePosition } from "@floating-ui/dom";
 
 import { FloatingActionBar } from "./floating-bar.tsx";
+
+const computePositionMock = vi.mocked(computePosition);
+const autoUpdateMock = vi.mocked(autoUpdate);
 
 /** Create a detached element whose getBoundingClientRect returns a known rect. */
 function makeElement(rect: {
@@ -32,7 +45,22 @@ function makeProps(overrides: Record<string, unknown> = {}) {
 }
 
 describe("FloatingActionBar", () => {
-  afterEach(() => cleanup());
+  beforeEach(() => {
+    computePositionMock.mockResolvedValue({
+      middlewareData: {},
+      placement: "right-start",
+      strategy: "fixed",
+      x: 0,
+      y: 0,
+    });
+    autoUpdateMock.mockReturnValue(vi.fn());
+  });
+
+  afterEach(() => {
+    computePositionMock.mockReset();
+    autoUpdateMock.mockReset();
+    cleanup();
+  });
 
   describe("renders correctly", () => {
     it("renders format selector and action buttons", () => {
@@ -150,8 +178,8 @@ describe("FloatingActionBar", () => {
     });
   });
 
-  describe("positioning via computeBarPosition", () => {
-    it("positions the bar relative to the element's bounding rect", () => {
+  describe("positioning via @floating-ui/dom", () => {
+    it("calls computePosition with reference, floating element, and options", async () => {
       const element = makeElement({
         height: 50,
         left: 100,
@@ -173,44 +201,62 @@ describe("FloatingActionBar", () => {
         .getByRole("button", { name: "Copy" })
         .closest("[data-tamiz-bar]") as HTMLElement;
 
-      // computeBarPosition(DOMRect(100,200,200,50), 200, 64, 1024, 768)
-      // top = 200 - 64 - 8 = 128, left = 300 + 8 = 308
-      expect(bar.style.top).toBe(`${128}px`);
-      expect(bar.style.left).toBe(`${308}px`);
+      await vi.waitFor(() => {
+        expect(computePositionMock).toHaveBeenCalledWith(
+          element,
+          bar,
+          expect.objectContaining({
+            placement: "right-start",
+            strategy: "fixed",
+          })
+        );
+      });
     });
 
-    it("repositions when element prop changes", () => {
+    it("invokes autoUpdate with ancestorScroll for Shadow DOM support", async () => {
+      const element = makeElement({
+        height: 50,
+        left: 100,
+        top: 200,
+        width: 200,
+      });
+      const [elementAccessor] = createSignal<Element | null>(element);
+      const [format] = createSignal<"markdown" | "html">("markdown");
+
+      render(() => (
+        <FloatingActionBar
+          element={elementAccessor}
+          format={format}
+          onAction={vi.fn()}
+        />
+      ));
+
+      await vi.waitFor(() => {
+        expect(autoUpdateMock).toHaveBeenCalledWith(
+          element,
+          expect.any(HTMLElement),
+          expect.any(Function),
+          { ancestorScroll: true }
+        );
+      });
+    });
+
+    it("repositions when element prop changes", async () => {
       const elementA = makeElement({
         height: 50,
         left: 100,
         top: 200,
         width: 200,
       });
-      const [element, setElement] = createSignal<Element | null>(elementA);
-      const [format] = createSignal<"markdown" | "html">("markdown");
-
-      const { unmount } = render(() => (
-        <FloatingActionBar
-          element={element}
-          format={format}
-          onAction={vi.fn()}
-        />
-      ));
-
-      const bar = screen
-        .getByRole("button", { name: "Copy" })
-        .closest("[data-tamiz-bar]") as HTMLElement;
-      expect(bar.style.top).toBe(`${128}px`);
-
-      unmount();
-
       const elementB = makeElement({
         height: 50,
         left: 600,
         top: 500,
         width: 200,
       });
-      setElement(elementB);
+      const [element, setElement] = createSignal<Element | null>(elementA);
+      const [format] = createSignal<"markdown" | "html">("markdown");
+
       render(() => (
         <FloatingActionBar
           element={element}
@@ -219,15 +265,29 @@ describe("FloatingActionBar", () => {
         />
       ));
 
-      const barB = screen
-        .getByRole("button", { name: "Copy" })
-        .closest("[data-tamiz-bar]") as HTMLElement;
+      await vi.waitFor(() => {
+        expect(computePositionMock).toHaveBeenCalledWith(
+          elementA,
+          expect.any(HTMLElement),
+          expect.objectContaining({
+            placement: "right-start",
+            strategy: "fixed",
+          })
+        );
+      });
 
-      // computeBarPosition(DOMRect(600,500,200,50), 200, 64, 1024, 768)
-      // top = 500 - 64 - 8 = 428, left = 800 + 8 = 808
-      // left 808 + 200 = 1008 < 1016 → no clamp
-      expect(barB.style.top).toBe(`${428}px`);
-      expect(barB.style.left).toBe(`${808}px`);
+      setElement(elementB);
+
+      await vi.waitFor(() => {
+        expect(computePositionMock).toHaveBeenCalledWith(
+          elementB,
+          expect.any(HTMLElement),
+          expect.objectContaining({
+            placement: "right-start",
+            strategy: "fixed",
+          })
+        );
+      });
     });
   });
 
