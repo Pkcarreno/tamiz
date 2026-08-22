@@ -64,15 +64,19 @@ const radioGroupVariants = cva("flex", {
 
 /**
  * CVA variant configuration for each radio option.
+ *
+ * Base includes `relative pl-5` to make room for the `::before` radio
+ * indicator defined in options.css. The indicator is positioned absolute
+ * inside the padding box.
  */
 const radioItemVariants = cva(
-  "inline-flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 font-sans text-[12px] transition-[color,background-color] duration-fast ease-out focus-visible:shadow-focus focus-visible:outline-none",
+  "relative inline-flex cursor-pointer select-none items-center gap-2 rounded-sm border border-transparent py-1.5 pr-2 pl-5 font-sans text-[12px] transition-[color,background-color,border-color] duration-fast ease-out focus-visible:shadow-focus focus-visible:outline-none active:enabled:scale-[0.97]",
   {
     defaultVariants: { selected: false },
     variants: {
       selected: {
-        false: "text-text-secondary hover:text-text",
-        true: "bg-accent-dim text-accent",
+        false: "text-text-secondary hover:bg-border/30 hover:text-text",
+        true: "border-border-accent bg-accent-dim text-accent",
       },
     },
   }
