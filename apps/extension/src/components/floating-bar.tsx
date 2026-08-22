@@ -1,19 +1,88 @@
+import type { Placement } from "@floating-ui/dom";
 import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import X from "lucide-solid/icons/x";
-import { type Accessor, createSignal } from "solid-js";
+import { type Accessor, createSignal, type JSX, splitProps } from "solid-js";
 
 import type { PickerAction } from "../core/actions/types.ts";
+import { cn } from "../lib/cn.ts";
 import { useFloatingPosition } from "../lib/floating-position.ts";
 import { Button } from "./ui/button.tsx";
 import { Select, type SelectOption } from "./ui/select.tsx";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip.tsx";
 
 /** Format options presented in the bar's Select toggle. */
 const FORMAT_OPTIONS: SelectOption[] = [
   { label: "Markdown", value: "markdown" },
   { label: "HTML", value: "html" },
 ];
+
+// ---------------------------------------------------------------------------
+// BarTooltip — thin wrapper for floating-bar button tooltips
+// ---------------------------------------------------------------------------
+
+/**
+ * Props for the {@link BarTooltip} component.
+ *
+ * @public
+ */
+export interface BarTooltipProps {
+  /** The trigger element (typically a Button). */
+  children: JSX.Element;
+  /** Human-readable label displayed in the tooltip. */
+  label: string;
+  /** Preferred placement of the tooltip relative to the trigger. @default "top" */
+  placement?: Placement;
+  /** Keyboard shortcut text displayed as a `<kbd>` element. */
+  shortcut: string;
+}
+
+/**
+ * Floating-bar specific tooltip that composes {@link Tooltip} compound
+ * components with consistent label + shortcut styling.
+ *
+ * Reduces boilerplate for the common pattern: trigger → label + kbd shortcut.
+ *
+ * @example
+ * ```tsx
+ * <BarTooltip label="Copy" shortcut="C" placement="bottom">
+ *   <Button onClick={handleCopy} size="xs" variant="icon">
+ *     <Copy size={16} />
+ *   </Button>
+ * </BarTooltip>
+ * ```
+ *
+ * @public
+ */
+export function BarTooltip(props: BarTooltipProps) {
+  const [local] = splitProps(props, [
+    "children",
+    "label",
+    "placement",
+    "shortcut",
+  ]);
+
+  return (
+    <Tooltip placement={local.placement}>
+      <TooltipTrigger>{local.children}</TooltipTrigger>
+      <TooltipContent>
+        {local.label}{" "}
+        <kbd
+          class={cn(
+            "ml-1 inline-flex h-[15px] items-center rounded-[3px] border border-border/60 bg-ground px-1 font-mono text-[9px] text-text"
+          )}
+        >
+          {local.shortcut}
+        </kbd>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FloatingActionBar
+// ---------------------------------------------------------------------------
 
 /**
  * Props for the {@link FloatingActionBar} component.
@@ -84,13 +153,15 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
       {/* Row 1: Format selector */}
       <div class="flex h-[32px] items-center px-1">
         <div class="min-w-0 flex-1">
-          <Select
-            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
-            onChange={handleFormatChange}
-            options={FORMAT_OPTIONS}
-            value={props.format()}
-            variant="subtle"
-          />
+          <BarTooltip label="Format" shortcut="F">
+            <Select
+              // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+              onChange={handleFormatChange}
+              options={FORMAT_OPTIONS}
+              value={props.format()}
+              variant="subtle"
+            />
+          </BarTooltip>
         </div>
       </div>
 
@@ -102,42 +173,50 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
 
       {/* Row 2: Action buttons */}
       <div class="flex h-[32px] items-center justify-center px-1">
-        <Button
-          aria-label="Copy"
-          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
-          onClick={handleCopy}
-          size="xs"
-          variant="icon"
-        >
-          <Copy size={16} />
-        </Button>
-        <Button
-          aria-label="Download"
-          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
-          onClick={handleDownload}
-          size="xs"
-          variant="icon"
-        >
-          <Download size={16} />
-        </Button>
-        <Button
-          aria-label="Restart selection"
-          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
-          onClick={handleRestart}
-          size="xs"
-          variant="icon"
-        >
-          <RotateCcw size={16} />
-        </Button>
-        <Button
-          aria-label="Cancel"
-          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
-          onClick={handleDismiss}
-          size="xs"
-          variant="ghost"
-        >
-          <X size={14} />
-        </Button>
+        <BarTooltip label="Copy" placement="bottom" shortcut="C">
+          <Button
+            aria-label="Copy"
+            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+            onClick={handleCopy}
+            size="xs"
+            variant="icon"
+          >
+            <Copy size={16} />
+          </Button>
+        </BarTooltip>
+        <BarTooltip label="Download" placement="bottom" shortcut="S">
+          <Button
+            aria-label="Download"
+            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+            onClick={handleDownload}
+            size="xs"
+            variant="icon"
+          >
+            <Download size={16} />
+          </Button>
+        </BarTooltip>
+        <BarTooltip label="Restart" placement="bottom" shortcut="R">
+          <Button
+            aria-label="Restart selection"
+            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+            onClick={handleRestart}
+            size="xs"
+            variant="icon"
+          >
+            <RotateCcw size={16} />
+          </Button>
+        </BarTooltip>
+        <BarTooltip label="Dismiss" placement="bottom" shortcut="Esc">
+          <Button
+            aria-label="Cancel"
+            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+            onClick={handleDismiss}
+            size="xs"
+            variant="ghost"
+          >
+            <X size={14} />
+          </Button>
+        </BarTooltip>
       </div>
     </div>
   );
