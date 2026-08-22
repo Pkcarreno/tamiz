@@ -4,6 +4,7 @@ import { composeActions } from "../core/actions/composer.ts";
 import { createPickerCore } from "../core/index.ts";
 import { handleKeydown } from "../core/keyboard/handler.ts";
 import type { PickerStateMachine } from "../core/machine/picker.ts";
+import { isSelectable } from "../core/picker-filter.ts";
 import type { ScrimController } from "../core/scrim.ts";
 import { extractContent } from "../lib/extract-content.ts";
 import { PostMessageChannel } from "../lib/messaging/adapters/postmessage.ts";
@@ -48,6 +49,10 @@ export function handleRelayedClick(
 
   // Ignore clicks on the document root (background, outside viewport, etc.)
   if (!target || target === document.documentElement) {
+    return;
+  }
+
+  if (!isSelectable(target)) {
     return;
   }
 
@@ -324,7 +329,11 @@ export default defineContentScript({
     ctx.addEventListener(document, "mousemove", (e) => {
       if (core.machine.getState() === "HIGHLIGHTING") {
         const target = (e as MouseEvent).target as Element;
-        if (target && target !== document.documentElement) {
+        if (
+          target &&
+          target !== document.documentElement &&
+          isSelectable(target)
+        ) {
           core.machine.dispatch({ target, type: "MOUSEMOVE" });
         }
       }
@@ -351,7 +360,11 @@ export default defineContentScript({
         }
         const mouse = e as MouseEvent;
         const target = document.elementFromPoint(mouse.clientX, mouse.clientY);
-        if (target && target !== document.documentElement) {
+        if (
+          target &&
+          target !== document.documentElement &&
+          isSelectable(target)
+        ) {
           core.machine.dispatch({ target, type: "CLICK" });
         }
       });
