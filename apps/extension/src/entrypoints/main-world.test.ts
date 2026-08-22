@@ -22,40 +22,40 @@ import { shouldBlock } from "./main-world.ts";
 // ---------------------------------------------------------------------------
 
 describe("shouldBlock", () => {
-  it("returns true when enabled and path has no UI marker", () => {
-    expect(shouldBlock(true, [], "click")).toBe(true);
+  it("returns true when enabled and target has no UI marker", () => {
+    expect(shouldBlock(true, null, "click")).toBe(true);
   });
 
   it("returns true for submit events when enabled", () => {
-    expect(shouldBlock(true, [], "submit")).toBe(true);
+    expect(shouldBlock(true, null, "submit")).toBe(true);
   });
 
   it("returns true for mousedown events when enabled", () => {
-    expect(shouldBlock(true, [], "mousedown")).toBe(true);
+    expect(shouldBlock(true, null, "mousedown")).toBe(true);
   });
 
   it("returns true for mouseup events when enabled", () => {
-    expect(shouldBlock(true, [], "mouseup")).toBe(true);
+    expect(shouldBlock(true, null, "mouseup")).toBe(true);
   });
 
-  it("returns false when disabled regardless of path", () => {
-    expect(shouldBlock(false, [], "click")).toBe(false);
+  it("returns false when disabled regardless of target", () => {
+    expect(shouldBlock(false, null, "click")).toBe(false);
   });
 
-  it("returns false when path contains the UI marker element", () => {
+  it("returns false when target is the UI marker element", () => {
     const uiElement = document.createElement("div");
     uiElement.setAttribute(TAMIZ_UI_MARKER, "");
-    expect(shouldBlock(true, [uiElement], "click")).toBe(false);
+    expect(shouldBlock(true, uiElement, "click")).toBe(false);
   });
 
-  it("returns true when path contains elements without the UI marker", () => {
+  it("returns true when target is an element without the UI marker", () => {
     const normalElement = document.createElement("span");
-    expect(shouldBlock(true, [normalElement], "click")).toBe(true);
+    expect(shouldBlock(true, normalElement, "click")).toBe(true);
   });
 
-  it("returns false when disabled even if path has no UI marker", () => {
+  it("returns false when disabled even if target has no UI marker", () => {
     const element = document.createElement("a");
-    expect(shouldBlock(false, [element], "click")).toBe(false);
+    expect(shouldBlock(false, element, "click")).toBe(false);
   });
 });
 
@@ -160,12 +160,11 @@ describe("blocking behavior", () => {
     document.removeEventListener("mousedown", lateHandler, { capture: true });
   });
 
-  it("UI marker element in path blocks interception", () => {
+  it("UI marker element blocks interception", () => {
     const uiEl = document.createElement("div");
     uiEl.setAttribute(TAMIZ_UI_MARKER, "");
-    const path = [uiEl, document.body, document.documentElement];
 
-    expect(shouldBlock(true, path, "click")).toBe(false);
+    expect(shouldBlock(true, uiEl, "click")).toBe(false);
   });
 
   it("events pass through when blocking is disabled", () => {
@@ -181,13 +180,13 @@ describe("blocking behavior", () => {
 
   it("shouldBlock rejects all blocked event types when disabled", () => {
     for (const type of ["click", "mousedown", "mouseup", "submit"]) {
-      expect(shouldBlock(false, [], type)).toBe(false);
+      expect(shouldBlock(false, null, type)).toBe(false);
     }
   });
 
   it("shouldBlock accepts all blocked event types when enabled", () => {
     for (const type of ["click", "mousedown", "mouseup", "submit"]) {
-      expect(shouldBlock(true, [], type)).toBe(true);
+      expect(shouldBlock(true, null, type)).toBe(true);
     }
   });
 });

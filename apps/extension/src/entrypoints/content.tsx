@@ -340,6 +340,21 @@ export default defineContentScript({
         }
         return Promise.resolve();
       });
+    } else {
+      // Fallback: when the main-world blocker is unavailable (e.g. CSP blocks
+      // script injection), intercept clicks directly from the content script.
+      // This does NOT block page interactions (links still navigate), but
+      // allows the picker to function for element selection.
+      ctx.addEventListener(document, "click", (e) => {
+        if (core.machine.getState() !== "HIGHLIGHTING") {
+          return;
+        }
+        const mouse = e as MouseEvent;
+        const target = document.elementFromPoint(mouse.clientX, mouse.clientY);
+        if (target && target !== document.documentElement) {
+          core.machine.dispatch({ target, type: "CLICK" });
+        }
+      });
     }
 
     // 10. Runtime messages.

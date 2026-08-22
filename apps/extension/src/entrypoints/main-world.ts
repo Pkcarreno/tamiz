@@ -28,11 +28,11 @@ const BLOCKED_TYPES = ["click", "mousedown", "mouseup", "submit"] as const;
 /**
  * Determine whether an event should be blocked.
  *
- * Events are blocked when `enabled` is true and the composed path does NOT
- * contain a Tamiz UI element (marked with `data-tamiz-ui`).
+ * Events are blocked when `enabled` is true and the event target is NOT
+ * a Tamiz UI element (marked with `data-tamiz-ui`).
  *
  * @param enabled - Whether blocking is currently active.
- * @param path    - The event's composed path (elements from target to root).
+ * @param target  - The event's target element (retargeted for shadow DOM).
  * @param type    - The DOM event type name.
  * @returns `true` if the event should be intercepted.
  *
@@ -40,15 +40,16 @@ const BLOCKED_TYPES = ["click", "mousedown", "mouseup", "submit"] as const;
  */
 export function shouldBlock(
   enabled: boolean,
-  path: EventTarget[],
+  target: EventTarget | null,
   _type: string
 ): boolean {
   if (!enabled) {
     return false;
   }
-  return !path.some(
-    (el) => el instanceof Element && el.hasAttribute(TAMIZ_UI_MARKER)
-  );
+  if (!(target instanceof Element)) {
+    return true;
+  }
+  return !target.hasAttribute(TAMIZ_UI_MARKER);
 }
 
 // ---------------------------------------------------------------------------
@@ -96,10 +97,7 @@ export default defineUnlistedScript({
             return;
           }
 
-          // Build composed path — includes shadow DOM ancestors.
-          const path = e.composedPath();
-
-          if (!shouldBlock(blockingEnabled, path, eventType)) {
+          if (!shouldBlock(blockingEnabled, e.target, eventType)) {
             return;
           }
 
