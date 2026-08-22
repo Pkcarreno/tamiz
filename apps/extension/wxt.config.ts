@@ -47,7 +47,7 @@ export default defineConfig({
       },
     },
     name: "Tamiz",
-    permissions: ["activeTab", "contextMenus", "scripting", "downloads"],
+    permissions: ["activeTab", "contextMenus", "scripting", "downloads", "storage"],
     web_accessible_resources: [
       {
         matches: ["<all_urls>"],
@@ -66,7 +66,10 @@ export default defineConfig({
       {
         enforce: "post",
         name: "shadow-dom-root-selector",
-        transformCSS(css) {
+        transformCSS(css, id) {
+          if (id?.includes("options")) {
+            return css;
+          }
           return css.replaceAll(":root", ":host");
         },
       },
