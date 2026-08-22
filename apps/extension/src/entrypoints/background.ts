@@ -1,7 +1,22 @@
 import { type Browser, browser } from "wxt/browser";
 
+import { readDefaultFormat } from "../lib/storage.ts";
 import { RuntimeChannel } from "../lib/messaging/adapters/runtime.ts";
 import type { Message } from "../lib/messaging/types.ts";
+
+/**
+ * Read the default export format from storage.
+ *
+ * Wraps {@link readDefaultFormat} so callers in the background script do not
+ * need to handle the async storage API directly.
+ *
+ * @returns The stored format or `"markdown"` fallback.
+ *
+ * @public
+ */
+export async function getDefaultFormat(): Promise<"markdown" | "html"> {
+  return readDefaultFormat();
+}
 
 /** ID used for the "Grab element..." context menu item. */
 export const CONTEXT_MENU_ID = "tamiz-grab";
@@ -200,12 +215,13 @@ function handleDownloadChange(delta: Browser.downloads.DownloadDelta): void {
  *
  * @public
  */
-export function handleContextMenuClick(
+export async function handleContextMenuClick(
   info: Browser.contextMenus.OnClickData,
   tab?: Browser.tabs.Tab
-): void {
+): Promise<void> {
   if (info.menuItemId === CONTEXT_MENU_ID && tab?.id !== undefined) {
-    relayInvokePicker(tab.id).catch((err) =>
+    const format = await getDefaultFormat();
+    relayInvokePicker(tab.id, format).catch((err) =>
       console.error("Failed to relay INVOKE_PICKER:", err)
     );
   }
@@ -221,9 +237,12 @@ export function handleContextMenuClick(
  *
  * @public
  */
-export function handleActionClick(tab?: Browser.tabs.Tab): void {
+export async function handleActionClick(
+  tab?: Browser.tabs.Tab
+): Promise<void> {
   if (tab?.id !== undefined) {
-    relayInvokePicker(tab.id).catch((err) =>
+    const format = await getDefaultFormat();
+    relayInvokePicker(tab.id, format).catch((err) =>
       console.error("Failed to relay INVOKE_PICKER from action click:", err)
     );
   }
@@ -244,20 +263,22 @@ export function handleActionClick(tab?: Browser.tabs.Tab): void {
  *
  * @public
  */
-export function handleCommand(command: string): void {
+export async function handleCommand(command: string): Promise<void> {
   if (command !== "_execute_action") {
     return;
   }
-  browser.tabs
-    .query({ active: true, currentWindow: true })
-    .then(([tab]) => {
-      if (tab?.id !== undefined) {
-        return relayInvokePicker(tab.id);
-      }
-    })
-    .catch((err) =>
-      console.error("Failed to relay INVOKE_PICKER from command:", err)
-    );
+  try {
+    const [tab] = await browser.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab?.id !== undefined) {
+      const format = await getDefaultFormat();
+      await relayInvokePicker(tab.id, format);
+    }
+  } catch (err) {
+    console.error("Failed to relay INVOKE_PICKER from command:", err);
+  }
 }
 
 /**

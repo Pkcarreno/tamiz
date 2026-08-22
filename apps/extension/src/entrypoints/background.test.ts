@@ -16,6 +16,7 @@ import {
   copyToClipboard,
   createContextMenu,
   downloadFile,
+  getDefaultFormat,
   getMimeType,
   handleActionClick,
   handleBackgroundMessage,
@@ -79,10 +80,10 @@ describe("createContextMenu", () => {
 });
 
 describe("handleContextMenuClick", () => {
-  it("sends INVOKE_PICKER to the tab when the tamiz menu item is clicked", () => {
+  it("sends INVOKE_PICKER with default format to the tab when the tamiz menu item is clicked", async () => {
     vi.mocked(browser.tabs.sendMessage).mockResolvedValue(undefined);
 
-    handleContextMenuClick(
+    await handleContextMenuClick(
       {
         editable: false,
         menuItemId: CONTEXT_MENU_ID,
@@ -91,12 +92,13 @@ describe("handleContextMenuClick", () => {
     );
 
     expect(browser.tabs.sendMessage).toHaveBeenCalledWith(99, {
+      format: "markdown",
       type: "INVOKE_PICKER",
     });
   });
 
-  it("ignores clicks on unrelated menu items", () => {
-    handleContextMenuClick(
+  it("ignores clicks on unrelated menu items", async () => {
+    await handleContextMenuClick(
       {
         editable: false,
         menuItemId: "something-else",
@@ -107,8 +109,8 @@ describe("handleContextMenuClick", () => {
     expect(browser.tabs.sendMessage).not.toHaveBeenCalled();
   });
 
-  it("does not relay when the clicked tab has no id", () => {
-    handleContextMenuClick(
+  it("does not relay when the clicked tab has no id", async () => {
+    await handleContextMenuClick(
       {
         editable: false,
         menuItemId: CONTEXT_MENU_ID,
@@ -120,25 +122,38 @@ describe("handleContextMenuClick", () => {
   });
 });
 
+describe("getDefaultFormat", () => {
+  it("returns a valid format from storage", async () => {
+    const format = await getDefaultFormat();
+    expect(format).toMatch(/^(markdown|html)$/);
+  });
+
+  it("returns 'markdown' as the default fallback", async () => {
+    const format = await getDefaultFormat();
+    expect(format).toBe("markdown");
+  });
+});
+
 describe("handleActionClick", () => {
-  it("sends INVOKE_PICKER to the tab when the extension icon is clicked", () => {
+  it("sends INVOKE_PICKER with default format to the tab when the extension icon is clicked", async () => {
     vi.mocked(browser.tabs.sendMessage).mockResolvedValue(undefined);
 
-    handleActionClick({ id: 99 } as Browser.tabs.Tab);
+    await handleActionClick({ id: 99 } as Browser.tabs.Tab);
 
     expect(browser.tabs.sendMessage).toHaveBeenCalledWith(99, {
+      format: "markdown",
       type: "INVOKE_PICKER",
     });
   });
 
-  it("does not relay when the tab is undefined", () => {
-    handleActionClick(undefined);
+  it("does not relay when the tab is undefined", async () => {
+    await handleActionClick(undefined);
 
     expect(browser.tabs.sendMessage).not.toHaveBeenCalled();
   });
 
-  it("does not relay when the tab has no id", () => {
-    handleActionClick({} as Browser.tabs.Tab);
+  it("does not relay when the tab has no id", async () => {
+    await handleActionClick({} as Browser.tabs.Tab);
 
     expect(browser.tabs.sendMessage).not.toHaveBeenCalled();
   });
@@ -694,7 +709,7 @@ describe("module-scope listener registration (SW restart regression)", () => {
     );
   });
 
-  it("sends INVOKE_PICKER when the menu item is clicked after SW restart", async () => {
+  it("sends INVOKE_PICKER with default format when the menu item is clicked after SW restart", async () => {
     vi.resetModules();
 
     const { fakeBrowser } = await import("wxt/testing/fake-browser");
@@ -711,9 +726,9 @@ describe("module-scope listener registration (SW restart regression)", () => {
       .calls[0][0] as (
       info: Browser.contextMenus.OnClickData,
       tab?: Browser.tabs.Tab
-    ) => void;
+    ) => Promise<void>;
 
-    listener(
+    await listener(
       {
         editable: false,
         menuItemId: CONTEXT_MENU_ID,
@@ -722,6 +737,7 @@ describe("module-scope listener registration (SW restart regression)", () => {
     );
 
     expect(fakeBrowser.tabs.sendMessage).toHaveBeenCalledWith(99, {
+      format: "markdown",
       type: "INVOKE_PICKER",
     });
   });
@@ -805,20 +821,18 @@ describe("command listener (keyboard shortcut)", () => {
     );
   });
 
-  it("relays INVOKE_PICKER to the active tab when _execute_action fires", async () => {
+  it("relays INVOKE_PICKER with default format to the active tab when _execute_action fires", async () => {
     const { fakeBrowser, mod } = await setupCommandsModule();
     fakeBrowser.tabs.query.mockResolvedValue([{ id: 99 }]);
 
-    mod.handleCommand("_execute_action");
-
-    // Flush the tabs.query().then(...) microtask chain.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await mod.handleCommand("_execute_action");
 
     expect(fakeBrowser.tabs.query).toHaveBeenCalledWith({
       active: true,
       currentWindow: true,
     });
     expect(fakeBrowser.tabs.sendMessage).toHaveBeenCalledWith(99, {
+      format: "markdown",
       type: "INVOKE_PICKER",
     });
   });
@@ -826,7 +840,7 @@ describe("command listener (keyboard shortcut)", () => {
   it("ignores unknown commands (does not query or relay INVOKE_PICKER)", async () => {
     const { fakeBrowser, mod } = await setupCommandsModule();
 
-    mod.handleCommand("unknown_command");
+    await mod.handleCommand("unknown_command");
 
     // handleCommand returns early — no async behavior should occur.
     expect(fakeBrowser.tabs.query).not.toHaveBeenCalled();
@@ -837,9 +851,7 @@ describe("command listener (keyboard shortcut)", () => {
     const { fakeBrowser, mod } = await setupCommandsModule();
     fakeBrowser.tabs.query.mockResolvedValue([]); // no active tab
 
-    mod.handleCommand("_execute_action");
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await mod.handleCommand("_execute_action");
 
     expect(fakeBrowser.tabs.query).toHaveBeenCalledWith({
       active: true,
@@ -852,23 +864,20 @@ describe("command listener (keyboard shortcut)", () => {
     const { fakeBrowser, mod } = await setupCommandsModule();
     fakeBrowser.tabs.query.mockResolvedValue([{}]); // tab without id
 
-    mod.handleCommand("_execute_action");
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await mod.handleCommand("_execute_action");
 
     expect(fakeBrowser.tabs.query).toHaveBeenCalled();
     expect(fakeBrowser.tabs.sendMessage).not.toHaveBeenCalled();
   });
 
-  it("relays INVOKE_PICKER to tab id 0 (falsy but valid — tests !== undefined guard)", async () => {
+  it("relays INVOKE_PICKER with format to tab id 0 (falsy but valid — tests !== undefined guard)", async () => {
     const { fakeBrowser, mod } = await setupCommandsModule();
     fakeBrowser.tabs.query.mockResolvedValue([{ id: 0 }]);
 
-    mod.handleCommand("_execute_action");
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await mod.handleCommand("_execute_action");
 
     expect(fakeBrowser.tabs.sendMessage).toHaveBeenCalledWith(0, {
+      format: "markdown",
       type: "INVOKE_PICKER",
     });
   });
