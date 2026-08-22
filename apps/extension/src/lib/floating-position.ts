@@ -62,7 +62,7 @@ export function useFloatingPosition(
     }
 
     computePosition(reference, floating as HTMLElement, {
-      middleware: [offset(8), flip(), shift({ padding: 8 })],
+      middleware: [offset(8), flip(), shift({ crossAxis: true, padding: 8 })],
       placement: options.placement,
       strategy: options.strategy,
     }).then(({ x, y }) => {

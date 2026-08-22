@@ -11,7 +11,7 @@ vi.mock("@floating-ui/dom", () => ({
   shift: vi.fn(() => ({ name: "shift" })),
 }));
 
-import { autoUpdate, computePosition } from "@floating-ui/dom";
+import { autoUpdate, computePosition, shift } from "@floating-ui/dom";
 
 const computePositionMock = vi.mocked(computePosition);
 const autoUpdateMock = vi.mocked(autoUpdate);
@@ -180,6 +180,36 @@ describe("useFloatingPosition", () => {
 
     await vi.waitFor(() => {
       expect(computePositionMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("passes crossAxis: true to shift middleware", async () => {
+    const shiftMock = vi.mocked(shift);
+    const element = makeElement();
+    const floating = document.createElement("div");
+
+    const [reference] = createSignal<Element | null>(element);
+    const [floatingRef] = createSignal<Element | null>(floating);
+
+    createRoot(() => {
+      useFloatingPosition(reference, {
+        floatingRef,
+        placement: "right-start",
+        strategy: "fixed",
+      });
+    });
+
+    await vi.waitFor(() => {
+      expect(shiftMock).toHaveBeenCalledWith({ crossAxis: true, padding: 8 });
+      expect(computePositionMock).toHaveBeenCalledWith(
+        element,
+        floating,
+        expect.objectContaining({
+          middleware: expect.arrayContaining([
+            expect.objectContaining({ name: "shift" }),
+          ]),
+        })
+      );
     });
   });
 
