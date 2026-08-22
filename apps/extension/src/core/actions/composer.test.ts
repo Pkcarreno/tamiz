@@ -4,6 +4,8 @@ import type { ActionHandlerDeps } from "./composer.ts";
 import { composeActions } from "./composer.ts";
 import { createActionDispatcher } from "./dispatcher.ts";
 
+const SLUG_FILENAME_PATTERN = /^[a-z0-9-]+\.md$/;
+
 /** Transition a real machine to SELECTED with a real DOM element. */
 function selectElement(machine: PickerStateMachine): void {
   machine.dispatch({ type: "INVOKE" });
@@ -11,6 +13,15 @@ function selectElement(machine: PickerStateMachine): void {
     target: document.createElement("div"),
     type: "CLICK",
   });
+}
+
+/** Transition a real machine to SELECTED with a specific DOM element. */
+function machine_selectElement(
+  machine: PickerStateMachine,
+  element: Element
+): void {
+  machine.dispatch({ type: "INVOKE" });
+  machine.dispatch({ target: element, type: "CLICK" });
 }
 
 /** Build fully mocked deps. Machine starts in IDLE; call selectElement for SELECTED. */
@@ -160,11 +171,35 @@ describe("DOWNLOAD handler", () => {
     expect(deps.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "converted-content",
+        filename: expect.stringMatching(SLUG_FILENAME_PATTERN),
         type: "DOWNLOAD_FILE",
       })
     );
     expect(deps.machine.getState()).toBe("IDLE");
     expect(deps.setBarVisible).toHaveBeenCalledWith(false);
+  });
+
+  it("uses heading text in filename when element contains a heading", async () => {
+    const deps = makeDeps();
+    const element = document.createElement("div");
+    const heading = document.createElement("h1");
+    heading.textContent = "Getting Started Guide";
+    element.appendChild(heading);
+    machine_selectElement(deps.machine, element);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "DOWNLOAD" });
+
+    await vi.waitFor(() => {
+      expect(deps.showToast).toHaveBeenCalledWith("Element downloaded");
+    });
+
+    expect(deps.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filename: "getting-started-guide.md",
+        type: "DOWNLOAD_FILE",
+      })
+    );
   });
 
   it("silently drops DOWNLOAD when no element is selected", async () => {

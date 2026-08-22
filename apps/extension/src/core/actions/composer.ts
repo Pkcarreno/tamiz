@@ -1,3 +1,9 @@
+import {
+  buildFilename,
+  extractArticleName,
+  extractTwitterTitle,
+  type FilenameSource,
+} from "../../lib/build-filename.ts";
 import type { Message } from "../../lib/messaging/types.ts";
 import type { ShortcutRegistry } from "../keyboard/registry.ts";
 import { createShortcutRegistry } from "../keyboard/registry.ts";
@@ -114,10 +120,14 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
               (m) => m.htmlStrategy
             );
       const content = await deps.htmlConverter.convert(html, { strategy });
-      const tag = element.tagName.toLowerCase();
-      const timestamp = Date.now();
       const extension = FORMAT_EXTENSION[deps.format()];
-      const filename = `${tag}-${timestamp}.${extension}`;
+      const source: FilenameSource = {
+        articleName: extractArticleName(document) ?? undefined,
+        element,
+        pageTitle: document.title,
+        twitterTitle: extractTwitterTitle(document) ?? undefined,
+      };
+      const filename = buildFilename(source, extension);
       await deps.sendMessage({ content, filename, type: "DOWNLOAD_FILE" });
       deps.showToast?.("Element downloaded");
       dispatcher.dispatch({ type: "DISMISS" });
