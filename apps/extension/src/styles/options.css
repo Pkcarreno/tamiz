@@ -126,11 +126,11 @@
 
 .tz-options {
   display: flex;
-  min-height: 100dvh;
   align-items: center;
   justify-content: center;
-  background-color: var(--tz-ground);
+  min-height: 100dvh;
   font-family: var(--tz-font-sans);
+  background-color: var(--tz-ground);
 }
 
 /* ===== REDUCED MOTION ===== */

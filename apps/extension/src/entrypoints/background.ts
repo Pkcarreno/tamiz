@@ -1,8 +1,7 @@
 import { type Browser, browser } from "wxt/browser";
-
-import { readDefaultFormat } from "../lib/storage.ts";
 import { RuntimeChannel } from "../lib/messaging/adapters/runtime.ts";
 import type { Message } from "../lib/messaging/types.ts";
+import { readDefaultFormat } from "../lib/storage.ts";
 
 /**
  * Read the default export format from storage.
@@ -14,7 +13,7 @@ import type { Message } from "../lib/messaging/types.ts";
  *
  * @public
  */
-export async function getDefaultFormat(): Promise<"markdown" | "html"> {
+export function getDefaultFormat(): Promise<"markdown" | "html"> {
   return readDefaultFormat();
 }
 
@@ -237,9 +236,7 @@ export async function handleContextMenuClick(
  *
  * @public
  */
-export async function handleActionClick(
-  tab?: Browser.tabs.Tab
-): Promise<void> {
+export async function handleActionClick(tab?: Browser.tabs.Tab): Promise<void> {
   if (tab?.id !== undefined) {
     const format = await getDefaultFormat();
     relayInvokePicker(tab.id, format).catch((err) =>

@@ -6,5 +6,18 @@
         "noUnresolvedImports": "off"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/radio-group.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off",
+            "useKeyWithClickEvents": "off"
+          }
+        }
+      }
+    }
+  ]
 }

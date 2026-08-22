@@ -8,6 +8,8 @@
 import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 import { type Browser, browser } from "wxt/browser";
 
+const FORMAT_REGEX = /^(markdown|html)$/;
+
 import {
   CONTEXT_MENU_ID,
   CONTEXT_MENU_TITLE,
@@ -125,7 +127,7 @@ describe("handleContextMenuClick", () => {
 describe("getDefaultFormat", () => {
   it("returns a valid format from storage", async () => {
     const format = await getDefaultFormat();
-    expect(format).toMatch(/^(markdown|html)$/);
+    expect(format).toMatch(FORMAT_REGEX);
   });
 
   it("returns 'markdown' as the default fallback", async () => {

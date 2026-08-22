@@ -26,7 +26,9 @@ export async function readDefaultFormat(): Promise<Format> {
   try {
     return await defaultFormatItem.getValue();
   } catch {
-    console.warn("[tamiz] failed to read default format, falling back to markdown");
+    console.warn(
+      "[tamiz] failed to read default format, falling back to markdown"
+    );
     return "markdown";
   }
 }

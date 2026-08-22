@@ -79,7 +79,10 @@ describe("RadioGroup", () => {
       />
     ));
     const items = container.querySelectorAll("[data-tamiz-radio-item]");
-    fireEvent.click(items[1]!);
+    const htmlItem = Array.from(items).find(
+      (el) => el.getAttribute("data-value") === "html"
+    );
+    fireEvent.click(htmlItem as Element);
     expect(onChange).toHaveBeenCalledWith("html");
   });
 
@@ -94,7 +97,10 @@ describe("RadioGroup", () => {
       />
     ));
     const items = container.querySelectorAll("[data-tamiz-radio-item]");
-    fireEvent.click(items[0]!);
+    const mdItem = Array.from(items).find(
+      (el) => el.getAttribute("data-value") === "markdown"
+    );
+    fireEvent.click(mdItem as Element);
     expect(onChange).toHaveBeenCalledWith("markdown");
   });
 
@@ -110,7 +116,10 @@ describe("RadioGroup", () => {
       />
     ));
     const items = container.querySelectorAll("[data-tamiz-radio-item]");
-    fireEvent.click(items[1]!);
+    const htmlItem = Array.from(items).find(
+      (el) => el.getAttribute("data-value") === "html"
+    );
+    fireEvent.click(htmlItem as Element);
     expect(onChange).not.toHaveBeenCalled();
   });
 
@@ -199,7 +208,7 @@ describe("RadioGroup", () => {
     expect(group?.id).toBe("format-group");
   });
 
-  it("navigates with ArrowDown and selects with Enter on vertical group", () => {
+  it("navigates with ArrowDown without selecting", () => {
     const onChange = vi.fn();
     const { container } = render(() => (
       <RadioGroup
@@ -210,8 +219,11 @@ describe("RadioGroup", () => {
       />
     ));
     const items = container.querySelectorAll("[data-tamiz-radio-item]");
-    fireEvent.keyDown(items[0]!, { key: "ArrowDown" });
-    // ArrowDown moves focus but doesn't select — user must click or press Space/Enter
+    const mdItem = Array.from(items).find(
+      (el) => el.getAttribute("data-value") === "markdown"
+    );
+    fireEvent.keyDown(mdItem as Element, { key: "ArrowDown" });
+    // ArrowDown moves focus but does not select
     expect(onChange).not.toHaveBeenCalled();
   });
 

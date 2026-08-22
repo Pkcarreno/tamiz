@@ -1,7 +1,7 @@
 import { cleanup, render, waitFor } from "@solidjs/testing-library";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { OptionsApp } from "./options.tsx";
+import { OptionsApp } from "../views/options-app.tsx";
 
 afterEach(() => cleanup());
 

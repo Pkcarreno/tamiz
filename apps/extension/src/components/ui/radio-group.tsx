@@ -1,5 +1,5 @@
 import { cva } from "class-variance-authority";
-import { type JSX, type ParentProps, splitProps } from "solid-js";
+import { For, type JSX, type ParentProps, splitProps } from "solid-js";
 
 import { cn } from "../../lib/cn.ts";
 
@@ -37,14 +37,14 @@ export interface RadioGroupProps {
   disabled?: boolean;
   /** HTML `id` attribute for the group element. */
   id?: string;
-  /** Callback invoked with the new value when an option is selected. */
-  onChange: (value: string) => void;
   /** Form `name` attribute forwarded to each radio input. */
   name: string;
-  /** Layout direction of the options. */
-  orientation?: RadioOrientation;
+  /** Callback invoked with the new value when an option is selected. */
+  onChange: (value: string) => void;
   /** The available radio options. */
   options: RadioOption[];
+  /** Layout direction of the options. */
+  orientation?: RadioOrientation;
   /** The currently selected value. */
   value: string;
 }
@@ -66,7 +66,7 @@ const radioGroupVariants = cva("flex", {
  * CVA variant configuration for each radio option.
  */
 const radioItemVariants = cva(
-  "inline-flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 font-sans text-[12px] transition-[color,background-color] duration-fast ease-out select-none focus-visible:shadow-focus focus-visible:outline-none",
+  "inline-flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 font-sans text-[12px] transition-[color,background-color] duration-fast ease-out focus-visible:shadow-focus focus-visible:outline-none",
   {
     defaultVariants: { selected: false },
     variants: {
@@ -95,15 +95,15 @@ function VisuallyHiddenRadio(props: {
       name={props.name}
       readOnly
       style={{
-        position: "absolute",
-        width: "1px",
+        border: "0",
+        clip: "rect(0, 0, 0, 0)",
         height: "1px",
-        padding: "0",
         margin: "-1px",
         overflow: "hidden",
-        clip: "rect(0, 0, 0, 0)",
+        padding: "0",
+        position: "absolute",
         "white-space": "nowrap",
-        border: "0",
+        width: "1px",
       }}
       tabIndex={props.checked ? 0 : -1}
       type="radio"
@@ -117,13 +117,12 @@ function VisuallyHiddenRadio(props: {
  *
  * Renders a set of radio options inside a `role="radiogroup"` container.
  * The currently selected option has `tabIndex=0`; all others have
- * `tabIndex=-1` (roving tabindex). Arrow keys move focus between options,
- * and Enter/Space selects the focused option.
+ * `tabIndex=-1` (roving tabindex). Arrow keys move focus between options.
  *
  * @public
  */
 export function RadioGroup(props: ParentProps<RadioGroupProps>): JSX.Element {
-  const [local, rest] = splitProps(props, [
+  const [local] = splitProps(props, [
     "class",
     "disabled",
     "id",
@@ -136,8 +135,7 @@ export function RadioGroup(props: ParentProps<RadioGroupProps>): JSX.Element {
 
   const orientation = () => local.orientation ?? "vertical";
 
-  let groupRef: HTMLDivElement | undefined;
-  let optionRefs: HTMLDivElement[] = [];
+  const optionRefs: HTMLDivElement[] = [];
 
   function focusOption(index: number): void {
     const clamped = Math.max(0, Math.min(index, local.options.length - 1));
@@ -208,49 +206,59 @@ export function RadioGroup(props: ParentProps<RadioGroupProps>): JSX.Element {
     }
   }
 
+  function setOptionRef(el: HTMLDivElement, index: number): void {
+    optionRefs[index] = el;
+  }
+
   return (
     <div
-      ref={groupRef}
       aria-disabled={local.disabled || undefined}
       aria-orientation={orientation()}
-      class={cn(radioGroupVariants({ orientation: orientation() }), local.class)}
+      class={cn(
+        radioGroupVariants({ orientation: orientation() }),
+        local.class
+      )}
       data-tamiz-radio-group
       id={local.id}
-      // biome-ignore lint/a11y/useSemanticElements: roving tabindex radiogroup
-      role="radiogroup"
+      // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
       onKeyDown={handleKeyDown}
+      role="radiogroup"
     >
-      {local.options.map((option, index) => {
-        const isSelected = () => option.value === local.value;
-        const optionIndex = index;
+      <For each={local.options}>
+        {(option, index) => {
+          const isSelected = () => option.value === local.value;
+          const optionIndex = index;
 
-        return (
-          <div
-            ref={(el) => {
-              optionRefs[optionIndex] = el;
-            }}
-            aria-checked={isSelected()}
-            class={cn(
-              radioItemVariants({ selected: isSelected() }),
-              local.disabled && "pointer-events-none opacity-[0.35]"
-            )}
-            data-tamiz-radio-item
-            data-value={option.value}
-            id={`${local.name}-${option.value}`}
-            role="radio"
-            tabIndex={isSelected() ? 0 : -1}
-            onClick={() => handleOptionClick(option.value)}
-          >
-            <VisuallyHiddenRadio
-              checked={isSelected()}
-              disabled={local.disabled}
-              name={local.name}
-              value={option.value}
-            />
-            <span aria-hidden="true">{option.label}</span>
-          </div>
-        );
-      })}
+          return (
+            <div
+              aria-checked={isSelected()}
+              class={cn(
+                radioItemVariants({ selected: isSelected() }),
+                local.disabled && "pointer-events-none opacity-[0.35]"
+              )}
+              data-tamiz-radio-item
+              data-value={option.value}
+              id={`${local.name}-${option.value}`}
+              // biome-ignore lint/performance/noJsxPropsBind: SolidJS For body runs once per item; stable in practice
+              onClick={() => handleOptionClick(option.value)}
+              // biome-ignore lint/performance/noJsxPropsBind: SolidJS For body runs once per item; stable in practice
+              ref={(el) => {
+                setOptionRef(el, optionIndex());
+              }}
+              role="radio"
+              tabIndex={isSelected() ? 0 : -1}
+            >
+              <VisuallyHiddenRadio
+                checked={isSelected()}
+                disabled={local.disabled}
+                name={local.name}
+                value={option.value}
+              />
+              <span aria-hidden="true">{option.label}</span>
+            </div>
+          );
+        }}
+      </For>
     </div>
   );
 }
