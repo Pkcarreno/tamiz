@@ -143,12 +143,14 @@ export function injectHighlightStyles(): void {
   style.textContent = `
     .tamiz-highlight {
       z-index: 2147483647 !important;
-      box-shadow: 0 0 0 2px #2563eb !important;
+      outline: 2px solid var(--tz-accent, #2563eb) !important;
+      outline-offset: 2px;
       background-color: rgba(37, 99, 235, 0.12) !important;
     }
     .tamiz-hover {
       z-index: 2147483647 !important;
-      box-shadow: inset 0 0 0 2px #3b82f6 !important;
+      outline: 2px dashed var(--tz-accent-bright, #3b82f6) !important;
+      outline-offset: 2px;
       background-color: rgba(59, 130, 246, 0.08) !important;
     }
     .tamiz-excluded {
