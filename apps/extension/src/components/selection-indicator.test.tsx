@@ -8,6 +8,8 @@ describe("SelectionIndicator", () => {
   const noop = vi.fn();
   const alwaysVisible = () => true;
   const neverVisible = () => false;
+  const notExclusionMode = () => false;
+  const isExclusionMode = () => true;
 
   beforeEach(() => {
     window.matchMedia = vi.fn().mockReturnValue({
@@ -24,7 +26,11 @@ describe("SelectionIndicator", () => {
   describe("when visible", () => {
     it("renders the instruction text", () => {
       const { unmount } = render(() => (
-        <SelectionIndicator onDismiss={noop} visible={alwaysVisible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={noop}
+          visible={alwaysVisible}
+        />
       ));
       expect(screen.getByText("Click an element to select")).toBeTruthy();
       unmount();
@@ -32,7 +38,11 @@ describe("SelectionIndicator", () => {
 
     it("renders the Esc hint text", () => {
       const { unmount } = render(() => (
-        <SelectionIndicator onDismiss={noop} visible={alwaysVisible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={noop}
+          visible={alwaysVisible}
+        />
       ));
       expect(screen.getByText("or press Esc")).toBeTruthy();
       unmount();
@@ -40,7 +50,11 @@ describe("SelectionIndicator", () => {
 
     it("renders a close button with accessible aria-label", () => {
       const { unmount } = render(() => (
-        <SelectionIndicator onDismiss={noop} visible={alwaysVisible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={noop}
+          visible={alwaysVisible}
+        />
       ));
       expect(
         screen.getByRole("button", { name: "Dismiss selection (Esc)" })
@@ -50,7 +64,11 @@ describe("SelectionIndicator", () => {
 
     it("renders the close button as a native button element", () => {
       const { unmount } = render(() => (
-        <SelectionIndicator onDismiss={noop} visible={alwaysVisible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={noop}
+          visible={alwaysVisible}
+        />
       ));
       const button = screen.getByRole("button", {
         name: "Dismiss selection (Esc)",
@@ -61,7 +79,11 @@ describe("SelectionIndicator", () => {
 
     it("renders the Lucide X icon as close button content", () => {
       const { unmount } = render(() => (
-        <SelectionIndicator onDismiss={noop} visible={alwaysVisible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={noop}
+          visible={alwaysVisible}
+        />
       ));
       const button = screen.getByRole("button", {
         name: "Dismiss selection (Esc)",
@@ -72,7 +94,11 @@ describe("SelectionIndicator", () => {
 
     it("renders the dismiss button at slim size (24px height)", () => {
       const { unmount } = render(() => (
-        <SelectionIndicator onDismiss={noop} visible={alwaysVisible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={noop}
+          visible={alwaysVisible}
+        />
       ));
       const button = screen.getByRole("button", {
         name: "Dismiss selection (Esc)",
@@ -83,7 +109,11 @@ describe("SelectionIndicator", () => {
 
     it("marks the container with data-tamiz-ui for blocker exclusion", () => {
       const { container, unmount } = render(() => (
-        <SelectionIndicator onDismiss={noop} visible={alwaysVisible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={noop}
+          visible={alwaysVisible}
+        />
       ));
       expect(container.querySelector("[data-tamiz-ui]")).not.toBeNull();
       unmount();
@@ -93,7 +123,11 @@ describe("SelectionIndicator", () => {
   describe("when not visible", () => {
     it("does not render the pill", () => {
       const { unmount } = render(() => (
-        <SelectionIndicator onDismiss={noop} visible={neverVisible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={noop}
+          visible={neverVisible}
+        />
       ));
       expect(screen.queryByText("Click an element to select")).toBeNull();
       expect(screen.queryByRole("button")).toBeNull();
@@ -105,7 +139,11 @@ describe("SelectionIndicator", () => {
     it("calls onDismiss when the close button is clicked", () => {
       const onDismiss = vi.fn();
       const { unmount } = render(() => (
-        <SelectionIndicator onDismiss={onDismiss} visible={alwaysVisible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={onDismiss}
+          visible={alwaysVisible}
+        />
       ));
       fireEvent.click(
         screen.getByRole("button", { name: "Dismiss selection (Esc)" })
@@ -115,11 +153,43 @@ describe("SelectionIndicator", () => {
     });
   });
 
+  describe("exclusion mode pill text", () => {
+    it("shows 'Click element to exclude' when isExclusionMode is true", () => {
+      const { unmount } = render(() => (
+        <SelectionIndicator
+          isExclusionMode={isExclusionMode}
+          onDismiss={noop}
+          visible={alwaysVisible}
+        />
+      ));
+      expect(screen.getByText("Click element to exclude")).toBeTruthy();
+      expect(screen.getByText("Esc to finish")).toBeTruthy();
+      unmount();
+    });
+
+    it("shows 'Click an element to select' when isExclusionMode is false", () => {
+      const { unmount } = render(() => (
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={noop}
+          visible={alwaysVisible}
+        />
+      ));
+      expect(screen.getByText("Click an element to select")).toBeTruthy();
+      expect(screen.getByText("or press Esc")).toBeTruthy();
+      unmount();
+    });
+  });
+
   describe("exit animation", () => {
     it("keeps the pill visible during exit then removes after 120ms", async () => {
       const [visible, setVisible] = createSignal(true);
       render(() => (
-        <SelectionIndicator onDismiss={vi.fn()} visible={visible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={vi.fn()}
+          visible={visible}
+        />
       ));
 
       expect(screen.getByText("Click an element to select")).toBeTruthy();
@@ -140,7 +210,11 @@ describe("SelectionIndicator", () => {
     it("does not remove the pill before 120ms elapses", async () => {
       const [visible, setVisible] = createSignal(true);
       render(() => (
-        <SelectionIndicator onDismiss={vi.fn()} visible={visible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={vi.fn()}
+          visible={visible}
+        />
       ));
 
       setVisible(false);
@@ -162,7 +236,11 @@ describe("SelectionIndicator", () => {
 
       const [visible, setVisible] = createSignal(true);
       render(() => (
-        <SelectionIndicator onDismiss={vi.fn()} visible={visible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={vi.fn()}
+          visible={visible}
+        />
       ));
 
       expect(screen.getByText("Click an element to select")).toBeTruthy();
@@ -184,7 +262,11 @@ describe("SelectionIndicator", () => {
 
       const [visible, setVisible] = createSignal(true);
       render(() => (
-        <SelectionIndicator onDismiss={vi.fn()} visible={visible} />
+        <SelectionIndicator
+          isExclusionMode={notExclusionMode}
+          onDismiss={vi.fn()}
+          visible={visible}
+        />
       ));
 
       setVisible(false);

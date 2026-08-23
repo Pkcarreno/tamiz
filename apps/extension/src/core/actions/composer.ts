@@ -30,12 +30,19 @@ const FORMAT_EXTENSION: Record<"markdown" | "html", string> = {
 export interface ActionHandlerDeps {
   /** Current output format signal getter. */
   format: () => "markdown" | "html";
+  /** Get the current set of excluded elements. */
+  getExcludedElements: () => Set<Element>;
+  /** Whether exclusion mode is currently active. */
+  getExclusionMode: () => boolean;
   /** HTML converter with extract and convert capabilities. */
   htmlConverter: {
     /** Convert HTML string to target format. */
     convert: (html: string, options: { strategy: unknown }) => Promise<string>;
     /** Extract clean HTML from a DOM element. */
-    extractContent: (element: Element) => string;
+    extractContent: (
+      element: Element,
+      excludedElements?: Set<Element>
+    ) => string;
   };
   /** The picker state machine for reading state and dispatching transitions. */
   machine: PickerStateMachine;
@@ -43,6 +50,10 @@ export interface ActionHandlerDeps {
   sendMessage: (message: Message) => Promise<void>;
   /** Show or hide the floating action bar. */
   setBarVisible: (visible: boolean) => void;
+  /** Update the excluded elements signal. */
+  setExcludedElements: (elements: Set<Element>) => void;
+  /** Update the exclusion mode signal. */
+  setExclusionMode: (exclusion: boolean) => void;
   /** Update the bar format signal. */
   setFormat: (format: "markdown" | "html") => void;
   /** Update the selected element signal. */
@@ -81,12 +92,18 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
   const registry = createShortcutRegistry();
 
   const handleCopy = async (): Promise<void> => {
+    if (deps.getExclusionMode()) {
+      return;
+    }
     const element = deps.machine.getSelectedElement();
     if (!element) {
       return;
     }
     try {
-      const html = deps.htmlConverter.extractContent(element);
+      const html = deps.htmlConverter.extractContent(
+        element,
+        deps.getExcludedElements()
+      );
       const strategy =
         deps.format() === "markdown"
           ? await import("@tamiz/html-converter/strategies/markdown").then(
@@ -105,12 +122,18 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
   };
 
   const handleDownload = async (): Promise<void> => {
+    if (deps.getExclusionMode()) {
+      return;
+    }
     const element = deps.machine.getSelectedElement();
     if (!element) {
       return;
     }
     try {
-      const html = deps.htmlConverter.extractContent(element);
+      const html = deps.htmlConverter.extractContent(
+        element,
+        deps.getExcludedElements()
+      );
       const strategy =
         deps.format() === "markdown"
           ? await import("@tamiz/html-converter/strategies/markdown").then(
@@ -157,14 +180,25 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
   const handleDismiss = (): void => {
     deps.machine.dispatch({ type: "DISMISS" });
     deps.setBarVisible(false);
+    deps.setExclusionMode(false);
+    deps.setExcludedElements(new Set());
   };
 
   const handleRestart = (): void => {
+    if (deps.getExclusionMode()) {
+      return;
+    }
     // Dispatch RESTART to the machine — it transitions to HIGHLIGHTING
     // and clears the selected element.  Bar visibility is driven by the
     // state machine via the onStateChange callback, so we do NOT call
     // setBarVisible here.
     deps.machine.dispatch({ type: "RESTART" });
+    deps.setExclusionMode(false);
+    deps.setExcludedElements(new Set());
+  };
+
+  const handleExcludeToggle = (): void => {
+    deps.setExclusionMode(!deps.getExclusionMode());
   };
 
   const subscriptions: Array<() => void> = [
@@ -174,6 +208,7 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
     dispatcher.on("DISMISS", handleDismiss),
     dispatcher.on("RESTART", handleRestart),
     dispatcher.on("DOWNLOAD", handleDownload),
+    dispatcher.on("EXCLUDE_TOGGLE", handleExcludeToggle),
   ];
 
   return {

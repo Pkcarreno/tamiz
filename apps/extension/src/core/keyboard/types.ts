@@ -34,6 +34,7 @@ export interface ModifierSet {
 export interface ShortcutContext {
   format: Format;
   inputFocused: boolean;
+  isExclusionMode: boolean;
   state: PickerState;
 }
 

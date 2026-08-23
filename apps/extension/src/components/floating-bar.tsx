@@ -1,4 +1,5 @@
 import type { Placement } from "@floating-ui/dom";
+import CircleMinus from "lucide-solid/icons/circle-minus";
 import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
@@ -94,6 +95,8 @@ export interface FloatingActionBarProps {
   element: Accessor<Element | null>;
   /** Currently selected output format. */
   format: Accessor<"markdown" | "html">;
+  /** Whether exclusion mode is active. */
+  isExclusionMode: Accessor<boolean>;
   /** Dispatched when the user clicks Copy, Download, Cancel, or changes format. */
   onAction: (action: PickerAction) => void;
 }
@@ -131,6 +134,10 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
 
   function handleRestart(): void {
     props.onAction({ type: "RESTART" });
+  }
+
+  function handleExcludeToggle(): void {
+    props.onAction({ type: "EXCLUDE_TOGGLE" });
   }
 
   function handleFormatChange(value: string): void {
@@ -176,6 +183,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         <BarTooltip label="Copy" placement="bottom" shortcut="C">
           <Button
             aria-label="Copy"
+            disabled={props.isExclusionMode()}
             // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleCopy}
             size="xs"
@@ -187,6 +195,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         <BarTooltip label="Download" placement="bottom" shortcut="S">
           <Button
             aria-label="Download"
+            disabled={props.isExclusionMode()}
             // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleDownload}
             size="xs"
@@ -195,9 +204,22 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
             <Download size={16} />
           </Button>
         </BarTooltip>
+        <BarTooltip label="Exclude" placement="bottom" shortcut="E">
+          <Button
+            aria-label="Toggle exclusion mode"
+            class={props.isExclusionMode() ? "text-accent" : ""}
+            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+            onClick={handleExcludeToggle}
+            size="xs"
+            variant="icon"
+          >
+            <CircleMinus size={16} />
+          </Button>
+        </BarTooltip>
         <BarTooltip label="Restart" placement="bottom" shortcut="R">
           <Button
             aria-label="Restart selection"
+            disabled={props.isExclusionMode()}
             // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleRestart}
             size="xs"

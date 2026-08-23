@@ -32,10 +32,14 @@ function makeDeps(
   const setFormat = vi.fn((f: "markdown" | "html") => {
     format = f;
   });
+  let exclusionMode = false;
+  let excludedElements = new Set<Element>();
   const machine = new PickerStateMachine();
 
   const deps: ActionHandlerDeps = {
     format: () => format,
+    getExcludedElements: () => excludedElements,
+    getExclusionMode: () => exclusionMode,
     htmlConverter: {
       convert: vi.fn().mockResolvedValue("converted-content"),
       extractContent: vi.fn().mockReturnValue("<div>test</div>"),
@@ -43,6 +47,12 @@ function makeDeps(
     machine,
     sendMessage: vi.fn().mockResolvedValue(undefined),
     setBarVisible: vi.fn(),
+    setExcludedElements: vi.fn((s: Set<Element>) => {
+      excludedElements = s;
+    }),
+    setExclusionMode: vi.fn((e: boolean) => {
+      exclusionMode = e;
+    }),
     setFormat,
     setSelectedElement: vi.fn(),
     showToast: vi.fn(),
@@ -80,7 +90,8 @@ describe("COPY handler", () => {
     });
 
     expect(deps.htmlConverter.extractContent).toHaveBeenCalledWith(
-      expect.any(Element)
+      expect.any(Element),
+      expect.any(Set)
     );
     expect(deps.htmlConverter.convert).toHaveBeenCalled();
     expect(deps.sendMessage).toHaveBeenCalledWith({
@@ -321,6 +332,17 @@ describe("DISMISS handler", () => {
     expect(deps.machine.getState()).toBe("IDLE");
     expect(deps.setBarVisible).toHaveBeenCalledWith(false);
   });
+
+  it("clears exclusion mode and excluded elements", () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "DISMISS" });
+
+    expect(deps.setExclusionMode).toHaveBeenCalledWith(false);
+    expect(deps.setExcludedElements).toHaveBeenCalledWith(expect.any(Set));
+  });
 });
 
 describe("RESTART handler", () => {
@@ -357,6 +379,41 @@ describe("RESTART handler", () => {
     // setFormat was only called once during the initial setup, not during RESTART
     expect(deps.setFormat).toHaveBeenCalledTimes(1);
     expect(deps.setFormat).not.toHaveBeenCalledWith("markdown");
+  });
+
+  it("clears exclusion mode and excluded elements", () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "RESTART" });
+
+    expect(deps.setExclusionMode).toHaveBeenCalledWith(false);
+    expect(deps.setExcludedElements).toHaveBeenCalledWith(expect.any(Set));
+  });
+});
+
+describe("EXCLUDE_TOGGLE handler", () => {
+  it("toggles exclusion mode on when currently off", () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "EXCLUDE_TOGGLE" });
+
+    expect(deps.setExclusionMode).toHaveBeenCalledWith(true);
+  });
+
+  it("toggles exclusion mode off when currently on", () => {
+    const deps = makeDeps({
+      getExclusionMode: () => true,
+    });
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "EXCLUDE_TOGGLE" });
+
+    expect(deps.setExclusionMode).toHaveBeenCalledWith(false);
   });
 });
 

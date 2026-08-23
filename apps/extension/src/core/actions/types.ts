@@ -13,7 +13,8 @@ export type PickerAction =
   | { type: "DISMISS" }
   | { type: "RESTART" }
   | { type: "FORMAT_CHANGE"; format: "markdown" | "html" }
-  | { type: "INVOKE"; format?: "markdown" | "html" };
+  | { type: "INVOKE"; format?: "markdown" | "html" }
+  | { type: "EXCLUDE_TOGGLE" };
 
 /**
  * Union of the `type` field across every {@link PickerAction} variant.

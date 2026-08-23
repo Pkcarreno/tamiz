@@ -70,24 +70,30 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
     action: { type: "COPY" },
     combo: { alt: false, ctrlOrMeta: false, key: "c", shift: false },
     label: "C",
-    when: (ctx) => ctx.state === "SELECTED",
+    when: (ctx) => ctx.state === "SELECTED" && !ctx.isExclusionMode,
   },
   {
     action: { type: "DOWNLOAD" },
     combo: { alt: false, ctrlOrMeta: false, key: "s", shift: false },
     label: "S",
-    when: (ctx) => ctx.state === "SELECTED",
+    when: (ctx) => ctx.state === "SELECTED" && !ctx.isExclusionMode,
   },
   {
     action: { format: "html", type: "FORMAT_CHANGE" },
     combo: { alt: false, ctrlOrMeta: false, key: "f", shift: false },
     label: "F",
-    when: (ctx) => ctx.state === "SELECTED",
+    when: (ctx) => ctx.state === "SELECTED" && !ctx.isExclusionMode,
   },
   {
     action: { type: "RESTART" },
     combo: { alt: false, ctrlOrMeta: false, key: "r", shift: false },
     label: "R",
+    when: (ctx) => ctx.state === "SELECTED" && !ctx.isExclusionMode,
+  },
+  {
+    action: { type: "EXCLUDE_TOGGLE" },
+    combo: { alt: false, ctrlOrMeta: false, key: "e", shift: false },
+    label: "E",
     when: (ctx) => ctx.state === "SELECTED",
   },
 ];

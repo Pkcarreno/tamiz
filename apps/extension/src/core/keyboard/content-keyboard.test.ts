@@ -47,6 +47,7 @@ function makeDeps(
     dispatcher,
     getActiveElement: () => null,
     getCurrentFormat: () => "markdown",
+    isExclusionMode: () => false,
     machine,
     registry,
     shadowHost,
@@ -120,6 +121,21 @@ describe("handleKeydown — Escape", () => {
 
     expect(dispatchSpy).toHaveBeenCalledWith({ type: "DISMISS" });
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("dispatches EXCLUDE_TOGGLE when Escape pressed in exclusion mode", () => {
+    const deps = makeDeps({ isExclusionMode: () => true });
+    selectElement(deps.machine);
+    expect(deps.machine.getState()).toBe("SELECTED");
+
+    const dispatchSpy = vi.spyOn(deps.dispatcher, "dispatch");
+    const event = keyEvent({ key: "Escape" });
+
+    handleKeydown(event, deps);
+
+    expect(dispatchSpy).toHaveBeenCalledWith({ type: "EXCLUDE_TOGGLE" });
+    expect(dispatchSpy).not.toHaveBeenCalledWith({ type: "DISMISS" });
+    expect(event.defaultPrevented).toBe(true);
   });
 });
 

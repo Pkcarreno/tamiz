@@ -13,6 +13,8 @@ export interface ContentAppProps {
   element: Accessor<Element | null>;
   /** Current output format. */
   format: Accessor<"markdown" | "html">;
+  /** Whether exclusion mode is active. */
+  isExclusionMode: Accessor<boolean>;
   /** Dispatched when the user clicks a bar button or changes format. */
   onAction: (action: PickerAction) => void;
   /** Called when the toast API is ready. */
@@ -53,6 +55,7 @@ export function ContentApp(props: ContentAppProps): JSX.Element {
         <FloatingActionBar
           element={props.element}
           format={props.format}
+          isExclusionMode={props.isExclusionMode}
           onAction={props.onAction}
         />
       )}

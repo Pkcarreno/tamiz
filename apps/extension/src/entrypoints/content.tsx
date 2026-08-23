@@ -25,6 +25,20 @@ import type { BlockingClickMessage } from "../lib/messaging/types.ts";
 // ---------------------------------------------------------------------------
 
 /**
+ * Remove `.tamiz-excluded` CSS class from all elements that carry it.
+ *
+ * Called when the picker flow ends or exclusion mode is deactivated to
+ * prevent stale visual artifacts on the page.
+ *
+ * @public
+ */
+export function clearExcludedClasses(): void {
+  for (const el of document.querySelectorAll(".tamiz-excluded")) {
+    el.classList.remove("tamiz-excluded");
+  }
+}
+
+/**
  * Process a relayed click from the main-world blocker.
  *
  * Resolves the target element via `elementFromPoint` using the coordinates
@@ -137,8 +151,47 @@ export function injectHighlightStyles(): void {
       box-shadow: inset 0 0 0 2px #3b82f6 !important;
       background-color: rgba(59, 130, 246, 0.08) !important;
     }
+    .tamiz-excluded {
+      outline: 2px solid var(--tz-state-error, #dc2626) !important;
+      outline-offset: 2px;
+      opacity: 0.4 !important;
+      transition:
+        opacity var(--tz-duration-fast, 120ms) var(--tz-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+        outline-color var(--tz-duration-fast, 120ms) var(--tz-ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+    }
+    .tamiz-exclusion-hover {
+      outline: 2px dashed var(--tz-state-error, #dc2626) !important;
+      outline-offset: 2px;
+      opacity: 0.6 !important;
+    }
+    .tamiz-exclusion-cursor,
+    .tamiz-exclusion-cursor *,
+    .tamiz-exclusion-cursor *::before,
+    .tamiz-exclusion-cursor *::after {
+      cursor: crosshair !important;
+    }
   `;
   document.head.appendChild(style);
+}
+
+/**
+ * Synchronize the crosshair cursor class on `document.documentElement`
+ * with the current exclusion mode state.
+ *
+ * When exclusion mode is active, all elements on the page receive a
+ * `crosshair` cursor via the `.tamiz-exclusion-cursor` CSS class.
+ * The class is removed when exclusion mode deactivates.
+ *
+ * @param isExclusion - Whether exclusion mode is currently active.
+ *
+ * @public
+ */
+export function syncExclusionCursor(isExclusion: boolean): void {
+  if (isExclusion) {
+    document.documentElement.classList.add("tamiz-exclusion-cursor");
+  } else {
+    document.documentElement.classList.remove("tamiz-exclusion-cursor");
+  }
 }
 
 /**
@@ -181,7 +234,7 @@ export default defineContentScript({
 
     // 3. Import SolidJS and UI.
     const [
-      { createSignal },
+      { createEffect, createMemo, createSignal },
       { render },
       { ContentApp },
       { SelectionIndicator },
@@ -206,7 +259,15 @@ export default defineContentScript({
     );
     const [barVisible, setBarVisible] = createSignal(false);
     const [indicatorVisible, setIndicatorVisible] = createSignal(false);
+    const [isExclusionMode, setExclusionMode] = createSignal(false);
+    const [excludedElements, setExcludedElements] = createSignal<Set<Element>>(
+      new Set<Element>()
+    );
     let showToastApi: ((message: string) => void) | null = null;
+    let exclusionHoverTarget: Element | null = null;
+    const pillVisible = createMemo(
+      () => indicatorVisible() || isExclusionMode()
+    );
 
     // 5. Create core (domain collaborators wired together).
     const core = createPickerCore({
@@ -221,10 +282,26 @@ export default defineContentScript({
         if (state === "IDLE") {
           setBarVisible(false);
           setSelectedElement(null);
+          setExclusionMode(false);
+          clearExcludedClasses();
+          setExcludedElements(new Set<Element>());
+          // Clean up exclusion hover feedback.
+          if (exclusionHoverTarget) {
+            exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
+            exclusionHoverTarget = null;
+          }
         } else if (state === "HIGHLIGHTING") {
           // RESTART transitions to HIGHLIGHTING — clear the selected element
           // signal so the bar disappears and the user can hover freely.
           setSelectedElement(null);
+          setExclusionMode(false);
+          clearExcludedClasses();
+          setExcludedElements(new Set<Element>());
+          // Clean up exclusion hover feedback.
+          if (exclusionHoverTarget) {
+            exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
+            exclusionHoverTarget = null;
+          }
         }
         // Synchronize visual feedback with picker state.
         syncVisualFeedback(state, core.scrim, setIndicatorVisible);
@@ -235,9 +312,36 @@ export default defineContentScript({
       },
     });
 
+    // Disable the main-world blocker while exclusion mode is active so
+    // clicks reach the content-script click handler instead of being
+    // intercepted. Re-enable when exclusion mode is turned off.
+    if (blockingAvailable) {
+      createEffect(() => {
+        if (isExclusionMode()) {
+          blockingChannel.send({ type: TAMIZ_BLOCKING_DISABLE });
+        } else {
+          // Clean up exclusion hover feedback when exiting exclusion mode.
+          if (exclusionHoverTarget) {
+            exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
+            exclusionHoverTarget = null;
+          }
+          if (core.machine.getState() === "SELECTED") {
+            blockingChannel.send({ type: TAMIZ_BLOCKING_ENABLE });
+          }
+        }
+      });
+    }
+
+    // Apply crosshair cursor during exclusion mode.
+    createEffect(() => {
+      syncExclusionCursor(isExclusionMode());
+    });
+
     // 6. Compose action handlers (wires SolidJS signal setters).
     const { dispatcher } = composeActions({
       format: barFormat,
+      getExcludedElements: excludedElements,
+      getExclusionMode: isExclusionMode,
       htmlConverter: {
         convert: async (html, { strategy }) => {
           const { convert } = await import("@tamiz/html-converter");
@@ -248,6 +352,8 @@ export default defineContentScript({
       machine: core.machine,
       sendMessage: (msg) => runtimeChannel.send(msg),
       setBarVisible,
+      setExcludedElements,
+      setExclusionMode,
       setFormat: setBarFormat,
       setSelectedElement,
       get showToast() {
@@ -267,6 +373,7 @@ export default defineContentScript({
               {ContentApp({
                 element: selectedElement,
                 format: barFormat,
+                isExclusionMode,
                 onAction: (action) => dispatcher.dispatch(action),
                 onToastReady: (api) => {
                   showToastApi = api;
@@ -274,8 +381,9 @@ export default defineContentScript({
                 visible: barVisible,
               })}
               <SelectionIndicator
+                isExclusionMode={isExclusionMode}
                 onDismiss={handleDismiss}
-                visible={indicatorVisible}
+                visible={pillVisible}
               />
             </>
           ),
@@ -320,6 +428,7 @@ export default defineContentScript({
         dispatcher,
         getActiveElement: () => document.activeElement,
         getCurrentFormat: barFormat,
+        isExclusionMode,
         machine: core.machine,
         registry: core.registry,
         shadowHost: ui.shadowHost,
@@ -327,15 +436,74 @@ export default defineContentScript({
     });
 
     ctx.addEventListener(document, "mousemove", (e) => {
-      if (core.machine.getState() === "HIGHLIGHTING") {
-        const target = (e as MouseEvent).target as Element;
-        if (
-          target &&
-          target !== document.documentElement &&
-          isSelectable(target)
-        ) {
-          core.machine.dispatch({ target, type: "MOUSEMOVE" });
+      const state = core.machine.getState();
+      const target = (e as MouseEvent).target as Element;
+      const selectable =
+        target && target !== document.documentElement && isSelectable(target);
+
+      if (selectable && state === "HIGHLIGHTING") {
+        core.machine.dispatch({ target, type: "MOUSEMOVE" });
+      } else if (
+        selectable &&
+        state === "SELECTED" &&
+        isExclusionMode() &&
+        target !== selectedElement() &&
+        selectedElement()?.contains(target)
+      ) {
+        // Track hover directly during exclusion mode since the machine
+        // ignores MOUSEMOVE in SELECTED state.
+        if (exclusionHoverTarget !== target && exclusionHoverTarget) {
+          exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
         }
+        if (exclusionHoverTarget !== target) {
+          exclusionHoverTarget = target;
+          target.classList.add("tamiz-exclusion-hover");
+        }
+      }
+
+      // Clear exclusion hover when the mouse is not over a valid excludable element.
+      if (exclusionHoverTarget) {
+        const isExcludable =
+          selectable &&
+          state === "SELECTED" &&
+          isExclusionMode() &&
+          target !== selectedElement() &&
+          selectedElement()?.contains(target);
+
+        if (!isExcludable) {
+          exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
+          exclusionHoverTarget = null;
+        }
+      }
+    });
+
+    // Exclusion-mode click: when in exclusion mode, clicks toggle elements.
+    ctx.addEventListener(document, "click", (e) => {
+      if (!isExclusionMode()) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      const mouse = e as MouseEvent;
+      const target = document.elementFromPoint(mouse.clientX, mouse.clientY);
+      if (
+        target &&
+        target !== document.documentElement &&
+        target !== selectedElement() &&
+        isSelectable(target) &&
+        selectedElement()?.contains(target)
+      ) {
+        const prev = excludedElements();
+        const next = new Set(prev);
+        if (next.has(target)) {
+          next.delete(target);
+          target.classList.remove("tamiz-excluded");
+        } else {
+          next.add(target);
+          target.classList.add("tamiz-excluded");
+        }
+        setExcludedElements(next);
+        setExclusionMode(false);
       }
     });
 

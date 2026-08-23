@@ -56,3 +56,51 @@ describe("extractContent", () => {
     expect(extractContent(element)).toBe("<p></p>");
   });
 });
+
+describe("extractContent — exclusion", () => {
+  it("excludes marked elements from the cloned output", () => {
+    const { document } = parseHTML(
+      "<div><p>keep</p><p>exclude me</p><p>keep too</p></div>"
+    );
+    const element = document.querySelector("div") as Element;
+    const paragraphs = document.querySelectorAll("p");
+    const excluded = new Set<Element>([paragraphs[1]]);
+
+    const result = extractContent(element, excluded);
+
+    expect(result).toContain("keep");
+    expect(result).toContain("keep too");
+    expect(result).not.toContain("exclude me");
+  });
+
+  it("does not mutate the source element when excluding", () => {
+    const { document } = parseHTML("<div><p>keep</p><p>exclude</p></div>");
+    const element = document.querySelector("div") as Element;
+    const paragraphs = document.querySelectorAll("p");
+    const excluded = new Set<Element>([paragraphs[1]]);
+
+    extractContent(element, excluded);
+
+    // Source element keeps both children.
+    expect(element.children.length).toBe(2);
+  });
+
+  it("handles an empty excluded set", () => {
+    const { document } = parseHTML("<div><p>content</p></div>");
+    const element = document.querySelector("div") as Element;
+    const excluded = new Set<Element>();
+
+    const result = extractContent(element, excluded);
+
+    expect(result).toContain("content");
+  });
+
+  it("returns full content when excludedElements is not provided", () => {
+    const { document } = parseHTML("<div><p>content</p></div>");
+    const element = document.querySelector("div") as Element;
+
+    const result = extractContent(element);
+
+    expect(result).toContain("content");
+  });
+});

@@ -32,11 +32,16 @@ interface TestCase {
 
 /** Helper to build a SELECTED context with the given format and focus. */
 function selectedCtx(
-  opts: { format?: "markdown" | "html"; inputFocused?: boolean } = {}
+  opts: {
+    format?: "markdown" | "html";
+    inputFocused?: boolean;
+    isExclusionMode?: boolean;
+  } = {}
 ): ShortcutContext {
   return {
     format: opts.format ?? "markdown",
     inputFocused: opts.inputFocused ?? false,
+    isExclusionMode: opts.isExclusionMode ?? false,
     state: "SELECTED",
   };
 }
@@ -44,25 +49,45 @@ function selectedCtx(
 const testCases: TestCase[] = [
   // --- Escape → dismiss (any state, before input guard) ---
   {
-    context: { format: "markdown", inputFocused: false, state: "IDLE" },
+    context: {
+      format: "markdown",
+      inputFocused: false,
+      isExclusionMode: false,
+      state: "IDLE",
+    },
     desc: "Escape → dismiss in IDLE",
     expected: { actionType: "DISMISS" },
     key: { key: "Escape" },
   },
   {
-    context: { format: "markdown", inputFocused: false, state: "HIGHLIGHTING" },
+    context: {
+      format: "markdown",
+      inputFocused: false,
+      isExclusionMode: false,
+      state: "HIGHLIGHTING",
+    },
     desc: "Escape → dismiss in HIGHLIGHTING",
     expected: { actionType: "DISMISS" },
     key: { key: "Escape" },
   },
   {
-    context: { format: "markdown", inputFocused: false, state: "SELECTED" },
+    context: {
+      format: "markdown",
+      inputFocused: false,
+      isExclusionMode: false,
+      state: "SELECTED",
+    },
     desc: "Escape → dismiss in SELECTED",
     expected: { actionType: "DISMISS" },
     key: { key: "Escape" },
   },
   {
-    context: { format: "markdown", inputFocused: true, state: "SELECTED" },
+    context: {
+      format: "markdown",
+      inputFocused: true,
+      isExclusionMode: false,
+      state: "SELECTED",
+    },
     desc: "Escape → dismiss when inputFocused=true (bypasses input guard)",
     expected: { actionType: "DISMISS" },
     key: { key: "Escape" },
@@ -160,31 +185,56 @@ const testCases: TestCase[] = [
 
   // --- State guard: non-SELECTED states block copy/download/format-cycle ---
   {
-    context: { format: "markdown", inputFocused: false, state: "HIGHLIGHTING" },
+    context: {
+      format: "markdown",
+      inputFocused: false,
+      isExclusionMode: false,
+      state: "HIGHLIGHTING",
+    },
     desc: "f in HIGHLIGHTING → null",
     expected: null,
     key: { key: "f" },
   },
   {
-    context: { format: "markdown", inputFocused: false, state: "IDLE" },
+    context: {
+      format: "markdown",
+      inputFocused: false,
+      isExclusionMode: false,
+      state: "IDLE",
+    },
     desc: "c in IDLE → null (state guard on single-key copy)",
     expected: null,
     key: { key: "c" },
   },
   {
-    context: { format: "markdown", inputFocused: false, state: "IDLE" },
+    context: {
+      format: "markdown",
+      inputFocused: false,
+      isExclusionMode: false,
+      state: "IDLE",
+    },
     desc: "s in IDLE → null (state guard on single-key download)",
     expected: null,
     key: { key: "s" },
   },
   {
-    context: { format: "markdown", inputFocused: false, state: "IDLE" },
+    context: {
+      format: "markdown",
+      inputFocused: false,
+      isExclusionMode: false,
+      state: "IDLE",
+    },
     desc: "ctrl+c in IDLE → null",
     expected: null,
     key: { ctrlKey: true, key: "c" },
   },
   {
-    context: { format: "markdown", inputFocused: false, state: "IDLE" },
+    context: {
+      format: "markdown",
+      inputFocused: false,
+      isExclusionMode: false,
+      state: "IDLE",
+    },
     desc: "ctrl+s in IDLE → null",
     expected: null,
     key: { ctrlKey: true, key: "s" },
@@ -224,10 +274,40 @@ const testCases: TestCase[] = [
     key: { key: "Enter" },
   },
   {
-    context: { format: "markdown", inputFocused: false, state: "IDLE" },
+    context: {
+      format: "markdown",
+      inputFocused: false,
+      isExclusionMode: false,
+      state: "IDLE",
+    },
     desc: "a in IDLE → null (unmatched key)",
     expected: null,
     key: { key: "a" },
+  },
+
+  // --- e → exclude-toggle (SELECTED only) ---
+  {
+    context: selectedCtx(),
+    desc: "e → exclude-toggle in SELECTED",
+    expected: { actionType: "EXCLUDE_TOGGLE" },
+    key: { key: "e" },
+  },
+  {
+    context: selectedCtx({ isExclusionMode: true }),
+    desc: "e → exclude-toggle even in exclusion mode",
+    expected: { actionType: "EXCLUDE_TOGGLE" },
+    key: { key: "e" },
+  },
+  {
+    context: {
+      format: "markdown",
+      inputFocused: false,
+      isExclusionMode: false,
+      state: "HIGHLIGHTING",
+    },
+    desc: "e in HIGHLIGHTING → null",
+    expected: null,
+    key: { key: "e" },
   },
 ];
 

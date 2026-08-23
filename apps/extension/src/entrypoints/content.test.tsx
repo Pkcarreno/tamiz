@@ -21,6 +21,7 @@ import {
   handleRelayedClick,
   injectHighlightStyles,
   syncBlockingState,
+  syncExclusionCursor,
   syncVisualFeedback,
 } from "./content.tsx";
 
@@ -287,5 +288,30 @@ describe("syncVisualFeedback", () => {
     syncVisualFeedback("IDLE", scrim as never, setIndicatorVisible);
     expect(scrim.hide).toHaveBeenCalledOnce();
     expect(setIndicatorVisible).toHaveBeenCalledWith(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// syncExclusionCursor
+// ---------------------------------------------------------------------------
+
+describe("exclusion mode crosshair cursor", () => {
+  afterEach(() => {
+    document.documentElement.classList.remove("tamiz-exclusion-cursor");
+  });
+
+  it("adds tamiz-exclusion-cursor class to document.documentElement when exclusion mode activates", () => {
+    syncExclusionCursor(true);
+    expect(
+      document.documentElement.classList.contains("tamiz-exclusion-cursor")
+    ).toBe(true);
+  });
+
+  it("removes tamiz-exclusion-cursor class from document.documentElement when exclusion mode deactivates", () => {
+    document.documentElement.classList.add("tamiz-exclusion-cursor");
+    syncExclusionCursor(false);
+    expect(
+      document.documentElement.classList.contains("tamiz-exclusion-cursor")
+    ).toBe(false);
   });
 });

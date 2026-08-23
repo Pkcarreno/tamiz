@@ -234,3 +234,11 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+.tamiz-excluded {
+  outline: 2px solid var(--tz-state-error);
+  opacity: 0.4;
+  transition:
+    outline var(--tz-duration-fast) var(--tz-ease-out),
+    opacity var(--tz-duration-fast) var(--tz-ease-out);
+}

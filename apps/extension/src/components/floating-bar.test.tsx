@@ -36,13 +36,18 @@ function makeElement(rect: {
 function makeProps(overrides: Record<string, unknown> = {}) {
   const el = makeElement({ height: 50, left: 100, top: 200, width: 200 });
   const [format] = createSignal<"markdown" | "html">("markdown");
+  const [isExclusionMode] = createSignal(false);
   return {
     element: (() => el) as Accessor<Element | null>,
     format,
+    isExclusionMode,
     onAction: vi.fn(),
     ...overrides,
   };
 }
+
+/** Stable accessor for isExclusionMode in inline JSX usage. */
+const falseAccessor = () => false;
 
 describe("FloatingActionBar", () => {
   beforeEach(() => {
@@ -193,6 +198,7 @@ describe("FloatingActionBar", () => {
         <FloatingActionBar
           element={elementAccessor}
           format={format}
+          isExclusionMode={falseAccessor}
           onAction={vi.fn()}
         />
       ));
@@ -227,6 +233,7 @@ describe("FloatingActionBar", () => {
         <FloatingActionBar
           element={elementAccessor}
           format={format}
+          isExclusionMode={falseAccessor}
           onAction={vi.fn()}
         />
       ));
@@ -261,6 +268,7 @@ describe("FloatingActionBar", () => {
         <FloatingActionBar
           element={element}
           format={format}
+          isExclusionMode={falseAccessor}
           onAction={vi.fn()}
         />
       ));

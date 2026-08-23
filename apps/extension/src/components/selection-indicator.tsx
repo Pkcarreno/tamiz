@@ -16,6 +16,8 @@ import { Button } from "./ui/button.tsx";
  * @public
  */
 export interface SelectionIndicatorProps {
+  /** Whether the user is in exclusion mode. */
+  isExclusionMode: Accessor<boolean>;
   /** Called when the user clicks the close button or presses Escape. */
   onDismiss: () => void;
   /** Whether the instruction pill should be shown. */
@@ -70,8 +72,17 @@ export function SelectionIndicator(
         )}
         data-tamiz-ui
       >
-        <span>Click an element to select</span>
-        <span class="text-text-secondary">or press Esc</span>
+        {props.isExclusionMode() ? (
+          <>
+            <span>Click element to exclude</span>
+            <span class="text-text-secondary">Esc to finish</span>
+          </>
+        ) : (
+          <>
+            <span>Click an element to select</span>
+            <span class="text-text-secondary">or press Esc</span>
+          </>
+        )}
         <Button
           aria-label="Dismiss selection (Esc)"
           data-tamiz-ui

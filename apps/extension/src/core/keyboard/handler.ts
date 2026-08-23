@@ -19,6 +19,8 @@ export interface KeydownHandlerDeps {
   getActiveElement: () => Element | null;
   /** Read the current bar format (the SolidJS signal getter). */
   getCurrentFormat: () => Format;
+  /** Whether exclusion mode is currently active. */
+  isExclusionMode: () => boolean;
   /** The picker state machine for reading state context. */
   machine: PickerStateMachine;
   /** The shortcut registry for resolving key combos to actions. */
@@ -61,8 +63,17 @@ export function handleKeydown(
   const context: ShortcutContext = {
     format: deps.getCurrentFormat(),
     inputFocused: isInputElement(deps.getActiveElement()),
+    isExclusionMode: deps.isExclusionMode(),
     state: deps.machine.getState(),
   };
+
+  // Escape in exclusion mode exits the sub-mode instead of dismissing.
+  if (event.key === "Escape" && context.isExclusionMode) {
+    event.preventDefault();
+    event.stopPropagation();
+    deps.dispatcher.dispatch({ type: "EXCLUDE_TOGGLE" });
+    return;
+  }
 
   const command = deps.registry.matchShortcut(event, context);
 
