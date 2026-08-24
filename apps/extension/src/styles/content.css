@@ -242,3 +242,14 @@
     outline var(--tz-duration-fast) var(--tz-ease-out),
     opacity var(--tz-duration-fast) var(--tz-ease-out);
 }
+
+/*
+ * Native <select> dropdown is browser chrome rendered outside Shadow DOM.
+ * color-scheme from :host(.dark) does not reach the popup. System colors
+ * (Canvas/CanvasText) resolve from the browser theme context, bypassing
+ * the Shadow DOM inheritance limitation.
+ */
+option {
+  color: CanvasText;
+  background-color: Canvas;
+}
