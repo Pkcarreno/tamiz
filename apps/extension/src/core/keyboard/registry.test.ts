@@ -345,4 +345,41 @@ describe("createShortcutRegistry", () => {
       expect(bindings.length).toBeGreaterThanOrEqual(4);
     });
   });
+
+  describe("getLabelByActionType", () => {
+    it('returns "C" for COPY', () => {
+      const { getLabelByActionType } = createShortcutRegistry();
+      expect(getLabelByActionType("COPY")).toBe("C");
+    });
+
+    it('returns "S" for DOWNLOAD', () => {
+      const { getLabelByActionType } = createShortcutRegistry();
+      expect(getLabelByActionType("DOWNLOAD")).toBe("S");
+    });
+
+    it('returns "F" for FORMAT_CHANGE', () => {
+      const { getLabelByActionType } = createShortcutRegistry();
+      expect(getLabelByActionType("FORMAT_CHANGE")).toBe("F");
+    });
+
+    it('returns "Esc" for DISMISS', () => {
+      const { getLabelByActionType } = createShortcutRegistry();
+      expect(getLabelByActionType("DISMISS")).toBe("Esc");
+    });
+
+    it('returns "R" for RESTART', () => {
+      const { getLabelByActionType } = createShortcutRegistry();
+      expect(getLabelByActionType("RESTART")).toBe("R");
+    });
+
+    it('returns "E" for EXCLUDE_TOGGLE', () => {
+      const { getLabelByActionType } = createShortcutRegistry();
+      expect(getLabelByActionType("EXCLUDE_TOGGLE")).toBe("E");
+    });
+
+    it('returns "" for unknown action types', () => {
+      const { getLabelByActionType } = createShortcutRegistry();
+      expect(getLabelByActionType("INVOKE")).toBe("");
+    });
+  });
 });

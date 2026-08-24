@@ -2,6 +2,7 @@ import type { Accessor, JSX } from "solid-js";
 import { FloatingActionBar } from "../components/floating-bar.tsx";
 import { ToastProvider, useToast } from "../components/ui/toast.tsx";
 import type { PickerAction } from "../core/actions/types.ts";
+import type { ShortcutRegistry } from "../core/keyboard/registry.ts";
 
 /**
  * Props for the ContentApp component.
@@ -19,6 +20,8 @@ export interface ContentAppProps {
   onAction: (action: PickerAction) => void;
   /** Called when the toast API is ready. */
   onToastReady: (showToast: (msg: string) => void) => void;
+  /** Shortcut registry for dynamic label lookup. */
+  registry?: ShortcutRegistry;
   /** Whether the floating bar is visible. */
   visible: Accessor<boolean>;
 }
@@ -57,6 +60,7 @@ export function ContentApp(props: ContentAppProps): JSX.Element {
           format={props.format}
           isExclusionMode={props.isExclusionMode}
           onAction={props.onAction}
+          registry={props.registry}
         />
       )}
     </ToastProvider>

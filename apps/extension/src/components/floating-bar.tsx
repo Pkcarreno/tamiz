@@ -7,9 +7,10 @@ import X from "lucide-solid/icons/x";
 import { type Accessor, createSignal, type JSX, splitProps } from "solid-js";
 
 import type { PickerAction } from "../core/actions/types.ts";
-import { cn } from "../lib/cn.ts";
+import type { ShortcutRegistry } from "../core/keyboard/registry.ts";
 import { useFloatingPosition } from "../lib/floating-position.ts";
 import { Button } from "./ui/button.tsx";
+import { Kbd } from "./ui/kbd.tsx";
 import { Select, type SelectOption } from "./ui/select.tsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip.tsx";
 
@@ -68,14 +69,7 @@ export function BarTooltip(props: BarTooltipProps) {
     <Tooltip placement={local.placement}>
       <TooltipTrigger>{local.children}</TooltipTrigger>
       <TooltipContent>
-        {local.label}{" "}
-        <kbd
-          class={cn(
-            "ml-1 inline-flex h-[15px] items-center rounded-[3px] border border-border/60 bg-ground px-1 font-mono text-[9px] text-text"
-          )}
-        >
-          {local.shortcut}
-        </kbd>
+        {local.label} <Kbd>{local.shortcut}</Kbd>
       </TooltipContent>
     </Tooltip>
   );
@@ -99,6 +93,8 @@ export interface FloatingActionBarProps {
   isExclusionMode: Accessor<boolean>;
   /** Dispatched when the user clicks Copy, Download, Cancel, or changes format. */
   onAction: (action: PickerAction) => void;
+  /** Shortcut registry for dynamic label lookup. */
+  registry?: ShortcutRegistry;
 }
 
 /**
@@ -119,6 +115,15 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
     placement: "right-start",
     strategy: "fixed",
   });
+
+  /** Resolve a shortcut label from the registry, falling back to a static key. */
+  function shortcutLabel(
+    actionType: Parameters<ShortcutRegistry["getLabelByActionType"]>[0],
+    fallback: string
+  ): string {
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: registry is optional; ?? fallback needed
+    return props.registry?.getLabelByActionType(actionType) ?? fallback;
+  }
 
   function handleCopy(): void {
     props.onAction({ type: "COPY" });
@@ -160,7 +165,10 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
       {/* Row 1: Format selector */}
       <div class="flex h-[32px] items-center px-1">
         <div class="min-w-0 flex-1">
-          <BarTooltip label="Format" shortcut="F">
+          <BarTooltip
+            label="Format"
+            shortcut={shortcutLabel("FORMAT_CHANGE", "F")}
+          >
             <Select
               // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
               onChange={handleFormatChange}
@@ -180,7 +188,11 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
 
       {/* Row 2: Action buttons */}
       <div class="flex h-[32px] items-center justify-center px-1">
-        <BarTooltip label="Copy" placement="bottom" shortcut="C">
+        <BarTooltip
+          label="Copy"
+          placement="bottom"
+          shortcut={shortcutLabel("COPY", "C")}
+        >
           <Button
             aria-label="Copy"
             disabled={props.isExclusionMode()}
@@ -192,7 +204,11 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
             <Copy size={16} />
           </Button>
         </BarTooltip>
-        <BarTooltip label="Download" placement="bottom" shortcut="S">
+        <BarTooltip
+          label="Download"
+          placement="bottom"
+          shortcut={shortcutLabel("DOWNLOAD", "S")}
+        >
           <Button
             aria-label="Download"
             disabled={props.isExclusionMode()}
@@ -204,7 +220,11 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
             <Download size={16} />
           </Button>
         </BarTooltip>
-        <BarTooltip label="Exclude" placement="bottom" shortcut="E">
+        <BarTooltip
+          label="Exclude"
+          placement="bottom"
+          shortcut={shortcutLabel("EXCLUDE_TOGGLE", "E")}
+        >
           <Button
             aria-label="Toggle exclusion mode"
             class={props.isExclusionMode() ? "text-accent" : ""}
@@ -216,7 +236,11 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
             <CircleMinus size={16} />
           </Button>
         </BarTooltip>
-        <BarTooltip label="Restart" placement="bottom" shortcut="R">
+        <BarTooltip
+          label="Restart"
+          placement="bottom"
+          shortcut={shortcutLabel("RESTART", "R")}
+        >
           <Button
             aria-label="Restart selection"
             disabled={props.isExclusionMode()}
@@ -228,7 +252,11 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
             <RotateCcw size={16} />
           </Button>
         </BarTooltip>
-        <BarTooltip label="Dismiss" placement="bottom" shortcut="Esc">
+        <BarTooltip
+          label="Dismiss"
+          placement="bottom"
+          shortcut={shortcutLabel("DISMISS", "Esc")}
+        >
           <Button
             aria-label="Cancel"
             // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable

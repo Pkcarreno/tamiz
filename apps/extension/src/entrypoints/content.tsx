@@ -380,6 +380,7 @@ export default defineContentScript({
                 onToastReady: (api) => {
                   showToastApi = api;
                 },
+                registry: core.registry,
                 visible: barVisible,
               })}
               <SelectionIndicator

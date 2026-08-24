@@ -1,4 +1,4 @@
-import type { PickerAction } from "../actions/types.ts";
+import type { PickerAction, PickerActionType } from "../actions/types.ts";
 import type { ShortcutContext } from "./types.ts";
 
 /**
@@ -42,6 +42,8 @@ export interface ShortcutBinding {
  */
 export interface ShortcutRegistry {
   bindings: readonly ShortcutBinding[];
+  /** Return the display label for a given action type, or "" if unbound. */
+  getLabelByActionType: (actionType: PickerActionType) => string;
   matchShortcut: (
     event: KeyboardEvent,
     context: ShortcutContext
@@ -117,6 +119,15 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
 export function createShortcutRegistry(): ShortcutRegistry {
   return {
     bindings: DEFAULT_BINDINGS,
+
+    getLabelByActionType(actionType) {
+      for (const binding of DEFAULT_BINDINGS) {
+        if (binding.action.type === actionType) {
+          return binding.label;
+        }
+      }
+      return "";
+    },
 
     matchShortcut(event, context) {
       for (const binding of DEFAULT_BINDINGS) {

@@ -12,6 +12,7 @@ vi.mock("@floating-ui/dom", () => ({
 
 import { autoUpdate, computePosition } from "@floating-ui/dom";
 
+import { createShortcutRegistry } from "../core/keyboard/registry.ts";
 import { FloatingActionBar } from "./floating-bar.tsx";
 
 const computePositionMock = vi.mocked(computePosition);
@@ -42,6 +43,7 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     format,
     isExclusionMode,
     onAction: vi.fn(),
+    registry: createShortcutRegistry(),
     ...overrides,
   };
 }
