@@ -1,17 +1,23 @@
-import { getContentNodes, isStructuralElement, NODE_TYPE } from "../dom";
-import type { ConversionStrategy } from "../types";
+import {
+  getContentNodes,
+  INVISIBLE_CHARS,
+  isStructuralElement,
+  NODE_TYPE,
+} from "../dom.ts";
+import type { ConversionStrategy } from "../types.ts";
 
 /**
- * Regex of characters that have special meaning in CommonMark.
- * Applied to raw text nodes so user content is never accidentally
- * interpreted as Markdown syntax. The period (`.`) is deliberately
- * omitted — it is only a list marker at line start and is common
- * in prose. The slash (`/`) is not a Markdown character.
- *
- * Note: `-` is NOT escaped here — it is only special at line start
- * (list markers, thematic breaks) or in emphasis, not mid-word.
+ * Characters that are ALWAYS escaped in Markdown text — they carry
+ * syntactic meaning in virtually every context.
  */
-const MARKDOWN_ESCAPE_PATTERN = /[\\`*_{}[\]()#+!|>]/g;
+const ALWAYS_ESCAPED = /([\\`[\]])/g;
+
+/**
+ * Flanking emphasis delimiters: `*` or `_` surrounded by non-whitespace
+ * on BOTH sides (e.g., `foo*bar`, `2*3`, `foo_bar`). These would be
+ * parsed as emphasis openers/closers and must be escaped.
+ */
+const FLANKING_EMPHASIS = /(?<=\S)([*_])(?=\S)/g;
 
 /** Block-level HTML tags that produce line breaks in Markdown */
 const BLOCK_TAGS: ReadonlySet<string> = new Set([
@@ -45,9 +51,64 @@ const BLOCK_TAGS: ReadonlySet<string> = new Set([
 /** Regex to extract language from code class attribute (e.g., "language-javascript") */
 const LANGUAGE_CLASS_PATTERN = /language-(\w+)/;
 
-/** Escape Markdown special characters inside a text node */
-function escapeMarkdown(text: string): string {
-  return text.replace(MARKDOWN_ESCAPE_PATTERN, "\\$&");
+/**
+ * Characters that are special at the start of a line in user text.
+ * Applied to text nodes, NOT to renderer-generated Markdown syntax.
+ */
+const LINE_START_SPECIAL = /^([#>+*-]|\d+\.)/;
+
+/** Regex to escape `#` at line start */
+const ESCAPE_HASH = /^#/;
+/** Regex to escape `>` at line start */
+const ESCAPE_GT = /^>/;
+/** Regex to escape `+` at line start */
+const ESCAPE_PLUS = /^\+/;
+/** Regex to escape `-` at line start */
+const ESCAPE_MINUS = /^-/;
+/** Regex to escape `*` at line start */
+const ESCAPE_STAR = /^\*/;
+/** Regex to escape ordered list marker at line start */
+const ESCAPE_ORDERED = /^(\d+)\./;
+
+/**
+ * Escape Markdown characters in mid-paragraph text.
+ *
+ * - Strip zero-width and invisible Unicode characters
+ * - Always escape: `\`, `` ` ``, `[`, `]`
+ * - Escape `*`/`_` only as flanking emphasis delimiters
+ * - `!` is NOT escaped here (only special before `[`)
+ * - Characters like `(`, `)`, `{`, `}`, `|`, `<`, `>` are safe in prose
+ */
+function escapeMidLine(text: string): string {
+  return text
+    .replace(INVISIBLE_CHARS, "")
+    .replace(ALWAYS_ESCAPED, "\\$1")
+    .replace(FLANKING_EMPHASIS, "\\$1");
+}
+
+/**
+ * Escape a text node that appears at the start of a line.
+ * This handles user text like "# Heading" or "- item" that would
+ * otherwise be interpreted as Markdown syntax.
+ */
+function escapeLineStartText(text: string): string {
+  return text.replace(LINE_START_SPECIAL, (match) =>
+    match
+      .replace(ESCAPE_HASH, "\\#")
+      .replace(ESCAPE_GT, "\\>")
+      .replace(ESCAPE_PLUS, "\\+")
+      .replace(ESCAPE_MINUS, "\\-")
+      .replace(ESCAPE_STAR, "\\*")
+      .replace(ESCAPE_ORDERED, "$1\\.")
+  );
+}
+
+/**
+ * Check if text content is visually empty — contains only whitespace
+ * and zero-width/invisible Unicode characters.
+ */
+function isVisuallyEmpty(text: string): boolean {
+  return text.replace(INVISIBLE_CHARS, "").trim() === "";
 }
 
 /**
@@ -58,7 +119,7 @@ function escapeMarkdown(text: string): string {
  */
 function renderInline(node: Node): string {
   if (node.nodeType === NODE_TYPE.TEXT) {
-    return escapeMarkdown(node.textContent ?? "");
+    return escapeLineStartText(escapeMidLine(node.textContent ?? ""));
   }
 
   if (node.nodeType !== NODE_TYPE.ELEMENT) {
@@ -72,21 +133,43 @@ function renderInline(node: Node): string {
     case "a": {
       const href = element.getAttribute("href");
       const text = renderInlineChildren(element);
+      // Drop empty links — no text means no visible link
+      if (isVisuallyEmpty(text)) {
+        return "";
+      }
       return href ? `[${text}](${href})` : text;
     }
 
     case "strong":
-    case "b":
-      return `**${renderInlineChildren(element)}**`;
+    case "b": {
+      const inner = renderInlineChildren(element);
+      // Drop empty strong/b — no orphan ** markers
+      if (isVisuallyEmpty(inner)) {
+        return "";
+      }
+      return `**${inner}**`;
+    }
 
     case "em":
     case "i":
-    case "u":
-      return `*${renderInlineChildren(element)}*`;
+    case "u": {
+      const inner = renderInlineChildren(element);
+      // Drop empty em/i/u — no orphan * markers
+      if (isVisuallyEmpty(inner)) {
+        return "";
+      }
+      return `*${inner}*`;
+    }
 
-    case "code":
+    case "code": {
       // Inline code is never parsed as Markdown
-      return `\`${element.textContent ?? ""}\``;
+      const text = element.textContent ?? "";
+      // Drop empty code — no orphan backtick markers
+      if (isVisuallyEmpty(text)) {
+        return "";
+      }
+      return `\`${text}\``;
+    }
 
     case "img": {
       const src = element.getAttribute("src") ?? "";
@@ -163,7 +246,10 @@ function renderList(element: Element, ordered: boolean): string {
       } else if (child.nodeType === NODE_TYPE.TEXT) {
         const text = (child.textContent ?? "").trim();
         if (text) {
-          inlineParts.push(escapeMarkdown(text));
+          const escaped = escapeMidLine(text);
+          if (escaped) {
+            inlineParts.push(escaped);
+          }
         }
       }
     }
@@ -234,7 +320,7 @@ function renderTable(element: Element): string {
 function renderBlock(node: Node): string {
   if (node.nodeType === NODE_TYPE.TEXT) {
     const text = (node.textContent ?? "").trim();
-    return text ? `${escapeMarkdown(text)}\n\n` : "";
+    return text ? `${escapeLineStartText(escapeMidLine(text))}\n\n` : "";
   }
 
   if (node.nodeType !== NODE_TYPE.ELEMENT) {
@@ -317,40 +403,57 @@ function renderBlock(node: Node): string {
  * Render all children of an element, dispatching each child to
  * block-level or inline rendering based on its tag name.
  *
- * Block tags (p, div, h1–h6, …) produce their own Markdown blocks;
- * inline tags (a, strong, em, code, …) and bare text nodes are
- * rendered inline and separated from siblings by blank lines.
+ * Consecutive inline children (text nodes + inline elements) are
+ * grouped into a single paragraph. Block-level children break the
+ * group and produce their own Markdown blocks.
  */
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: block/inline dispatch is inherently complex
 function renderChildren(element: Element): string {
   const parts: string[] = [];
+  const buffer: string[] = [];
+
+  const flushBuffer = () => {
+    if (buffer.length > 0) {
+      const paragraph = buffer.join("");
+      if (paragraph.trim()) {
+        parts.push(`${paragraph}\n\n`);
+      }
+      buffer.length = 0;
+    }
+  };
 
   for (const child of Array.from(element.childNodes)) {
     if (isStructuralElement(child)) {
       continue;
     }
     if (child.nodeType === NODE_TYPE.TEXT) {
-      const text = (child.textContent ?? "").trim();
-      if (text) {
-        parts.push(`${escapeMarkdown(text)}\n\n`);
+      // Preserve original whitespace between inline elements
+      const text = child.textContent ?? "";
+      if (text.trim()) {
+        const escaped = escapeLineStartText(escapeMidLine(text));
+        if (escaped) {
+          buffer.push(escaped);
+        }
       }
     } else if (child.nodeType === NODE_TYPE.ELEMENT) {
       const tag = (child as Element).tagName.toLowerCase();
       if (BLOCK_TAGS.has(tag)) {
+        flushBuffer();
         const blockResult = renderBlock(child as Element);
         if (blockResult.trim()) {
           parts.push(blockResult);
         }
       } else {
-        // Inline element appearing at block level
+        // Inline element — add to current paragraph buffer
         const inlineResult = renderInline(child);
         if (inlineResult.trim()) {
-          parts.push(`${inlineResult}\n\n`);
+          buffer.push(inlineResult);
         }
       }
     }
   }
 
+  flushBuffer();
   return parts.join("");
 }
 

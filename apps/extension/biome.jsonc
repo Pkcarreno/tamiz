@@ -1,0 +1,19 @@
+{
+  "root": false,
+  "extends": [
+    "../../biome.jsonc",
+    "ultracite/biome/core",
+    "ultracite/biome/type-aware",
+    "ultracite/biome/solid"
+  ],
+  "javascript": {
+    "globals": ["defineBackground", "defineContentScript", "createShadowRootUi"]
+  },
+  "linter": {
+    "rules": {
+      "correctness": {
+        "noUnresolvedImports": "off"
+      }
+    }
+  }
+}

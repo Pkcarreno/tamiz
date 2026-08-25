@@ -1,0 +1,168 @@
+/*
+ * OPTIONS PAGE: Design tokens and layout for the Tamiz options page.
+ *
+ * Tokens are defined on `:root` (not `:host`) because the options page
+ * runs in a full document context, not a Shadow DOM.
+ */
+
+@import "tailwindcss";
+
+/* ===== DESIGN TOKENS: :root (LIGHT) ===== */
+
+:root {
+  /* --- Color: Ground (light) --- */
+  --tz-ground: #fafafa;
+  --tz-ground-raised: #ffffff;
+  --tz-ground-elevated: #ffffff;
+
+  /* --- Color: Accent --- */
+  --tz-accent: #2563eb;
+  --tz-accent-dim: rgba(37, 99, 235, 0.12);
+  --tz-accent-glow: rgba(37, 99, 235, 0.2);
+  --tz-accent-bright: #3b82f6;
+
+  /* --- Color: Text --- */
+  --tz-text: #0a0a0a;
+  --tz-text-secondary: #525252;
+  --tz-text-tertiary: #a3a3a3;
+  --tz-text-on-accent: #ffffff;
+
+  /* --- Color: State --- */
+  --tz-state-error: #dc2626;
+  --tz-state-success: #16a34a;
+  --tz-state-warning: #f59e0b;
+
+  /* --- Color: Border --- */
+  --tz-border: rgba(0, 0, 0, 0.08);
+  --tz-border-accent: rgba(37, 99, 235, 0.4);
+
+  /* --- Spacing --- */
+  --tz-space-1: 4px;
+  --tz-space-2: 8px;
+  --tz-space-3: 12px;
+  --tz-space-4: 16px;
+  --tz-space-5: 20px;
+  --tz-space-6: 24px;
+
+  /* --- Radius --- */
+  --tz-radius-sm: 4px;
+  --tz-radius-md: 6px;
+  --tz-radius-lg: 8px;
+  --tz-radius-pill: 999px;
+
+  /* --- Typography --- */
+  --tz-font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI",
+    system-ui, sans-serif;
+  --tz-font-mono:
+    "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --tz-font-size-xs: 11px;
+  --tz-font-size-sm: 12px;
+  --tz-font-size-md: 13px;
+  --tz-font-size-lg: 14px;
+  --tz-font-weight-normal: 400;
+  --tz-font-weight-medium: 500;
+  --tz-font-weight-semibold: 600;
+
+  /* --- Depth (light — subtle shadows) --- */
+  --tz-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --tz-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --tz-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --tz-shadow-focus:
+    0 0 0 2px var(--tz-accent-dim), 0 0 12px var(--tz-accent-glow);
+
+  /* --- Motion --- */
+  --tz-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --tz-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --tz-duration-fast: 120ms;
+  --tz-duration-normal: 160ms;
+  --tz-duration-slow: 180ms;
+
+  color-scheme: light;
+}
+
+/* ===== DESIGN TOKENS: DARK MODE ===== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* --- Color: Ground (dark) --- */
+    --tz-ground: #0a0a0a;
+    --tz-ground-raised: #141414;
+    --tz-ground-elevated: #1a1a1a;
+
+    /* --- Color: Accent (dark — brighter for contrast) --- */
+    --tz-accent: #3b82f6;
+    --tz-accent-dim: rgba(59, 130, 246, 0.15);
+    --tz-accent-glow: rgba(59, 130, 246, 0.25);
+    --tz-accent-bright: #60a5fa;
+
+    /* --- Color: Text --- */
+    --tz-text: #fafafa;
+    --tz-text-secondary: #a3a3a3;
+    --tz-text-tertiary: #525252;
+    --tz-text-on-accent: #ffffff;
+
+    /* --- Color: State --- */
+    --tz-state-error: #ef4444;
+    --tz-state-success: #22c55e;
+    --tz-state-warning: #fbbf24;
+
+    /* --- Color: Border --- */
+    --tz-border: rgba(255, 255, 255, 0.08);
+    --tz-border-accent: rgba(59, 130, 246, 0.4);
+
+    /* --- Depth (dark — no shadows, borders instead) --- */
+    --tz-shadow-sm: none;
+    --tz-shadow-md: none;
+    --tz-shadow-lg: none;
+    --tz-shadow-focus:
+      0 0 0 2px var(--tz-accent-dim), 0 0 12px var(--tz-accent-glow);
+
+    color-scheme: dark;
+  }
+}
+
+/* ===== OPTIONS LAYOUT ===== */
+
+.tz-options {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  font-family: var(--tz-font-sans);
+  background-color: var(--tz-ground);
+}
+
+/* ===== RADIO INDICATOR ===== */
+
+[data-tamiz-radio-item]::before {
+  position: absolute;
+  top: 50%;
+  left: var(--tz-space-2);
+  width: 8px;
+  height: 8px;
+  content: "";
+  background-color: var(--tz-border);
+  border-radius: 50%;
+  transform: translateY(-50%) scale(0.8);
+  transition:
+    background-color var(--tz-duration-fast) var(--tz-ease-out),
+    transform var(--tz-duration-fast) var(--tz-ease-out);
+}
+
+[data-tamiz-radio-item][aria-checked="true"]::before {
+  background-color: var(--tz-accent);
+  transform: translateY(-50%) scale(1);
+}
+
+/* ===== REDUCED MOTION ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

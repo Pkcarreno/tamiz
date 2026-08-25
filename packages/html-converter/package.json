@@ -2,6 +2,7 @@
   "name": "@tamiz/html-converter",
   "version": "0.1.0",
   "description": "Isomorphic HTML-to-text converter toolkit for the Tamiz browser extension",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -16,9 +17,9 @@
       "types": "./dist/cleaner.d.mts",
       "default": "./dist/cleaner.js"
     },
-    "./strategies/raw": {
-      "types": "./dist/strategies/raw.d.mts",
-      "default": "./dist/strategies/raw.js"
+    "./strategies/html": {
+      "types": "./dist/strategies/html.d.mts",
+      "default": "./dist/strategies/html.js"
     },
     "./strategies/markdown": {
       "types": "./dist/strategies/markdown.d.mts",
@@ -27,13 +28,14 @@
   },
   "scripts": {
     "build": "tsdown",
-    "test": "bun test",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.14",
+    "@types/node": "^26.2.0",
     "linkedom": "^0.18.13",
     "tsdown": "^0.22.14",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
   }
 }

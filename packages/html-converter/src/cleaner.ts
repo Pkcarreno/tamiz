@@ -3,8 +3,8 @@ import {
   getDomParser,
   NODE_TYPE,
   serializeContent,
-} from "./dom";
-import type { DomParser } from "./types";
+} from "./dom.ts";
+import type { DomParser } from "./types.ts";
 
 /** Tags whose removal eliminates non-content regions entirely */
 const UNWANTED_TAGS: ReadonlySet<string> = new Set([
@@ -34,14 +34,14 @@ const UNWANTED_TAGS: ReadonlySet<string> = new Set([
 
 /** CSS class / ID fragments that signal ads, sidebars, or boilerplate */
 const AD_SIDEBAR_PATTERNS: readonly RegExp[] = [
-  /ad(s|vertisement)?/i,
-  /banner/i,
-  /comment/i,
-  /promo/i,
-  /related/i,
-  /sidebar/i,
-  /social/i,
-  /supplemental/i,
+  /\bad(s|vertisement)?\b/i,
+  /\bbanner\b/i,
+  /\bcomment\b/i,
+  /\bpromo\b/i,
+  /\brelated\b/i,
+  /\bsidebar\b/i,
+  /\bsocial\b/i,
+  /\bsupplemental\b/i,
 ];
 
 /** Attributes that carry semantic meaning and survive cleaning */
@@ -185,7 +185,7 @@ function filterByContentScore(root: Node): void {
  * Special case: `class` attributes starting with `language-` on `<code>`
  * elements are preserved for Markdown code block language detection.
  *
- * Exported so the *raw* strategy can apply the same filtering even when
+ * Exported so the html strategy can apply the same filtering even when
  * the cleaning pipeline was skipped.
  *
  * @public

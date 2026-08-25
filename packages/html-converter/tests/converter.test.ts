@@ -1,9 +1,9 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
-import { convert } from "../src/converter";
-import { getDomParser } from "../src/dom";
-import { markdownStrategy } from "../src/strategies/markdown";
-import { rawStrategy } from "../src/strategies/raw";
+import { convert } from "../src/converter.ts";
+import { getDomParser } from "../src/dom.ts";
+import { htmlStrategy } from "../src/strategies/html.ts";
+import { markdownStrategy } from "../src/strategies/markdown.ts";
 
 describe("convert", () => {
   test("converts HTML to Markdown (default clean: true)", async () => {
@@ -33,14 +33,14 @@ describe("convert", () => {
     expect(result).toContain("alert");
   });
 
-  test("converts HTML to raw format", async () => {
+  test("converts HTML to html format", async () => {
     const html =
       "<html><body>" +
       '<h1 class="title" id="h1">Hello</h1>' +
       '<p data-track="x">World</p>' +
       "</body></html>";
 
-    const result = await convert(html, { strategy: rawStrategy });
+    const result = await convert(html, { strategy: htmlStrategy });
 
     expect(result).toContain("<h1");
     expect(result).toContain("Hello");
@@ -105,11 +105,11 @@ describe("convert", () => {
     expect(result).toContain("Fragment body.");
   });
 
-  test("raw strategy strips attributes from fragments", async () => {
+  test("html strategy strips attributes from fragments", async () => {
     const html =
       '<h1 class="big" id="title">Heading</h1><p onclick="x()">Text</p>';
 
-    const result = await convert(html, { strategy: rawStrategy });
+    const result = await convert(html, { strategy: htmlStrategy });
 
     expect(result).toContain("Heading");
     expect(result).not.toContain("class=");
@@ -121,6 +121,12 @@ describe("convert", () => {
     const result = convert("<p>test</p>", { strategy: markdownStrategy });
     expect(result).toBeInstanceOf(Promise);
   });
+
+  test("groups div inline content into single markdown paragraph", async () => {
+    const html = "<div>Hello <strong>world</strong>!</div>";
+    const result = await convert(html, { strategy: markdownStrategy });
+    expect(result).toBe("Hello **world**!\n");
+  });
 });
 
 describe("convert with getDomParser integration", () => {
@@ -130,7 +136,7 @@ describe("convert with getDomParser integration", () => {
 
     const _doc = parser.parse(html);
     const cleaned = await convert(html, {
-      strategy: rawStrategy,
+      strategy: htmlStrategy,
     });
 
     expect(cleaned).toContain("Content here");

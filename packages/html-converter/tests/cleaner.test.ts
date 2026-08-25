@@ -1,11 +1,11 @@
-import { describe, expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
+import { describe, expect, test } from "vitest";
 
 import {
   cleanHtml,
   SEMANTIC_ATTRIBUTES,
   stripNonSemanticAttributes,
-} from "../src/cleaner";
+} from "../src/cleaner.ts";
 
 describe("cleanHtml", () => {
   test("removes script tags and their content", () => {
@@ -45,6 +45,16 @@ describe("cleanHtml", () => {
     expect(result).not.toContain("Sidebar content");
     expect(result).not.toContain("Promo");
     expect(result).toContain("Real content");
+  });
+
+  test("preserves elements with class containing 'ad' as substring (word boundary)", () => {
+    // "heading-style-h4" contains "ad" but should NOT be removed
+    const html =
+      '<div class="heading-style-h4">Qualifications</div>' +
+      '<div class="text-size-regular">Content here</div>';
+    const result = cleanHtml(html);
+    expect(result).toContain("Qualifications");
+    expect(result).toContain("Content here");
   });
 
   test("strips non-semantic attributes (class, id, data-*, onclick)", () => {

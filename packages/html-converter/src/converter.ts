@@ -1,6 +1,6 @@
-import { cleanHtml } from "./cleaner";
-import { getDomParser } from "./dom";
-import type { ConverterOptions, DomParser } from "./types";
+import { cleanHtml } from "./cleaner.ts";
+import { getDomParser } from "./dom.ts";
+import type { ConverterOptions, DomParser } from "./types.ts";
 
 /**
  * Convert an HTML string to the desired output format.

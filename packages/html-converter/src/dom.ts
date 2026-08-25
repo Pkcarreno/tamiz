@@ -1,4 +1,6 @@
-import type { DomParser } from "./types";
+import { createRequire } from "node:module";
+
+import type { DomParser } from "./types.ts";
 
 /**
  * DOM node type codes from the WHATWG Living Standard.
@@ -67,7 +69,7 @@ function loadLinkedom(): LinkedomModule {
     return linkedomModule;
   }
 
-  linkedomModule = import.meta.require("linkedom") as LinkedomModule;
+  linkedomModule = createRequire(import.meta.url)("linkedom") as LinkedomModule;
 
   return linkedomModule;
 }
@@ -248,4 +250,21 @@ export function getDomParser(): DomParser {
     return createNativeParser();
   }
   return createLinkedomParser();
+}
+
+/**
+ * Characters that should be stripped from visible text output.
+ * Includes zero-width joiners, non-breaking spaces, soft hyphens,
+ * and other invisible Unicode characters that WYSIWYG editors inject.
+ */
+export const INVISIBLE_CHARS =
+  /\u200B|\u200C|\u200D|\u200E|\u200F|\u00AD|\u00A0/g;
+
+/**
+ * Strip invisible characters from text content.
+ *
+ * @public
+ */
+export function stripInvisibleChars(text: string): string {
+  return text.replace(INVISIBLE_CHARS, "");
 }

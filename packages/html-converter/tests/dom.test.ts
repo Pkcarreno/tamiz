@@ -1,12 +1,12 @@
-import { describe, expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
+import { describe, expect, test } from "vitest";
 
 import {
   getContentNodes,
   getDomParser,
   NODE_TYPE,
   serialize,
-} from "../src/dom";
+} from "../src/dom.ts";
 
 describe("NODE_TYPE constants", () => {
   test("exposes expected DOM node type codes", () => {

@@ -1,6 +1,255 @@
-/* biome-ignore lint/suspicious/noUnknownAtRules: TailwindCSS directives */
-@tailwind base;
-/* biome-ignore lint/suspicious/noUnknownAtRules: TailwindCSS directives */
-@tailwind components;
-/* biome-ignore lint/suspicious/noUnknownAtRules: TailwindCSS directives */
-@tailwind utilities;
+/*
+ * THESIS: Tamiz is a precision instrument for extracting signal from noise.
+ * The interface is cold, minimal, and surgical — it disappears until the
+ * user needs it, then appears with purpose.
+ *
+ * OWN-WORLD: Cool neutral ground with near-black text, blue accent on
+ * active states only. System typography. Ghost interactions. Zero visual
+ * gap in toolbars. Comfortable density.
+ *
+ * STORY: The user hovers to focus, clicks to grab, and noise fades away.
+ * The tool recedes; the content leads.
+ *
+ * FIRST VIEWPORT: (floating bar) Two-row compact panel — format selector
+ * and settings on top, action buttons below. Minimal chrome, cool ground.
+ *
+ * FORM: Precision Tool — surgical/minimal metaphor.
+ */
+
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *, :host(.dark) *));
+
+/* ===== DESIGN TOKENS: @theme BRIDGE ===== */
+
+@theme {
+  /* Colors: Ground */
+  --color-ground: var(--tz-ground);
+  --color-ground-raised: var(--tz-ground-raised);
+  --color-ground-elevated: var(--tz-ground-elevated);
+
+  /* Colors: Accent */
+  --color-accent: var(--tz-accent);
+  --color-accent-dim: var(--tz-accent-dim);
+  --color-accent-glow: var(--tz-accent-glow);
+  --color-accent-bright: var(--tz-accent-bright);
+
+  /* Colors: Text */
+  --color-text: var(--tz-text);
+  --color-text-secondary: var(--tz-text-secondary);
+  --color-text-tertiary: var(--tz-text-tertiary);
+  --color-text-on-accent: var(--tz-text-on-accent);
+
+  /* Colors: State */
+  --color-error: var(--tz-state-error);
+  --color-success: var(--tz-state-success);
+  --color-warning: var(--tz-state-warning);
+
+  /* Colors: Border */
+  --color-border: var(--tz-border);
+  --color-border-accent: var(--tz-border-accent);
+
+  /* Spacing */
+  --spacing-1: var(--tz-space-1);
+  --spacing-2: var(--tz-space-2);
+  --spacing-3: var(--tz-space-3);
+  --spacing-4: var(--tz-space-4);
+  --spacing-5: var(--tz-space-5);
+  --spacing-6: var(--tz-space-6);
+
+  /* Radius */
+  --radius-sm: var(--tz-radius-sm);
+  --radius-md: var(--tz-radius-md);
+  --radius-lg: var(--tz-radius-lg);
+  --radius-pill: var(--tz-radius-pill);
+
+  /* Typography */
+  --font-sans: var(--tz-font-sans);
+  --font-mono: var(--tz-font-mono);
+  --text-xs: var(--tz-font-size-xs);
+  --text-sm: var(--tz-font-size-sm);
+  --text-md: var(--tz-font-size-md);
+  --text-lg: var(--tz-font-size-lg);
+  --font-weight-normal: var(--tz-font-weight-normal);
+  --font-weight-medium: var(--tz-font-weight-medium);
+  --font-weight-semibold: var(--tz-font-weight-semibold);
+
+  /* Depth */
+  --shadow-sm: var(--tz-shadow-sm);
+  --shadow-md: var(--tz-shadow-md);
+  --shadow-lg: var(--tz-shadow-lg);
+  --shadow-focus: var(--tz-shadow-focus);
+
+  /* Motion */
+  --ease-out: var(--tz-ease-out);
+  --ease-in-out: var(--tz-ease-in-out);
+  --transition-duration-fast: var(--tz-duration-fast);
+  --transition-duration-normal: var(--tz-duration-normal);
+  --transition-duration-slow: var(--tz-duration-slow);
+}
+
+/* ===== DESIGN TOKENS: :root (LIGHT) ===== */
+
+:host {
+  /* --- Color: Ground (light) --- */
+  --tz-ground: #fafafa;
+  --tz-ground-raised: #ffffff;
+  --tz-ground-elevated: #ffffff;
+
+  /* --- Color: Accent --- */
+  --tz-accent: #2563eb;
+  --tz-accent-dim: rgba(37, 99, 235, 0.12);
+  --tz-accent-glow: rgba(37, 99, 235, 0.2);
+  --tz-accent-bright: #3b82f6;
+
+  /* --- Color: Text --- */
+  --tz-text: #0a0a0a;
+  --tz-text-secondary: #525252;
+  --tz-text-tertiary: #a3a3a3;
+  --tz-text-on-accent: #ffffff;
+
+  /* --- Color: State --- */
+  --tz-state-error: #dc2626;
+  --tz-state-success: #16a34a;
+  --tz-state-warning: #f59e0b;
+
+  /* --- Color: Border --- */
+  --tz-border: rgba(0, 0, 0, 0.08);
+  --tz-border-accent: rgba(37, 99, 235, 0.4);
+
+  /* --- Spacing --- */
+  --tz-space-1: 4px;
+  --tz-space-2: 8px;
+  --tz-space-3: 12px;
+  --tz-space-4: 16px;
+  --tz-space-5: 20px;
+  --tz-space-6: 24px;
+
+  /* --- Radius --- */
+  --tz-radius-sm: 4px;
+  --tz-radius-md: 6px;
+  --tz-radius-lg: 8px;
+  --tz-radius-pill: 999px;
+
+  /* --- Typography --- */
+  --tz-font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI",
+    system-ui, sans-serif;
+  --tz-font-mono:
+    "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --tz-font-size-xs: 11px;
+  --tz-font-size-sm: 12px;
+  --tz-font-size-md: 13px;
+  --tz-font-size-lg: 14px;
+  --tz-font-weight-normal: 400;
+  --tz-font-weight-medium: 500;
+  --tz-font-weight-semibold: 600;
+
+  /* --- Depth (light — subtle shadows) --- */
+  --tz-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --tz-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --tz-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --tz-shadow-focus:
+    0 0 0 2px var(--tz-accent-dim), 0 0 12px var(--tz-accent-glow);
+
+  /* --- Motion --- */
+  --tz-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --tz-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --tz-duration-fast: 120ms;
+  --tz-duration-normal: 160ms;
+  --tz-duration-slow: 180ms;
+
+  color-scheme: light;
+}
+
+/* ===== DESIGN TOKENS: DARK MODE ===== */
+
+:host(.dark) {
+  /* --- Color: Ground (dark) --- */
+  --tz-ground: #0a0a0a;
+  --tz-ground-raised: #141414;
+  --tz-ground-elevated: #1a1a1a;
+
+  /* --- Color: Accent (dark — brighter for contrast) --- */
+  --tz-accent: #3b82f6;
+  --tz-accent-dim: rgba(59, 130, 246, 0.15);
+  --tz-accent-glow: rgba(59, 130, 246, 0.25);
+  --tz-accent-bright: #60a5fa;
+
+  /* --- Color: Text --- */
+  --tz-text: #fafafa;
+  --tz-text-secondary: #a3a3a3;
+  --tz-text-tertiary: #525252;
+  --tz-text-on-accent: #ffffff;
+
+  /* --- Color: State --- */
+  --tz-state-error: #ef4444;
+  --tz-state-success: #22c55e;
+  --tz-state-warning: #fbbf24;
+
+  /* --- Color: Border --- */
+  --tz-border: rgba(255, 255, 255, 0.08);
+  --tz-border-accent: rgba(59, 130, 246, 0.4);
+
+  /* --- Depth (dark — no shadows, borders instead) --- */
+  --tz-shadow-sm: none;
+  --tz-shadow-md: none;
+  --tz-shadow-lg: none;
+  --tz-shadow-focus:
+    0 0 0 2px var(--tz-accent-dim), 0 0 12px var(--tz-accent-glow);
+
+  color-scheme: dark;
+}
+
+/* ===== COMPONENTS ===== */
+
+@keyframes tz-lens-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes tz-lens-disappear {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+.tamiz-excluded {
+  outline: 2px solid var(--tz-state-error);
+  opacity: 0.4;
+  transition:
+    outline var(--tz-duration-fast) var(--tz-ease-out),
+    opacity var(--tz-duration-fast) var(--tz-ease-out);
+}
+
+/*
+ * Native <select> dropdown is browser chrome rendered outside Shadow DOM.
+ * color-scheme from :host(.dark) does not reach the popup. System colors
+ * (Canvas/CanvasText) resolve from the browser theme context, bypassing
+ * the Shadow DOM inheritance limitation.
+ */
+option {
+  color: CanvasText;
+  background-color: Canvas;
+}
