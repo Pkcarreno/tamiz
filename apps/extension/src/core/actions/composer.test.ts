@@ -37,6 +37,7 @@ function makeDeps(
   const machine = new PickerStateMachine();
 
   const deps: ActionHandlerDeps = {
+    clipboardAvailable: vi.fn().mockReturnValue(true),
     format: () => format,
     getExcludedElements: () => excludedElements,
     getExclusionMode: () => exclusionMode,
@@ -78,8 +79,11 @@ describe("composeActions — return shape", () => {
 });
 
 describe("COPY handler", () => {
-  it("converts element, sends clipboard message, shows toast, then DISMISS", async () => {
+  it("converts element, writes directly to clipboard, shows toast, then DISMISS", async () => {
     const deps = makeDeps();
+    const writeTextSpy = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined);
     selectElement(deps.machine);
     const { dispatcher } = composeActions(deps);
 
@@ -94,13 +98,31 @@ describe("COPY handler", () => {
       expect.any(Set)
     );
     expect(deps.htmlConverter.convert).toHaveBeenCalled();
+    expect(writeTextSpy).toHaveBeenCalledWith("converted-content");
+    expect(deps.sendMessage).not.toHaveBeenCalled();
+    // DISMISS was dispatched by the COPY handler → machine is now IDLE
+    expect(deps.machine.getState()).toBe("IDLE");
+    expect(deps.setBarVisible).toHaveBeenCalledWith(false);
+  });
+
+  it("sends COPY_TO_CLIPBOARD message when clipboard API is unavailable", async () => {
+    const deps = makeDeps({
+      clipboardAvailable: vi.fn().mockReturnValue(false),
+    });
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "COPY" });
+
+    await vi.waitFor(() => {
+      expect(deps.showToast).toHaveBeenCalledWith("Copied to clipboard");
+    });
+
     expect(deps.sendMessage).toHaveBeenCalledWith({
       content: "converted-content",
       type: "COPY_TO_CLIPBOARD",
     });
-    // DISMISS was dispatched by the COPY handler → machine is now IDLE
     expect(deps.machine.getState()).toBe("IDLE");
-    expect(deps.setBarVisible).toHaveBeenCalledWith(false);
   });
 
   it("uses the current format signal when converting", async () => {

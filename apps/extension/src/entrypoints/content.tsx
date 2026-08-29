@@ -7,6 +7,7 @@ import type { PickerStateMachine } from "../core/machine/picker.ts";
 import { isSelectable } from "../core/picker-filter.ts";
 import type { ScrimController } from "../core/scrim.ts";
 import { extractContent } from "../lib/extract-content.ts";
+import { isClipboardAvailable } from "../lib/feature-detection.ts";
 import { PostMessageChannel } from "../lib/messaging/adapters/postmessage.ts";
 import { RuntimeChannel } from "../lib/messaging/adapters/runtime.ts";
 import {
@@ -341,6 +342,7 @@ export default defineContentScript({
 
     // 6. Compose action handlers (wires SolidJS signal setters).
     const { dispatcher } = composeActions({
+      clipboardAvailable: isClipboardAvailable,
       format: barFormat,
       getExcludedElements: excludedElements,
       getExclusionMode: isExclusionMode,

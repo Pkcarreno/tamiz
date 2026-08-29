@@ -28,6 +28,8 @@ const FORMAT_EXTENSION: Record<"markdown" | "html", string> = {
  * @public
  */
 export interface ActionHandlerDeps {
+  /** Whether the Clipboard API is available for direct writes. */
+  clipboardAvailable: () => boolean;
   /** Current output format signal getter. */
   format: () => "markdown" | "html";
   /** Get the current set of excluded elements. */
@@ -113,7 +115,11 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
               (m) => m.htmlStrategy
             );
       const content = await deps.htmlConverter.convert(html, { strategy });
-      await deps.sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
+      if (deps.clipboardAvailable()) {
+        await navigator.clipboard.writeText(content);
+      } else {
+        await deps.sendMessage({ content, type: "COPY_TO_CLIPBOARD" });
+      }
       deps.showToast?.("Copied to clipboard");
       dispatcher.dispatch({ type: "DISMISS" });
     } catch {

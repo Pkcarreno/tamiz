@@ -1,4 +1,5 @@
 import { type Browser, browser } from "wxt/browser";
+import { isBlobUrlAvailable } from "../lib/feature-detection.ts";
 import { RuntimeChannel } from "../lib/messaging/adapters/runtime.ts";
 import type { Message } from "../lib/messaging/types.ts";
 import { readDefaultFormat } from "../lib/storage.ts";
@@ -448,7 +449,7 @@ export async function downloadFile(
 ): Promise<void> {
   const mimeType = getMimeType(filename);
 
-  if (import.meta.env.BROWSER === "firefox") {
+  if (isBlobUrlAvailable()) {
     const url = URL.createObjectURL(new Blob([content], { type: mimeType }));
     let downloadId: number;
     try {
