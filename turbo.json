@@ -40,6 +40,9 @@
     },
     "zip:firefox": {
       "outputs": [".output/*-firefox.zip"]
+    },
+    "clean": {
+      "cache": false
     }
   }
 }

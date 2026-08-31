@@ -64,6 +64,7 @@ Run all commands from the repository root using `bun`:
 - `bun run test`: Execute unit tests.
 - `bun run typecheck`: Perform TypeScript type checking.
 - `bun run lint` / `lint:fix`: Run or auto-fix the linter and formatter checks.
+- `bun run nuke`: Remove all generated artifacts, dependencies, and caches across the entire repository.
 
 ## faq
 

@@ -8,10 +8,12 @@
   ],
   "scripts": {
     "build": "turbo run build build:chrome build:firefox",
+    "clean": "turbo run clean",
     "dev": "turbo run dev dev:chrome dev:firefox",
     "format": "ultracite format",
     "lint": "ultracite check",
     "lint:fix": "ultracite check --write",
+    "nuke": "bun run clean && rm -rf node_modules .turbo bun.lock",
     "prepare": "lefthook install",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
