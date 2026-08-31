@@ -13,8 +13,8 @@ Features:
 
 ### installation
 
-- [Chrome Web Store](#)
-- [Firefox Add-ons](#)
+- Chrome Web Store (coming soon)
+- Firefox Add-ons (coming soon)
 
 ### workflow
 
