@@ -6,7 +6,7 @@
     },
     "//#lint": {},
     "typecheck": {
-      "dependsOn": ["^typecheck", "wxt:prepare"]
+      "dependsOn": ["^build", "^typecheck", "wxt:prepare"]
     },
     "build": {
       "dependsOn": ["^build"],
@@ -21,7 +21,7 @@
       "outputs": [".output/firefox-mv2/**", ".output/firefox-mv3/**"]
     },
     "test": {
-      "dependsOn": ["build", "wxt:prepare"]
+      "dependsOn": ["^build", "wxt:prepare"]
     },
     "dev": {
       "cache": false,
@@ -40,6 +40,9 @@
     },
     "zip:firefox": {
       "outputs": [".output/*-firefox.zip"]
+    },
+    "clean": {
+      "cache": false
     }
   }
 }

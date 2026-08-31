@@ -14,6 +14,7 @@ export default defineConfig({
       if (wxt.config.browser === "firefox") {
         manifest.browser_specific_settings = {
           gecko: {
+            data_collection_permissions: { required: ["none"] },
             id: "tamiz@pkcarreno.dev",
             strict_min_version: "109.0",
           },
@@ -63,9 +64,7 @@ export default defineConfig({
   },
   modules: ["@wxt-dev/module-solid", "@wxt-dev/auto-icons"],
   srcDir: "src",
-  suppressWarnings: {
-    firefoxDataCollection: true,
-  },
+
   vite: () => ({
     plugins: [
       tailwindcss(),

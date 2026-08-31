@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    "apps/extension": {
+      "component": "@tamiz/extension",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true
+    },
+    "packages/html-converter": {
+      "component": "@tamiz/html-converter",
+      "release-type": "node",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true
+    }
+  },
+  "plugins": ["node-workspace"],
+  "include-component-in-tag": true,
+  "include-v-in-tag": true
+}

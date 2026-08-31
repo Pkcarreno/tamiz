@@ -7,6 +7,7 @@
   "scripts": {
     "build:chrome": "wxt build -b chrome",
     "build:firefox": "wxt build -b firefox",
+    "clean": "rm -rf .turbo .wxt .output node_modules dist",
     "dev:chrome": "wxt dev -b chrome",
     "dev:firefox": "wxt dev -b firefox",
     "postinstall": "wxt prepare",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@solidjs/testing-library": "^0.8.10",
     "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.0",
     "@types/bun": "^1.3.14",
     "@wxt-dev/auto-icons": "^1.1.2",
     "@wxt-dev/module-solid": "^1.1.4",

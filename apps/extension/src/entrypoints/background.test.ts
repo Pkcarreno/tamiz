@@ -10,6 +10,7 @@ import { type Browser, browser } from "wxt/browser";
 
 const FORMAT_REGEX = /^(markdown|html)$/;
 
+import { isBlobUrlAvailable } from "../lib/feature-detection.ts";
 import {
   CONTEXT_MENU_ID,
   CONTEXT_MENU_TITLE,
@@ -26,6 +27,8 @@ import {
   relayInvokePicker,
   removePendingInvoke,
 } from "./background.ts";
+
+vi.mock("../lib/feature-detection.ts");
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -366,7 +369,7 @@ describe("getMimeType", () => {
 
 describe("downloadFile", () => {
   it("calls browser.downloads.download with a data URL containing encoded content", async () => {
-    vi.stubEnv("BROWSER", "chrome");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(false);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("file content", "article-123.md");
@@ -379,7 +382,7 @@ describe("downloadFile", () => {
   });
 
   it("uses text/html MIME type in the data URL for .html filenames", async () => {
-    vi.stubEnv("BROWSER", "chrome");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(false);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("<h1>Hello</h1>", "page.html");
@@ -392,7 +395,7 @@ describe("downloadFile", () => {
   });
 
   it("uses text/markdown MIME type in the data URL for .md filenames", async () => {
-    vi.stubEnv("BROWSER", "chrome");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(false);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("content", "article.md");
@@ -405,7 +408,7 @@ describe("downloadFile", () => {
   });
 
   it("uses text/plain MIME type in the data URL for .txt filenames", async () => {
-    vi.stubEnv("BROWSER", "chrome");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(false);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("hello world", "notes.txt");
@@ -417,8 +420,8 @@ describe("downloadFile", () => {
     });
   });
 
-  it("does not use URL.createObjectURL or URL.revokeObjectURL in Chrome (MV3-safe)", async () => {
-    vi.stubEnv("BROWSER", "chrome");
+  it("does not use URL.createObjectURL or URL.revokeObjectURL when blob URLs are unavailable", async () => {
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(false);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
     const createObjectURLSpy = vi.spyOn(URL, "createObjectURL");
     const revokeObjectURLSpy = vi.spyOn(URL, "revokeObjectURL");
@@ -429,8 +432,8 @@ describe("downloadFile", () => {
     expect(revokeObjectURLSpy).not.toHaveBeenCalled();
   });
 
-  it("rethrows download errors without revoking any URL (chrome)", async () => {
-    vi.stubEnv("BROWSER", "chrome");
+  it("rethrows download errors without revoking any URL when blob URLs are unavailable", async () => {
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(false);
     vi.mocked(browser.downloads.download).mockRejectedValue(
       new Error("download failed")
     );
@@ -446,7 +449,7 @@ describe("downloadFile", () => {
   // --- Firefox branch (spec §1, §4) ---
 
   it("creates a blob URL via URL.createObjectURL for Firefox downloads", async () => {
-    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(true);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     const createObjectURLSpy = vi.spyOn(URL, "createObjectURL");
@@ -460,7 +463,7 @@ describe("downloadFile", () => {
   });
 
   it("passes a blob URL to browser.downloads.download for Firefox", async () => {
-    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(true);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await downloadFile("file content", "article.md");
@@ -471,7 +474,7 @@ describe("downloadFile", () => {
   });
 
   it("creates a blob URL with the correct MIME type for .html on Firefox", async () => {
-    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(true);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     const createObjectURLSpy = vi.spyOn(URL, "createObjectURL");
@@ -487,7 +490,7 @@ describe("downloadFile", () => {
   });
 
   it("rethrows download errors and revokes the blob URL (firefox)", async () => {
-    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(true);
     vi.mocked(browser.downloads.download).mockRejectedValue(
       new Error("download failed")
     );
@@ -504,7 +507,7 @@ describe("downloadFile", () => {
   // --- Blob URL revocation via onChanged + timeout (spec §1, §4) ---
 
   it("revokes blob URL when downloads.onChanged fires with complete state", async () => {
-    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(true);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     const createSpy = vi.spyOn(URL, "createObjectURL");
@@ -523,7 +526,7 @@ describe("downloadFile", () => {
   });
 
   it("revokes blob URL when downloads.onChanged fires with interrupted state", async () => {
-    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(true);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     const createSpy = vi.spyOn(URL, "createObjectURL");
@@ -542,7 +545,7 @@ describe("downloadFile", () => {
   });
 
   it("does not revoke blob URL on non-terminal onChanged state", async () => {
-    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(true);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     vi.spyOn(URL, "createObjectURL");
@@ -560,7 +563,7 @@ describe("downloadFile", () => {
 
   it("revokes blob URL via 30s timeout fallback if onChanged does not fire", async () => {
     vi.useFakeTimers();
-    vi.stubEnv("BROWSER", "firefox");
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(true);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     const createSpy = vi.spyOn(URL, "createObjectURL");
@@ -639,6 +642,7 @@ describe("handleBackgroundMessage", () => {
   });
 
   it("triggers a file download on DOWNLOAD_FILE", async () => {
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(false);
     vi.mocked(browser.downloads.download).mockResolvedValue(42);
 
     await handleBackgroundMessage(
@@ -658,6 +662,7 @@ describe("handleBackgroundMessage", () => {
   });
 
   it("rejects when download fails on DOWNLOAD_FILE", async () => {
+    vi.mocked(isBlobUrlAvailable).mockReturnValue(false);
     vi.mocked(browser.downloads.download).mockRejectedValue(
       new Error("download failed")
     );

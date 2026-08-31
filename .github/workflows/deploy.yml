@@ -1,0 +1,116 @@
+name: Deploy to Stores
+
+on:
+  release:
+    types:
+      - published
+
+concurrency:
+  group: deploy-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Extension
+    runs-on: ubuntu-latest
+    outputs:
+      chrome-version: ${{ steps.version.outputs.chrome }}
+      firefox-version: ${{ steps.version.outputs.firefox }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun-install
+
+      - name: Build Chrome extension
+        run: bun run build:chrome
+
+      - name: Build Firefox extension
+        run: bun run build:firefox
+
+      - name: Zip Chrome extension
+        run: bun run zip:chrome
+
+      - name: Zip Firefox extension
+        run: bun run zip:firefox
+
+      - name: Get version
+        id: version
+        run: |
+          echo "chrome=$(jq -r '.version' apps/extension/package.json)" >> $GITHUB_OUTPUT
+          echo "firefox=$(jq -r '.version' apps/extension/package.json)" >> $GITHUB_OUTPUT
+
+      - name: Rename zips for release
+        run: |
+          mv apps/extension/.output/*-chrome.zip "apps/extension/.output/tamiz-chrome-v${{ steps.version.outputs.chrome }}.zip"
+          mv apps/extension/.output/*-firefox.zip "apps/extension/.output/tamiz-firefox-v${{ steps.version.outputs.firefox }}.zip"
+
+      - name: Upload Chrome artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tamiz-chrome-v${{ steps.version.outputs.chrome }}
+          path: apps/extension/.output/tamiz-chrome-v*.zip
+          retention-days: 30
+
+      - name: Upload Firefox artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tamiz-firefox-v${{ steps.version.outputs.firefox }}
+          path: apps/extension/.output/tamiz-firefox-v*.zip
+          retention-days: 30
+
+      - name: Attach zips to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            apps/extension/.output/tamiz-chrome-v*.zip
+            apps/extension/.output/tamiz-firefox-v*.zip
+
+  deploy-chrome:
+    name: Deploy to Chrome Web Store
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: chrome-web-store
+      url: https://chrome.google.com/webstore
+    steps:
+      - name: Download Chrome artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tamiz-chrome-v${{ needs.build.outputs.chrome-version }}
+
+      - name: Upload to Chrome Web Store
+        uses: fregante/chrome-webstore-upload@v3
+        with:
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          zip-file: ./*.zip
+          publish: true
+
+  deploy-firefox:
+    name: Deploy to Firefox Add-ons
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: firefox-addons
+      url: https://addons.mozilla.org
+    steps:
+      - name: Download Firefox artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tamiz-firefox-v${{ needs.build.outputs.firefox-version }}
+
+      - name: Upload to Firefox Add-ons
+        uses: trmcnvn/firefox-addon@v1
+        with:
+          guid: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          api-key: ${{ secrets.FIREFOX_API_KEY }}
+          api-secret: ${{ secrets.FIREFOX_API_SECRET }}
+          package: ./*.zip

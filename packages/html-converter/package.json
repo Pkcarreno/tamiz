@@ -28,6 +28,7 @@
   },
   "scripts": {
     "build": "tsdown",
+    "clean": "rm -rf .turbo node_modules dist",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
