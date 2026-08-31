@@ -21,7 +21,7 @@
       "outputs": [".output/firefox-mv2/**", ".output/firefox-mv3/**"]
     },
     "test": {
-      "dependsOn": ["wxt:prepare"]
+      "dependsOn": ["^build", "wxt:prepare"]
     },
     "dev": {
       "cache": false,
