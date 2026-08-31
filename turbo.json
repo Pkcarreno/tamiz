@@ -6,7 +6,7 @@
     },
     "//#lint": {},
     "typecheck": {
-      "dependsOn": ["^typecheck", "wxt:prepare"]
+      "dependsOn": ["^build", "^typecheck", "wxt:prepare"]
     },
     "build": {
       "dependsOn": ["^build"],
