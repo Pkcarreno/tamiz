@@ -14,7 +14,7 @@ Features:
 ### installation
 
 - Chrome Web Store (coming soon)
-- Firefox Add-ons (coming soon)
+- [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/tamiz/)
 
 ### workflow
 
