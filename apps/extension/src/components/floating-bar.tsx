@@ -121,7 +121,6 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
     actionType: Parameters<ShortcutRegistry["getLabelByActionType"]>[0],
     fallback: string
   ): string {
-    // biome-ignore lint/suspicious/noUnnecessaryConditions: registry is optional; ?? fallback needed
     return props.registry?.getLabelByActionType(actionType) ?? fallback;
   }
 
