@@ -1,4 +1,4 @@
 {
-  "apps/extension": "0.1.0",
-  "packages/html-converter": "0.1.0"
+  "apps/extension": "1.0.0",
+  "packages/html-converter": "1.0.0"
 }
