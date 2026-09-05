@@ -21,7 +21,7 @@ jobs:
       firefox-version: ${{ steps.version.outputs.firefox }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun-install
@@ -50,21 +50,21 @@ jobs:
           mv apps/extension/.output/*-firefox.zip "apps/extension/.output/tamiz-firefox-v${{ steps.version.outputs.firefox }}.zip"
 
       - name: Upload Chrome artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tamiz-chrome-v${{ steps.version.outputs.chrome }}
           path: apps/extension/.output/tamiz-chrome-v*.zip
           retention-days: 30
 
       - name: Upload Firefox artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tamiz-firefox-v${{ steps.version.outputs.firefox }}
           path: apps/extension/.output/tamiz-firefox-v*.zip
           retention-days: 30
 
       - name: Attach zips to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.release.tag_name }}
           files: |
@@ -80,7 +80,7 @@ jobs:
       url: https://chrome.google.com/webstore
     steps:
       - name: Download Chrome artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: tamiz-chrome-v${{ needs.build.outputs.chrome-version }}
 
@@ -103,7 +103,7 @@ jobs:
       url: https://addons.mozilla.org
     steps:
       - name: Download Firefox artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: tamiz-firefox-v${{ needs.build.outputs.firefox-version }}
 
