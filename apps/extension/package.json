@@ -22,7 +22,7 @@
     "@tamiz/html-converter": "workspace:*",
     "@wxt-dev/browser": "^0.2.8",
     "class-variance-authority": "^0.7.1",
-    "cnfast": "^0.2.0",
+    "cn": "^0.2.5",
     "lucide-solid": "^1.39.0"
   },
   "devDependencies": {

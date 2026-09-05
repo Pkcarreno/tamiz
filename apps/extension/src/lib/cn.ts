@@ -1,4 +1,4 @@
-import { type ClassValue, cn as cnfast } from "cnfast";
+import { type ClassValue, cn as shadcn } from "cn";
 
 /**
  * Concatenates class names with Tailwind conflict deduplication, filtering out
@@ -7,5 +7,5 @@ import { type ClassValue, cn as cnfast } from "cnfast";
  * @public
  */
 export function cn(...inputs: ClassValue[]): string {
-  return cnfast(inputs);
+  return shadcn(inputs);
 }
