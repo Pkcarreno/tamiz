@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: fix
+      include: scope
+      prefix-development: chore
+    versioning-strategy: increase
+    groups:
+      all:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        patterns:
+          - "actions/*"
+          - "oven-sh/*"
+          - "softprops/*"
+          - "fregante/*"
+          - "trmcnvn/*"
+          - "googleapis/*"
