@@ -13,8 +13,8 @@ Features:
 
 ### installation
 
-- Chrome Web Store (coming soon)
-- Firefox Add-ons (coming soon)
+- [Chrome Web Store](https://chromewebstore.google.com/detail/becemcejhelcojcaogkankiejnhdhcbd)
+- [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/tamiz/)
 
 ### workflow
 
