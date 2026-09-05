@@ -21,7 +21,7 @@ runs:
         path: |
           ~/.bun/install/cache
           node_modules
-        key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lockb') }}
+        key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
         restore-keys: |
           bun-${{ runner.os }}-
 
