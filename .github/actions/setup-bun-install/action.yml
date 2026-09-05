@@ -15,15 +15,13 @@ runs:
       with:
         bun-version: ${{ inputs.bun-version }}
 
-    - name: Cache Bun dependencies
+    - name: Cache Bun download cache
       uses: actions/cache@v4
       with:
-        path: |
-          ~/.bun/install/cache
-          node_modules
-        key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+        path: ~/.bun/install/cache
+        key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
         restore-keys: |
-          bun-${{ runner.os }}-
+          bun-deps-${{ runner.os }}-
 
     - name: Install dependencies
       shell: bash
