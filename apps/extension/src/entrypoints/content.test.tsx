@@ -18,6 +18,7 @@ import {
 } from "../lib/messaging/constants.ts";
 import type { BlockingClickMessage } from "../lib/messaging/types.ts";
 import {
+  applyThemePreference,
   handleRelayedClick,
   injectHighlightStyles,
   syncBlockingState,
@@ -313,5 +314,49 @@ describe("exclusion mode crosshair cursor", () => {
     expect(
       document.documentElement.classList.contains("tamiz-exclusion-cursor")
     ).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// applyThemePreference
+// ---------------------------------------------------------------------------
+
+describe("applyThemePreference", () => {
+  afterEach(() => {
+    document.documentElement.classList.remove("dark");
+    vi.restoreAllMocks();
+  });
+
+  it("adds dark class to host when preference is 'dark'", () => {
+    const host = document.createElement("div");
+    applyThemePreference("dark", host);
+    expect(host.classList.contains("dark")).toBe(true);
+  });
+
+  it("removes dark class from host when preference is 'light'", () => {
+    const host = document.createElement("div");
+    host.classList.add("dark");
+    applyThemePreference("light", host);
+    expect(host.classList.contains("dark")).toBe(false);
+  });
+
+  it("does not add dark class when preference is 'light' and host has no class", () => {
+    const host = document.createElement("div");
+    applyThemePreference("light", host);
+    expect(host.classList.contains("dark")).toBe(false);
+  });
+
+  it("falls back to system detection when preference is 'auto'", () => {
+    const host = document.createElement("div");
+    applyThemePreference("auto", host);
+    // In jsdom, matchMedia is not implemented, so the function should
+    // not throw and should not add the dark class by default.
+    expect(host.classList.contains("dark")).toBe(false);
+  });
+
+  it("handles null host gracefully", () => {
+    expect(() => applyThemePreference("dark", null)).not.toThrow();
+    expect(() => applyThemePreference("light", null)).not.toThrow();
+    expect(() => applyThemePreference("auto", null)).not.toThrow();
   });
 });

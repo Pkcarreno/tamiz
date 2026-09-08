@@ -6,16 +6,30 @@ import { OptionsApp } from "../views/options-app.tsx";
 afterEach(() => cleanup());
 
 describe("OptionsApp", () => {
-  it("renders a heading with the page title", () => {
+  it("renders a page title heading", () => {
     const { container } = render(() => <OptionsApp />);
     const heading = container.querySelector("h1");
-    expect(heading?.textContent).toBe("Default Export Format");
+    expect(heading?.textContent).toBe("Settings");
+  });
+
+  it("renders section headings as h2", () => {
+    const { container } = render(() => <OptionsApp />);
+    const headings = container.querySelectorAll("h2");
+    const texts = Array.from(headings).map((h) => h.textContent);
+    expect(texts).toContain("Default Export Format");
+    expect(texts).toContain("Theme");
   });
 
   it("renders the RadioGroup with format options", async () => {
     const { container } = render(() => <OptionsApp />);
     await waitFor(() => {
-      const radioItems = container.querySelectorAll("[data-tamiz-radio-item]");
+      const radioGroups = container.querySelectorAll(
+        "[data-tamiz-radio-group]"
+      );
+      const [formatGroup] = radioGroups;
+      const radioItems = formatGroup.querySelectorAll(
+        "[data-tamiz-radio-item]"
+      );
       expect(radioItems).toHaveLength(2);
     });
   });
@@ -23,7 +37,13 @@ describe("OptionsApp", () => {
   it("loads the default format from storage on mount", async () => {
     const { container } = render(() => <OptionsApp />);
     await waitFor(() => {
-      const radioItems = container.querySelectorAll("[data-tamiz-radio-item]");
+      const radioGroups = container.querySelectorAll(
+        "[data-tamiz-radio-group]"
+      );
+      const [formatGroup] = radioGroups;
+      const radioItems = formatGroup.querySelectorAll(
+        "[data-tamiz-radio-item]"
+      );
       const selected = Array.from(radioItems).find(
         (item) => item.getAttribute("aria-checked") === "true"
       );
@@ -42,5 +62,60 @@ describe("OptionsApp", () => {
     const { container } = render(() => <OptionsApp />);
     const root = container.querySelector(".tz-options");
     expect(root).not.toBeNull();
+  });
+});
+
+describe("OptionsApp — Theme Preference", () => {
+  it("renders a Theme Preference heading", () => {
+    const { container } = render(() => <OptionsApp />);
+    const headings = container.querySelectorAll("h2");
+    const themeHeading = Array.from(headings).find(
+      (h) => h.textContent === "Theme"
+    );
+    expect(themeHeading).toBeDefined();
+  });
+
+  it("renders three theme RadioGroup options (Light, Dark, Auto)", async () => {
+    const { container } = render(() => <OptionsApp />);
+    await waitFor(() => {
+      const radioGroups = container.querySelectorAll(
+        "[data-tamiz-radio-group]"
+      );
+      expect(radioGroups.length).toBeGreaterThanOrEqual(2);
+      const [, themeGroup] = radioGroups;
+      const items = themeGroup.querySelectorAll("[data-tamiz-radio-item]");
+      expect(items).toHaveLength(3);
+    });
+  });
+
+  it("loads the default theme preference (auto) on mount", async () => {
+    const { container } = render(() => <OptionsApp />);
+    await waitFor(() => {
+      const radioGroups = container.querySelectorAll(
+        "[data-tamiz-radio-group]"
+      );
+      const [, themeGroup] = radioGroups;
+      const items = themeGroup.querySelectorAll("[data-tamiz-radio-item]");
+      const selected = Array.from(items).find(
+        (item) => item.getAttribute("aria-checked") === "true"
+      );
+      expect(selected).toBeDefined();
+      expect(selected?.getAttribute("data-value")).toBe("auto");
+    });
+  });
+
+  it("renders theme options with correct labels", async () => {
+    const { container } = render(() => <OptionsApp />);
+    await waitFor(() => {
+      const radioGroups = container.querySelectorAll(
+        "[data-tamiz-radio-group]"
+      );
+      const [, themeGroup] = radioGroups;
+      const labels = themeGroup.querySelectorAll(
+        "[data-tamiz-radio-item] span"
+      );
+      const texts = Array.from(labels).map((el) => el.textContent);
+      expect(texts).toEqual(["Light", "Dark", "Auto"]);
+    });
   });
 });
