@@ -20,6 +20,7 @@ import {
   TAMIZ_UI_MARKER,
 } from "../lib/messaging/constants.ts";
 import type { BlockingClickMessage } from "../lib/messaging/types.ts";
+import { readThemePreference } from "../lib/storage.ts";
 
 // ---------------------------------------------------------------------------
 // Content-script helpers (exported for unit testing)
@@ -194,6 +195,35 @@ export function syncExclusionCursor(isExclusion: boolean): void {
     document.documentElement.classList.add("tamiz-exclusion-cursor");
   } else {
     document.documentElement.classList.remove("tamiz-exclusion-cursor");
+  }
+}
+
+/**
+ * Apply the user's theme preference to a shadow host element.
+ *
+ * - `"dark"` — adds the `dark` class to the host.
+ * - `"light"` — removes the `dark` class from the host.
+ * - `"auto"` — removes the class and relies on the system media query.
+ *
+ * @param preference - The stored theme preference.
+ * @param host       - The shadow host element to apply the class to.
+ *
+ * @public
+ */
+export function applyThemePreference(
+  preference: "auto" | "dark" | "light",
+  host: Element | null
+): void {
+  if (!host) {
+    return;
+  }
+  if (preference === "dark") {
+    host.classList.add("dark");
+  } else if (preference === "light") {
+    host.classList.remove("dark");
+  } else {
+    // auto: remove class, let media query decide
+    host.classList.remove("dark");
   }
 }
 
@@ -416,16 +446,22 @@ export default defineContentScript({
       }
     });
 
-    // 8. Dark mode.
-    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    function applyDarkMode() {
-      const host = ui.shadowHost;
-      if (host) {
-        host.classList.toggle("dark", darkQuery.matches);
+    // 8. Dark mode — read user preference, fall back to system detection.
+    const preference = await readThemePreference();
+    const host = ui.shadowHost;
+
+    if (preference === "auto") {
+      const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      function applyDarkMode() {
+        if (host) {
+          host.classList.toggle("dark", darkQuery.matches);
+        }
       }
+      applyDarkMode();
+      darkQuery.addEventListener("change", applyDarkMode);
+    } else {
+      applyThemePreference(preference, host);
     }
-    applyDarkMode();
-    darkQuery.addEventListener("change", applyDarkMode);
 
     // 9. Event listeners — thin delegation to core.
     ctx.addEventListener(document, "keydown", (e) => {

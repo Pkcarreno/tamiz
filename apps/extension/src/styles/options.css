@@ -122,6 +122,45 @@
   }
 }
 
+/* ===== DARK MODE (class override) ===== */
+
+:root.dark {
+  /* --- Color: Ground (dark) --- */
+  --tz-ground: #0a0a0a;
+  --tz-ground-raised: #141414;
+  --tz-ground-elevated: #1a1a1a;
+
+  /* --- Color: Accent (dark) --- */
+  --tz-accent: #3b82f6;
+  --tz-accent-dim: rgba(59, 130, 246, 0.15);
+  --tz-accent-glow: rgba(59, 130, 246, 0.25);
+  --tz-accent-bright: #60a5fa;
+
+  /* --- Color: Text (dark) --- */
+  --tz-text: #fafafa;
+  --tz-text-secondary: #a3a3a3;
+  --tz-text-tertiary: #525252;
+  --tz-text-on-accent: #ffffff;
+
+  /* --- Color: State (dark) --- */
+  --tz-state-error: #ef4444;
+  --tz-state-success: #22c55e;
+  --tz-state-warning: #fbbf24;
+
+  /* --- Color: Border (dark) --- */
+  --tz-border: rgba(255, 255, 255, 0.08);
+  --tz-border-accent: rgba(59, 130, 246, 0.4);
+
+  /* --- Depth (dark) --- */
+  --tz-shadow-sm: none;
+  --tz-shadow-md: none;
+  --tz-shadow-lg: none;
+  --tz-shadow-focus:
+    0 0 0 2px var(--tz-accent-dim), 0 0 12px var(--tz-accent-glow);
+
+  color-scheme: dark;
+}
+
 /* ===== OPTIONS LAYOUT ===== */
 
 .tz-options {
