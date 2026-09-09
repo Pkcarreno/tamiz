@@ -47,17 +47,11 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun-install
 
-      - name: Build Chrome extension
-        run: bun run build:chrome
-
-      - name: Build Firefox extension
-        run: bun run build:firefox
-
       - name: Zip Chrome extension
-        run: bun run zip:chrome
+        run: bun run --filter @tamiz/extension zip:chrome
 
       - name: Zip Firefox extension
-        run: bun run zip:firefox
+        run: bun run --filter @tamiz/extension zip:firefox
 
       - name: Get version
         id: version
