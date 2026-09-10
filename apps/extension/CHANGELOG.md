@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.0.0...@tamiz/extension-v1.1.0) (2026-09-08)
+
+
+### Features
+
+* **extension:** add theme preference (light/dark/auto) to options page ([c80eac4](https://github.com/Pkcarreno/tamiz/commit/c80eac4f6956a91cc377a25549e78cf4a0bd8df3))
+* **extension:** add theme preference (light/dark/auto) to options page ([8540347](https://github.com/Pkcarreno/tamiz/commit/8540347a8cf7af8720e361bd8db54ec6022c646d))
+
+
+### Bug Fixes
+
+* **extension:** lint ([9b99138](https://github.com/Pkcarreno/tamiz/commit/9b991383b676f8d354afffc02f2f970160919d59))
+* **extension:** restyle options page to vertical settings layout ([73f4713](https://github.com/Pkcarreno/tamiz/commit/73f47138e14cfa943d22b179d21c568c36b6fd54))
+
 ## [1.0.0](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v0.1.0...@tamiz/extension-v1.0.0) (2026-09-05)
 
 

@@ -7,11 +7,57 @@
 
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ===== DESIGN TOKENS: @theme BRIDGE ===== */
+
+@theme {
+  /* Colors: Ground */
+  --color-ground: var(--tz-ground);
+  --color-ground-raised: var(--tz-ground-raised);
+  --color-ground-elevated: var(--tz-ground-elevated);
+
+  /* Colors: Accent */
+  --color-accent: var(--tz-accent);
+  --color-accent-dim: var(--tz-accent-dim);
+  --color-accent-glow: var(--tz-accent-glow);
+  --color-accent-bright: var(--tz-accent-bright);
+
+  /* Colors: Text */
+  --color-text: var(--tz-text);
+  --color-text-secondary: var(--tz-text-secondary);
+  --color-text-tertiary: var(--tz-text-tertiary);
+  --color-text-on-accent: var(--tz-text-on-accent);
+
+  /* Colors: State */
+  --color-state-error: var(--tz-state-error);
+  --color-state-success: var(--tz-state-success);
+  --color-state-warning: var(--tz-state-warning);
+
+  /* Colors: Border */
+  --color-border: var(--tz-border);
+  --color-border-accent: var(--tz-border-accent);
+
+  /* Depth */
+  --shadow-focus: var(--tz-shadow-focus);
+
+  /* Typography */
+  --font-sans: var(--tz-font-sans);
+  --font-mono: var(--tz-font-mono);
+
+  /* Motion */
+  --duration-fast: var(--tz-duration-fast);
+  --duration-normal: var(--tz-duration-normal);
+  --duration-slow: var(--tz-duration-slow);
+  --ease-out: var(--tz-ease-out);
+  --ease-in-out: var(--tz-ease-in-out);
+}
+
 /* ===== DESIGN TOKENS: :root (LIGHT) ===== */
 
 :root {
   /* --- Color: Ground (light) --- */
-  --tz-ground: #fafafa;
+  --tz-ground: transparent;
   --tz-ground-raised: #ffffff;
   --tz-ground-elevated: #ffffff;
 
@@ -86,7 +132,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* --- Color: Ground (dark) --- */
-    --tz-ground: #0a0a0a;
+    --tz-ground: transparent;
     --tz-ground-raised: #141414;
     --tz-ground-elevated: #1a1a1a;
 
@@ -165,9 +211,10 @@
 
 .tz-options {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: flex-start;
   min-height: 100dvh;
+  padding: var(--tz-space-6);
   font-family: var(--tz-font-sans);
   background-color: var(--tz-ground);
 }

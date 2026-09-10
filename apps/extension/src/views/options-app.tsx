@@ -76,10 +76,11 @@ export function OptionsApp(): JSX.Element {
 
   return (
     <div class="tz-options">
-      <div class="flex flex-col gap-4 rounded-md border border-border/60 bg-ground-raised p-6 shadow-md">
-        <h1 class="font-semibold text-[14px] text-text">
+      <h1 class="mb-6 font-semibold text-[16px] text-text">Settings</h1>
+      <div class="flex flex-col gap-4">
+        <h2 class="font-semibold text-[14px] text-text">
           Default Export Format
-        </h1>
+        </h2>
         <p class="text-[12px] text-text-secondary">
           Choose the format used when grabbing elements.
         </p>
@@ -93,8 +94,8 @@ export function OptionsApp(): JSX.Element {
         />
       </div>
 
-      <div class="flex flex-col gap-4 rounded-md border border-border/60 bg-ground-raised p-6 shadow-md">
-        <h1 class="font-semibold text-[14px] text-text">Theme</h1>
+      <div class="mt-2 flex flex-col gap-4 border-border border-t pt-4">
+        <h2 class="font-semibold text-[14px] text-text">Theme</h2>
         <p class="text-[12px] text-text-secondary">
           Choose the theme for the extension. Auto follows your system setting.
         </p>

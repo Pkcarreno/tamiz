@@ -6,10 +6,18 @@ import { OptionsApp } from "../views/options-app.tsx";
 afterEach(() => cleanup());
 
 describe("OptionsApp", () => {
-  it("renders a heading with the page title", () => {
+  it("renders a page title heading", () => {
     const { container } = render(() => <OptionsApp />);
     const heading = container.querySelector("h1");
-    expect(heading?.textContent).toBe("Default Export Format");
+    expect(heading?.textContent).toBe("Settings");
+  });
+
+  it("renders section headings as h2", () => {
+    const { container } = render(() => <OptionsApp />);
+    const headings = container.querySelectorAll("h2");
+    const texts = Array.from(headings).map((h) => h.textContent);
+    expect(texts).toContain("Default Export Format");
+    expect(texts).toContain("Theme");
   });
 
   it("renders the RadioGroup with format options", async () => {
@@ -60,7 +68,7 @@ describe("OptionsApp", () => {
 describe("OptionsApp — Theme Preference", () => {
   it("renders a Theme Preference heading", () => {
     const { container } = render(() => <OptionsApp />);
-    const headings = container.querySelectorAll("h1");
+    const headings = container.querySelectorAll("h2");
     const themeHeading = Array.from(headings).find(
       (h) => h.textContent === "Theme"
     );
