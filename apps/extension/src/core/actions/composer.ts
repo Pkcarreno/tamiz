@@ -77,7 +77,7 @@ export interface ComposedActions {
 }
 
 /**
- * Wire all six `PickerAction` handlers onto a fresh dispatcher.
+ * Wire all `PickerAction` handlers onto a fresh dispatcher.
  *
  * Each handler reads state from the machine and calls the injected side-effect
  * collaborators (`htmlConverter`, `sendMessage`, `showToast`). After a
@@ -207,6 +207,15 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
     deps.setExclusionMode(!deps.getExclusionMode());
   };
 
+  const handleOpenOptions = async (): Promise<void> => {
+    try {
+      await deps.sendMessage({ type: "OPEN_OPTIONS" });
+    } catch {
+      // Silently ignore — background may be unavailable
+    }
+    dispatcher.dispatch({ type: "DISMISS" });
+  };
+
   const subscriptions: Array<() => void> = [
     dispatcher.on("COPY", handleCopy),
     dispatcher.on("FORMAT_CHANGE", handleFormatChange),
@@ -215,6 +224,7 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
     dispatcher.on("RESTART", handleRestart),
     dispatcher.on("DOWNLOAD", handleDownload),
     dispatcher.on("EXCLUDE_TOGGLE", handleExcludeToggle),
+    dispatcher.on("OPEN_OPTIONS", handleOpenOptions),
   ];
 
   return {

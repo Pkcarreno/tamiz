@@ -7,6 +7,7 @@ export type Message =
   | { type: "INVOKE_PICKER"; format?: "markdown" | "html" }
   | { type: "COPY_TO_CLIPBOARD"; content: string }
   | { type: "DOWNLOAD_FILE"; content: string; filename: string }
+  | { type: "OPEN_OPTIONS" }
   | { type: "TOAST"; message: string }
   | { type: "CONTENT_READY" };
 

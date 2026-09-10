@@ -439,6 +439,50 @@ describe("EXCLUDE_TOGGLE handler", () => {
   });
 });
 
+describe("OPEN_OPTIONS handler", () => {
+  it("sends OPEN_OPTIONS message and dispatches DISMISS", async () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "OPEN_OPTIONS" });
+
+    await vi.waitFor(() => {
+      expect(deps.sendMessage).toHaveBeenCalledWith({ type: "OPEN_OPTIONS" });
+    });
+    expect(deps.machine.getState()).toBe("IDLE");
+  });
+
+  it("dispatches DISMISS even when sendMessage rejects", async () => {
+    const deps = makeDeps({
+      sendMessage: vi.fn().mockRejectedValue(new Error("unavailable")),
+    });
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "OPEN_OPTIONS" });
+
+    await vi.waitFor(() => {
+      expect(deps.sendMessage).toHaveBeenCalledOnce();
+    });
+    expect(deps.machine.getState()).toBe("IDLE");
+  });
+
+  it("works during exclusion mode", async () => {
+    const deps = makeDeps();
+    selectElement(deps.machine);
+    const { dispatcher } = composeActions(deps);
+
+    dispatcher.dispatch({ type: "EXCLUDE_TOGGLE" });
+    dispatcher.dispatch({ type: "OPEN_OPTIONS" });
+
+    await vi.waitFor(() => {
+      expect(deps.sendMessage).toHaveBeenCalledWith({ type: "OPEN_OPTIONS" });
+    });
+    expect(deps.machine.getState()).toBe("IDLE");
+  });
+});
+
 describe("unknown action handling", () => {
   it("does not throw when dispatching an action with no handler", () => {
     // A bare dispatcher with no handlers registered — every action type is

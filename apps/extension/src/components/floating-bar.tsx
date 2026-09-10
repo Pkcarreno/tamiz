@@ -3,6 +3,7 @@ import CircleMinus from "lucide-solid/icons/circle-minus";
 import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
+import Settings from "lucide-solid/icons/settings";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createSignal, type JSX, splitProps } from "solid-js";
 
@@ -144,6 +145,10 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
     props.onAction({ type: "EXCLUDE_TOGGLE" });
   }
 
+  function handleOpenOptions(): void {
+    props.onAction({ type: "OPEN_OPTIONS" });
+  }
+
   function handleFormatChange(value: string): void {
     props.onAction({
       format: value as "markdown" | "html",
@@ -161,7 +166,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         top: `${top()}px`,
       }}
     >
-      {/* Row 1: Format selector */}
+      {/* Row 1: Format selector + Settings */}
       <div class="flex h-[32px] items-center px-1">
         <div class="min-w-0 flex-1">
           <BarTooltip
@@ -177,6 +182,20 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
             />
           </BarTooltip>
         </div>
+        <BarTooltip
+          label="Settings"
+          shortcut={shortcutLabel("OPEN_OPTIONS", "⌘O")}
+        >
+          <Button
+            aria-label="Open settings"
+            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
+            onClick={handleOpenOptions}
+            size="xs"
+            variant="icon"
+          >
+            <Settings size={16} />
+          </Button>
+        </BarTooltip>
       </div>
 
       {/* Row separator */}

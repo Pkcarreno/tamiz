@@ -98,6 +98,12 @@ const DEFAULT_BINDINGS: ShortcutBinding[] = [
     label: "E",
     when: (ctx) => ctx.state === "SELECTED",
   },
+  {
+    action: { type: "OPEN_OPTIONS" },
+    combo: { alt: false, ctrlOrMeta: true, key: "o", shift: false },
+    label: "Ctrl+O",
+    when: (ctx) => ctx.state === "SELECTED",
+  },
 ];
 
 /**

@@ -14,7 +14,8 @@ export type PickerAction =
   | { type: "RESTART" }
   | { type: "FORMAT_CHANGE"; format: "markdown" | "html" }
   | { type: "INVOKE"; format?: "markdown" | "html" }
-  | { type: "EXCLUDE_TOGGLE" };
+  | { type: "EXCLUDE_TOGGLE" }
+  | { type: "OPEN_OPTIONS" };
 
 /**
  * Union of the `type` field across every {@link PickerAction} variant.
