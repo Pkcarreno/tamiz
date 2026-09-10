@@ -48,10 +48,10 @@ jobs:
         uses: ./.github/actions/setup-bun-install
 
       - name: Zip Chrome extension
-        run: bun run --filter @tamiz/extension zip:chrome
+        run: turbo run zip:chrome
 
       - name: Zip Firefox extension
-        run: bun run --filter @tamiz/extension zip:firefox
+        run: turbo run zip:firefox
 
       - name: Get version
         id: version
