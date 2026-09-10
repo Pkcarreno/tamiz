@@ -689,6 +689,17 @@ describe("handleBackgroundMessage", () => {
 
     expect(browser.runtime.sendMessage).not.toHaveBeenCalled();
   });
+
+  it("opens options page when OPEN_OPTIONS is received", async () => {
+    vi.spyOn(browser.runtime, "openOptionsPage").mockResolvedValue(undefined);
+
+    await handleBackgroundMessage(
+      { type: "OPEN_OPTIONS" },
+      {} as unknown as Browser.runtime.MessageSender
+    );
+
+    expect(browser.runtime.openOptionsPage).toHaveBeenCalledOnce();
+  });
 });
 
 describe("module-scope listener registration (SW restart regression)", () => {

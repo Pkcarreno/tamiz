@@ -506,6 +506,9 @@ export async function handleBackgroundMessage(
     case "DOWNLOAD_FILE":
       await downloadFile(message.content, message.filename);
       break;
+    case "OPEN_OPTIONS":
+      browser.runtime.openOptionsPage();
+      break;
     default:
       break;
   }
