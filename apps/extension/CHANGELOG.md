@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.1.0...@tamiz/extension-v1.2.0) (2026-09-10)
+
+
+### Features
+
+* **extension:** add OPEN_OPTIONS action with Settings button in floa… ([1943dae](https://github.com/Pkcarreno/tamiz/commit/1943daee1b5be0d1373d0b6467198f1e8d901250))
+* **extension:** add OPEN_OPTIONS action with Settings button in floating bar ([4034639](https://github.com/Pkcarreno/tamiz/commit/40346391ee97dcc9a549fc2a9caf91a93685dddd))
+
 ## [1.1.0](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.0.0...@tamiz/extension-v1.1.0) (2026-09-08)
 
 
