@@ -36,9 +36,11 @@
       "persistent": true
     },
     "zip:chrome": {
+      "dependsOn": ["^build"],
       "outputs": [".output/*-chrome.zip"]
     },
     "zip:firefox": {
+      "dependsOn": ["^build"],
       "outputs": [".output/*-firefox.zip"]
     },
     "clean": {
