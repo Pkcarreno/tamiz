@@ -20,16 +20,16 @@
   "dependencies": {
     "@floating-ui/dom": "^1.8.0",
     "@tamiz/html-converter": "workspace:*",
-    "@wxt-dev/browser": "^0.2.8",
+    "@wxt-dev/browser": "^0.2.9",
     "class-variance-authority": "^0.7.1",
-    "cn": "^0.2.5",
-    "lucide-solid": "^1.39.0"
+    "cn": "^0.2.6",
+    "lucide-solid": "^1.43.0"
   },
   "devDependencies": {
     "@solidjs/testing-library": "^0.8.10",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "^1.4.2",
     "@wxt-dev/auto-icons": "^1.1.2",
     "@wxt-dev/module-solid": "^1.1.4",
     "fake-indexeddb": "^6.2.5",
@@ -39,7 +39,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite-plugin-solid": "^2.11.14",
-    "vitest": "^4.1.10",
+    "vitest": "^5.0.0",
     "wxt": "^0.21.4"
   }
 }
