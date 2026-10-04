@@ -194,13 +194,84 @@ function renderInlineChildren(element: Element): string {
     .join("");
 }
 
+interface ParsedListItem {
+  inlineParts: string[];
+  nestedBlocks: string[];
+}
+
+function processTextListItemChild(child: Node, inlineParts: string[]): void {
+  const text = (child.textContent ?? "").trim();
+  if (!text) {
+    return;
+  }
+  const escaped = escapeMidLine(text);
+  if (escaped) {
+    inlineParts.push(escaped);
+  }
+}
+
+function processElementListItemChild(
+  element: Element,
+  parsed: ParsedListItem
+): void {
+  const childTag = element.tagName.toLowerCase();
+  if (childTag === "ul" || childTag === "ol") {
+    const nested = renderList(element, childTag === "ol");
+    if (nested.trim()) {
+      parsed.nestedBlocks.push(nested);
+    }
+    return;
+  }
+  if (BLOCK_TAGS.has(childTag)) {
+    const blockResult = renderBlock(element);
+    if (blockResult.trim()) {
+      parsed.inlineParts.push(blockResult.trim());
+    }
+    return;
+  }
+  const inline = renderInline(element);
+  if (inline.trim()) {
+    parsed.inlineParts.push(inline.trim());
+  }
+}
+
+function processListItemChild(child: Node, parsed: ParsedListItem): void {
+  if (isStructuralElement(child)) {
+    return;
+  }
+  if (child.nodeType === NODE_TYPE.ELEMENT) {
+    processElementListItemChild(child as Element, parsed);
+    return;
+  }
+  if (child.nodeType === NODE_TYPE.TEXT) {
+    processTextListItemChild(child, parsed.inlineParts);
+  }
+}
+
+function parseListItem(item: Element): ParsedListItem {
+  const parsed: ParsedListItem = { inlineParts: [], nestedBlocks: [] };
+  for (const child of Array.from(item.childNodes)) {
+    processListItemChild(child, parsed);
+  }
+  return parsed;
+}
+
+function appendNestedBlocks(lines: string[], nestedBlocks: string[]): void {
+  for (const nestedBlock of nestedBlocks) {
+    for (const line of nestedBlock.split("\n")) {
+      if (line.trim()) {
+        lines.push(`  ${line}`);
+      }
+    }
+  }
+}
+
 /**
  * Render a list (ordered or unordered) including nested sub-lists.
  *
  * Nested lists are indented by two spaces on every line so that
  * Markdown renderers display them at the correct level.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: list rendering is inherently complex
 function renderList(element: Element, ordered: boolean): string {
   const items = Array.from(element.children).filter(
     (child) => child.tagName.toLowerCase() === "li"
@@ -215,56 +286,12 @@ function renderList(element: Element, ordered: boolean): string {
   for (let i = 0; i < items.length; i += 1) {
     const item = items[i];
     const marker = ordered ? `${i + 1}. ` : "- ";
-
-    // Separate inline text from nested block-level content
-    const inlineParts: string[] = [];
-    const nestedBlocks: string[] = [];
-
-    for (const child of Array.from(item.childNodes)) {
-      if (isStructuralElement(child)) {
-        continue;
-      }
-      if (child.nodeType === NODE_TYPE.ELEMENT) {
-        const childTag = (child as Element).tagName.toLowerCase();
-
-        if (childTag === "ul" || childTag === "ol") {
-          const nested = renderList(child as Element, childTag === "ol");
-          if (nested.trim()) {
-            nestedBlocks.push(nested);
-          }
-        } else if (BLOCK_TAGS.has(childTag)) {
-          const blockResult = renderBlock(child as Element);
-          if (blockResult.trim()) {
-            inlineParts.push(blockResult.trim());
-          }
-        } else {
-          const inline = renderInline(child);
-          if (inline.trim()) {
-            inlineParts.push(inline.trim());
-          }
-        }
-      } else if (child.nodeType === NODE_TYPE.TEXT) {
-        const text = (child.textContent ?? "").trim();
-        if (text) {
-          const escaped = escapeMidLine(text);
-          if (escaped) {
-            inlineParts.push(escaped);
-          }
-        }
-      }
-    }
+    const { inlineParts, nestedBlocks } = parseListItem(item);
 
     const content = inlineParts.join(" ");
     lines.push(`${marker}${content}`);
 
-    // Nested lists are indented two spaces per level
-    for (const nestedBlock of nestedBlocks) {
-      for (const line of nestedBlock.split("\n")) {
-        if (line.trim()) {
-          lines.push(`  ${line}`);
-        }
-      }
-    }
+    appendNestedBlocks(lines, nestedBlocks);
   }
 
   return `${lines.join("\n")}\n\n`;
@@ -407,7 +434,52 @@ function renderBlock(node: Node): string {
  * grouped into a single paragraph. Block-level children break the
  * group and produce their own Markdown blocks.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: block/inline dispatch is inherently complex
+function dispatchChildNode(
+  child: Node,
+  parts: string[],
+  buffer: string[],
+  flushBuffer: () => void
+): void {
+  if (isStructuralElement(child)) {
+    return;
+  }
+  if (child.nodeType === NODE_TYPE.TEXT) {
+    // Preserve original whitespace between inline elements
+    const text = child.textContent ?? "";
+    if (text.trim()) {
+      const escaped = escapeLineStartText(escapeMidLine(text));
+      if (escaped) {
+        buffer.push(escaped);
+      }
+    }
+    return;
+  }
+  if (child.nodeType === NODE_TYPE.ELEMENT) {
+    const tag = (child as Element).tagName.toLowerCase();
+    if (BLOCK_TAGS.has(tag)) {
+      flushBuffer();
+      const blockResult = renderBlock(child as Element);
+      if (blockResult.trim()) {
+        parts.push(blockResult);
+      }
+    } else {
+      // Inline element — add to current paragraph buffer
+      const inlineResult = renderInline(child);
+      if (inlineResult.trim()) {
+        buffer.push(inlineResult);
+      }
+    }
+  }
+}
+
+/**
+ * Render all children of an element, dispatching each child to
+ * block-level or inline rendering based on its tag name.
+ *
+ * Consecutive inline children (text nodes + inline elements) are
+ * grouped into a single paragraph. Block-level children break the
+ * group and produce their own Markdown blocks.
+ */
 function renderChildren(element: Element): string {
   const parts: string[] = [];
   const buffer: string[] = [];
@@ -423,34 +495,7 @@ function renderChildren(element: Element): string {
   };
 
   for (const child of Array.from(element.childNodes)) {
-    if (isStructuralElement(child)) {
-      continue;
-    }
-    if (child.nodeType === NODE_TYPE.TEXT) {
-      // Preserve original whitespace between inline elements
-      const text = child.textContent ?? "";
-      if (text.trim()) {
-        const escaped = escapeLineStartText(escapeMidLine(text));
-        if (escaped) {
-          buffer.push(escaped);
-        }
-      }
-    } else if (child.nodeType === NODE_TYPE.ELEMENT) {
-      const tag = (child as Element).tagName.toLowerCase();
-      if (BLOCK_TAGS.has(tag)) {
-        flushBuffer();
-        const blockResult = renderBlock(child as Element);
-        if (blockResult.trim()) {
-          parts.push(blockResult);
-        }
-      } else {
-        // Inline element — add to current paragraph buffer
-        const inlineResult = renderInline(child);
-        if (inlineResult.trim()) {
-          buffer.push(inlineResult);
-        }
-      }
-    }
+    dispatchChildNode(child, parts, buffer, flushBuffer);
   }
 
   flushBuffer();

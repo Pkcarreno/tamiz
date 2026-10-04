@@ -83,40 +83,6 @@ const radioItemVariants = cva(
 );
 
 /**
- * Visually hidden native radio input for form semantics and screen readers.
- */
-function VisuallyHiddenRadio(props: {
-  checked: boolean;
-  disabled?: boolean;
-  name: string;
-  value: string;
-}): JSX.Element {
-  return (
-    <input
-      aria-checked={props.checked}
-      checked={props.checked}
-      disabled={props.disabled}
-      name={props.name}
-      readOnly
-      style={{
-        border: "0",
-        clip: "rect(0, 0, 0, 0)",
-        height: "1px",
-        margin: "-1px",
-        overflow: "hidden",
-        padding: "0",
-        position: "absolute",
-        "white-space": "nowrap",
-        width: "1px",
-      }}
-      tabIndex={props.checked ? 0 : -1}
-      type="radio"
-      value={props.value}
-    />
-  );
-}
-
-/**
  * Accessible radio group with roving tabindex and keyboard navigation.
  *
  * Renders a set of radio options inside a `role="radiogroup"` container.
@@ -139,7 +105,7 @@ export function RadioGroup(props: ParentProps<RadioGroupProps>): JSX.Element {
 
   const orientation = () => local.orientation ?? "vertical";
 
-  const optionRefs: HTMLDivElement[] = [];
+  const optionRefs: HTMLInputElement[] = [];
 
   function focusOption(index: number): void {
     const clamped = Math.max(0, Math.min(index, local.options.length - 1));
@@ -210,7 +176,7 @@ export function RadioGroup(props: ParentProps<RadioGroupProps>): JSX.Element {
     }
   }
 
-  function setOptionRef(el: HTMLDivElement, index: number): void {
+  function setOptionRef(el: HTMLInputElement, index: number): void {
     optionRefs[index] = el;
   }
 
@@ -224,7 +190,6 @@ export function RadioGroup(props: ParentProps<RadioGroupProps>): JSX.Element {
       )}
       data-tamiz-radio-group
       id={local.id}
-      // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
       onKeyDown={handleKeyDown}
       role="radiogroup"
     >
@@ -232,34 +197,39 @@ export function RadioGroup(props: ParentProps<RadioGroupProps>): JSX.Element {
         {(option, index) => {
           const isSelected = () => option.value === local.value;
           const optionIndex = index;
+          const inputId = () => `${local.name}-${option.value}`;
 
           return (
-            <div
-              aria-checked={isSelected()}
+            <label
               class={cn(
                 radioItemVariants({ selected: isSelected() }),
                 local.disabled && "pointer-events-none opacity-[0.35]"
               )}
+              data-checked={isSelected() ? "true" : "false"}
               data-tamiz-radio-item
               data-value={option.value}
-              id={`${local.name}-${option.value}`}
-              // biome-ignore lint/performance/noJsxPropsBind: SolidJS For body runs once per item; stable in practice
-              onClick={() => handleOptionClick(option.value)}
-              // biome-ignore lint/performance/noJsxPropsBind: SolidJS For body runs once per item; stable in practice
-              ref={(el) => {
-                setOptionRef(el, optionIndex());
-              }}
-              role="radio"
-              tabIndex={isSelected() ? 0 : -1}
+              for={inputId()}
+              id={`${inputId()}-label`}
             >
-              <VisuallyHiddenRadio
+              <input
+                aria-checked={isSelected()}
                 checked={isSelected()}
+                class="sr-only"
                 disabled={local.disabled}
+                id={inputId()}
                 name={local.name}
+                onChange={() => handleOptionClick(option.value)}
+                onClick={() => handleOptionClick(option.value)}
+                onKeyDown={handleKeyDown}
+                ref={(el) => {
+                  setOptionRef(el, optionIndex());
+                }}
+                tabIndex={isSelected() ? 0 : -1}
+                type="radio"
                 value={option.value}
               />
               <span aria-hidden="true">{option.label}</span>
-            </div>
+            </label>
           );
         }}
       </For>

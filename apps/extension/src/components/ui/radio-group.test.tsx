@@ -39,7 +39,7 @@ describe("RadioGroup", () => {
     expect(group?.getAttribute("role")).toBe("radiogroup");
   });
 
-  it("sets role='radio' on each option", () => {
+  it("renders a radio input for each option", () => {
     const { container } = render(() => (
       <RadioGroup
         name="format"
@@ -50,7 +50,7 @@ describe("RadioGroup", () => {
     ));
     const items = container.querySelectorAll("[data-tamiz-radio-item]");
     for (const item of items) {
-      expect(item.getAttribute("role")).toBe("radio");
+      expect(item.querySelector("input[type='radio']")).toBeTruthy();
     }
   });
 
@@ -63,9 +63,11 @@ describe("RadioGroup", () => {
         value="html"
       />
     ));
-    const items = container.querySelectorAll("[data-tamiz-radio-item]");
-    expect(items[0]?.getAttribute("aria-checked")).toBe("false");
-    expect(items[1]?.getAttribute("aria-checked")).toBe("true");
+    const inputs = container.querySelectorAll(
+      "[data-tamiz-radio-item] input[type='radio']"
+    );
+    expect(inputs[0]?.getAttribute("aria-checked")).toBe("false");
+    expect(inputs[1]?.getAttribute("aria-checked")).toBe("true");
   });
 
   it("calls onChange when an option is clicked", () => {
@@ -146,9 +148,11 @@ describe("RadioGroup", () => {
         value="html"
       />
     ));
-    const items = container.querySelectorAll("[data-tamiz-radio-item]");
-    expect(items[0]?.getAttribute("tabindex")).toBe("-1");
-    expect(items[1]?.getAttribute("tabindex")).toBe("0");
+    const inputs = container.querySelectorAll(
+      "[data-tamiz-radio-item] input[type='radio']"
+    );
+    expect(inputs[0]?.getAttribute("tabindex")).toBe("-1");
+    expect(inputs[1]?.getAttribute("tabindex")).toBe("0");
   });
 
   it("renders with horizontal orientation", () => {

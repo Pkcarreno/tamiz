@@ -1,5 +1,9 @@
 {
-  "extends": ["ultracite/biome/core", "ultracite/biome/type-aware"],
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/type-aware",
+    "ultracite/biome/vitest"
+  ],
   "files": {
     "includes": ["!.agents"]
   },
@@ -9,18 +13,5 @@
         "noUnresolvedImports": "off"
       }
     }
-  },
-  "overrides": [
-    {
-      "includes": ["**/radio-group.tsx"],
-      "linter": {
-        "rules": {
-          "a11y": {
-            "useSemanticElements": "off",
-            "useKeyWithClickEvents": "off"
-          }
-        }
-      }
-    }
-  ]
+  }
 }

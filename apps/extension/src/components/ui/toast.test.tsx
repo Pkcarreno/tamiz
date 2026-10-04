@@ -7,7 +7,6 @@ function ToastTrigger(props: { message: string; duration?: number }) {
   const { showToast } = useToast();
   const handleClick = () => showToast(props.message, props.duration);
   return (
-    // biome-ignore lint/performance/noJsxPropsBind: test helper, rendered once
     <button onClick={handleClick} type="button">
       Trigger
     </button>
@@ -21,7 +20,6 @@ function MultiToastTrigger() {
     showToast("Second toast");
   };
   return (
-    // biome-ignore lint/performance/noJsxPropsBind: test helper, rendered once
     <button onClick={handleClick} type="button">
       Multiple
     </button>

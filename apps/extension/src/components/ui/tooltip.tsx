@@ -3,6 +3,7 @@ import type { JSX } from "solid-js";
 import {
   createContext,
   createSignal,
+  onCleanup,
   Show,
   splitProps,
   useContext,
@@ -192,17 +193,32 @@ export function TooltipTrigger(props: TooltipTriggerProps) {
   const [local, rest] = splitProps(props, ["children"]);
   const ctx = useTooltipContext();
 
+  function bindTrigger(el: HTMLElement | null): void {
+    if (!el) {
+      return;
+    }
+    ctx.triggerRef(el);
+
+    const handlePointerEnter = () => ctx.show();
+    const handlePointerLeave = () => ctx.hide();
+    const handleFocus = () => ctx.show();
+    const handleBlur = () => ctx.hide();
+
+    el.addEventListener("pointerenter", handlePointerEnter);
+    el.addEventListener("pointerleave", handlePointerLeave);
+    el.addEventListener("focus", handleFocus);
+    el.addEventListener("blur", handleBlur);
+
+    onCleanup(() => {
+      el.removeEventListener("pointerenter", handlePointerEnter);
+      el.removeEventListener("pointerleave", handlePointerLeave);
+      el.removeEventListener("focus", handleFocus);
+      el.removeEventListener("blur", handleBlur);
+    });
+  }
+
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: wrapper delegates events to children
-    <span
-      onBlur={ctx.hide}
-      onFocus={ctx.show}
-      onPointerEnter={ctx.show}
-      onPointerLeave={ctx.hide}
-      ref={ctx.triggerRef}
-      role="presentation"
-      {...rest}
-    >
+    <span ref={bindTrigger} {...rest}>
       {local.children}
     </span>
   );

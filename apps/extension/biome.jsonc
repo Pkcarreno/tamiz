@@ -4,7 +4,8 @@
     "../../biome.jsonc",
     "ultracite/biome/core",
     "ultracite/biome/type-aware",
-    "ultracite/biome/solid"
+    "ultracite/biome/solid",
+    "ultracite/biome/vitest"
   ],
   "javascript": {
     "globals": ["defineBackground", "defineContentScript", "createShadowRootUi"]
@@ -13,6 +14,9 @@
     "rules": {
       "correctness": {
         "noUnresolvedImports": "off"
+      },
+      "performance": {
+        "noJsxPropsBind": "off"
       }
     }
   }

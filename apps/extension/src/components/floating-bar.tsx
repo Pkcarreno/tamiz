@@ -175,7 +175,6 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
             shortcut={shortcutLabel("FORMAT_CHANGE", "F")}
           >
             <Select
-              // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
               onChange={handleFormatChange}
               options={FORMAT_OPTIONS}
               value={props.snapshot().format}
@@ -189,7 +188,6 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         >
           <Button
             aria-label="Open settings"
-            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleOpenOptions}
             size="xs"
             variant="icon"
@@ -215,7 +213,6 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
           <Button
             aria-label="Copy"
             disabled={props.snapshot().isExclusionMode}
-            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleCopy}
             size="xs"
             variant="icon"
@@ -231,7 +228,6 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
           <Button
             aria-label="Download"
             disabled={props.snapshot().isExclusionMode}
-            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleDownload}
             size="xs"
             variant="icon"
@@ -247,7 +243,6 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
           <Button
             aria-label="Toggle exclusion mode"
             class={props.snapshot().isExclusionMode ? "text-accent" : ""}
-            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleExcludeToggle}
             size="xs"
             variant="icon"
@@ -263,7 +258,6 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
           <Button
             aria-label="Restart selection"
             disabled={props.snapshot().isExclusionMode}
-            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleRestart}
             size="xs"
             variant="icon"
@@ -278,7 +272,6 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         >
           <Button
             aria-label="Cancel"
-            // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleDismiss}
             size="xs"
             variant="ghost"
