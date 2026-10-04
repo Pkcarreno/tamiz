@@ -50,7 +50,6 @@ export function ContentApp(props: ContentAppProps): JSX.Element {
   return (
     <ToastProvider>
       <ToastMount
-        // biome-ignore lint/performance/noJsxPropsBind: mounted once in shadow root
         onReady={(api) => {
           props.onToastReady(api.showToast);
         }}

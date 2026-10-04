@@ -17,15 +17,18 @@ import type { CrossWorldMessage } from "../types.ts";
 export class PostMessageChannel
   implements Channel<CrossWorldMessage, CrossWorldMessage>
 {
-  private disposed = false;
+  private isDisposed: boolean;
   private userHandler:
     | ((message: CrossWorldMessage, sender: unknown) => Promise<unknown>)
     | null = null;
   private domListener: ((event: MessageEvent) => void) | null = null;
 
+  constructor() {
+    this.isDisposed = false;
+  }
+
   send(message: CrossWorldMessage): void {
-    // biome-ignore lint/suspicious/noUnnecessaryConditions: runtime guard — disposed can be true after dispose()
-    if (this.disposed) {
+    if (this.isDisposed) {
       throw new Error("PostMessageChannel: send after dispose");
     }
     window.postMessage(message, "*");
@@ -34,8 +37,7 @@ export class PostMessageChannel
   onMessage(
     handler: (message: CrossWorldMessage, sender: unknown) => Promise<unknown>
   ): void {
-    // biome-ignore lint/suspicious/noUnnecessaryConditions: runtime guard — disposed can be true after dispose()
-    if (this.disposed) {
+    if (this.isDisposed) {
       throw new Error("PostMessageChannel: onMessage after dispose");
     }
     this.userHandler = handler;
@@ -71,6 +73,6 @@ export class PostMessageChannel
       this.domListener = null;
     }
     this.userHandler = null;
-    this.disposed = true;
+    this.isDisposed = true;
   }
 }

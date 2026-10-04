@@ -118,7 +118,6 @@ export function Select(props: SelectProps) {
         class={cn(selectVariants({ variant: local.variant }), local.class)}
         disabled={local.disabled}
         id={local.id}
-        // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
         onChange={handleChange}
       >
         <For each={local.options}>

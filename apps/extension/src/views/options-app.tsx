@@ -87,7 +87,6 @@ export function OptionsApp(): JSX.Element {
         <RadioGroup
           disabled={!loaded()}
           name="default-format"
-          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
           onChange={handleFormatChange}
           options={FORMAT_OPTIONS}
           value={format()}
@@ -102,7 +101,6 @@ export function OptionsApp(): JSX.Element {
         <RadioGroup
           disabled={!loaded()}
           name="theme-preference"
-          // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
           onChange={handleThemeChange}
           options={THEME_OPTIONS}
           value={theme()}

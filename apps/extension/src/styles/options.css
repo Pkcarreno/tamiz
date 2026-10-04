@@ -236,7 +236,8 @@
     transform var(--tz-duration-fast) var(--tz-ease-out);
 }
 
-[data-tamiz-radio-item][aria-checked="true"]::before {
+[data-tamiz-radio-item][aria-checked="true"]::before,
+[data-tamiz-radio-item][data-checked="true"]::before {
   background-color: var(--tz-accent);
   transform: translateY(-50%) scale(1);
 }

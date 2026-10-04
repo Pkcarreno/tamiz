@@ -45,7 +45,7 @@ describe("OptionsApp", () => {
         "[data-tamiz-radio-item]"
       );
       const selected = Array.from(radioItems).find(
-        (item) => item.getAttribute("aria-checked") === "true"
+        (item) => item.getAttribute("data-checked") === "true"
       );
       expect(selected).toBeDefined();
       expect(selected?.getAttribute("data-value")).toBe("markdown");
@@ -97,7 +97,7 @@ describe("OptionsApp — Theme Preference", () => {
       const [, themeGroup] = radioGroups;
       const items = themeGroup.querySelectorAll("[data-tamiz-radio-item]");
       const selected = Array.from(items).find(
-        (item) => item.getAttribute("aria-checked") === "true"
+        (item) => item.getAttribute("data-checked") === "true"
       );
       expect(selected).toBeDefined();
       expect(selected?.getAttribute("data-value")).toBe("auto");
