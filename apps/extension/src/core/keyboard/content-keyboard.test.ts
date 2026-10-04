@@ -410,13 +410,10 @@ describe("handleKeydown — unmatched keys", () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it("does not cause infinite recursion when typing in an input with mounted shadowHost", () => {
+  it("does not cause infinite recursion when typing in an input with mounted listener", () => {
     const input = document.createElement("input");
     document.body.appendChild(input);
     input.focus();
-
-    const host = document.createElement("tamiz-picker");
-    document.body.appendChild(host);
 
     const deps = makeDeps({
       getActiveElement: () => input,
@@ -442,7 +439,6 @@ describe("handleKeydown — unmatched keys", () => {
     } finally {
       document.removeEventListener("keydown", keydownListener);
       input.remove();
-      host.remove();
     }
   });
 
@@ -450,9 +446,6 @@ describe("handleKeydown — unmatched keys", () => {
     const input = document.createElement("input");
     document.body.appendChild(input);
     input.focus();
-
-    const host = document.createElement("tamiz-picker");
-    document.body.appendChild(host);
 
     const deps = makeDeps({
       getActiveElement: () => input,
@@ -477,7 +470,6 @@ describe("handleKeydown — unmatched keys", () => {
     } finally {
       document.removeEventListener("keydown", keydownListener);
       input.remove();
-      host.remove();
     }
   });
 });

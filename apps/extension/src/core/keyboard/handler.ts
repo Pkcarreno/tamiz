@@ -5,8 +5,7 @@ import { isInputElement } from "./types.ts";
 /**
  * Runtime dependencies for {@link handleKeydown}.
  *
- * Injected so the handler can be unit-tested without the full
- * content-script runtime.
+ * Injected to test the handler without the full content-script runtime.
  *
  * @public
  */
@@ -20,7 +19,7 @@ export interface KeydownHandlerDeps {
 /**
  * Intercept a `keydown` event and resolve it against the session shortcut registry.
  *
- * When the picker is in the IDLE state, the handler bails out immediately so
+ * When the picker is in the IDLE state, the handler returns immediately so
  * native host-page keyboard events remain untouched.
  *
  * Resolution follows the registry priority table:

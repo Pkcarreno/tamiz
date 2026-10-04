@@ -138,25 +138,23 @@ export function applyThemePreference(
 
 /**
  * Callbacks and target document for {@link createDocumentListenerController}.
- *
- * @public
  */
 export interface DocumentListenerDeps {
-  /** Target document to attach listeners to (defaults to global document). */
-  doc?: Document;
-  /** Dispatched when a click occurs during selection or exclusion mode. */
+  /** Whether the main-world script handles click interception. */
+  isBlockingAvailable?: boolean;
+  /** Handles click events during selection or exclusion mode. */
   onClick: (event: MouseEvent) => void;
-  /** Dispatched when keydown occurs while the picker is active. */
+  /** Handles keydown events while the picker is active. */
   onKeydown: (event: KeyboardEvent) => void;
-  /** Dispatched when mousemove occurs during highlighting or exclusion mode. */
+  /** Handles mouse movements during highlighting or exclusion mode. */
   onMousemove: (event: MouseEvent) => void;
+  /** Target document to attach listeners to (defaults to global document). */
+  targetDocument?: Document;
 }
 
 /**
  * Controller that dynamically attaches and detaches document listeners
  * based on session state transitions.
- *
- * @public
  */
 export interface DocumentListenerController {
   /** Remove all currently attached listeners and clean up. */
@@ -172,78 +170,87 @@ export interface DocumentListenerController {
  *
  * @param deps - Callbacks and target document.
  * @returns The controller instance.
- *
- * @public
  */
 export function createDocumentListenerController(
   deps: DocumentListenerDeps
 ): DocumentListenerController {
-  const targetDoc = deps.doc ?? document;
-  let keydownAttached = false;
-  let mousemoveAttached = false;
-  let clickAttached = false;
+  const targetDoc = deps.targetDocument ?? document;
+  let isDisposed = false;
+  let isKeydownAttached = false;
+  let isMousemoveAttached = false;
+  let isClickAttached = false;
 
   function detachAll() {
-    if (keydownAttached) {
+    if (isKeydownAttached) {
       targetDoc.removeEventListener("keydown", deps.onKeydown as EventListener);
-      keydownAttached = false;
+      isKeydownAttached = false;
     }
-    if (mousemoveAttached) {
+    if (isMousemoveAttached) {
       targetDoc.removeEventListener(
         "mousemove",
         deps.onMousemove as EventListener
       );
-      mousemoveAttached = false;
+      isMousemoveAttached = false;
     }
-    if (clickAttached) {
+    if (isClickAttached) {
       targetDoc.removeEventListener("click", deps.onClick as EventListener);
-      clickAttached = false;
+      isClickAttached = false;
     }
+  }
+
+  function syncListener(
+    type: "click" | "keydown" | "mousemove",
+    handler: EventListener,
+    shouldAttach: boolean,
+    isCurrentlyAttached: boolean
+  ): boolean {
+    if (shouldAttach && !isCurrentlyAttached) {
+      targetDoc.addEventListener(type, handler);
+      return true;
+    }
+    if (!shouldAttach && isCurrentlyAttached) {
+      targetDoc.removeEventListener(type, handler);
+      return false;
+    }
+    return isCurrentlyAttached;
   }
 
   return {
     dispose() {
+      isDisposed = true;
       detachAll();
     },
     update(snapshot: PickerSessionSnapshot) {
-      const needsKeydown = snapshot.state !== "IDLE";
-      const needsMousemove =
+      if (isDisposed || snapshot.state === "IDLE") {
+        detachAll();
+        return;
+      }
+
+      const shouldAttachKeydown = true;
+      const shouldAttachMousemove =
         snapshot.state === "HIGHLIGHTING" || snapshot.isExclusionMode;
-      const needsClick =
-        snapshot.isExclusionMode || snapshot.state === "HIGHLIGHTING";
+      const shouldAttachClick =
+        snapshot.isExclusionMode ||
+        (!deps.isBlockingAvailable && snapshot.state === "HIGHLIGHTING");
 
-      if (needsKeydown && !keydownAttached) {
-        targetDoc.addEventListener("keydown", deps.onKeydown as EventListener);
-        keydownAttached = true;
-      } else if (!needsKeydown && keydownAttached) {
-        targetDoc.removeEventListener(
-          "keydown",
-          deps.onKeydown as EventListener
-        );
-        keydownAttached = false;
-      }
-
-      if (needsMousemove && !mousemoveAttached) {
-        targetDoc.addEventListener(
-          "mousemove",
-          deps.onMousemove as EventListener
-        );
-        mousemoveAttached = true;
-      } else if (!needsMousemove && mousemoveAttached) {
-        targetDoc.removeEventListener(
-          "mousemove",
-          deps.onMousemove as EventListener
-        );
-        mousemoveAttached = false;
-      }
-
-      if (needsClick && !clickAttached) {
-        targetDoc.addEventListener("click", deps.onClick as EventListener);
-        clickAttached = true;
-      } else if (!needsClick && clickAttached) {
-        targetDoc.removeEventListener("click", deps.onClick as EventListener);
-        clickAttached = false;
-      }
+      isKeydownAttached = syncListener(
+        "keydown",
+        deps.onKeydown as EventListener,
+        shouldAttachKeydown,
+        isKeydownAttached
+      );
+      isMousemoveAttached = syncListener(
+        "mousemove",
+        deps.onMousemove as EventListener,
+        shouldAttachMousemove,
+        isMousemoveAttached
+      );
+      isClickAttached = syncListener(
+        "click",
+        deps.onClick as EventListener,
+        shouldAttachClick,
+        isClickAttached
+      );
     },
   };
 }
@@ -306,12 +313,12 @@ export default defineContentScript({
     });
 
     // 6. Connect reactive UI signals, adornment, and dynamic document listeners.
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = (event: MouseEvent) => {
       const snap = session.getSnapshot();
       if (snap.isExclusionMode) {
-        e.preventDefault();
-        e.stopPropagation();
-        const target = document.elementFromPoint(e.clientX, e.clientY);
+        event.preventDefault();
+        event.stopPropagation();
+        const target = document.elementFromPoint(event.clientX, event.clientY);
         if (target) {
           session.dispatch({ target, type: "TOGGLE_EXCLUSION_ELEMENT" });
         }
@@ -319,7 +326,7 @@ export default defineContentScript({
       }
 
       if (!blockingAvailable && snap.state === "HIGHLIGHTING") {
-        const target = document.elementFromPoint(e.clientX, e.clientY);
+        const target = document.elementFromPoint(event.clientX, event.clientY);
         if (
           target &&
           target !== document.documentElement &&
@@ -330,22 +337,23 @@ export default defineContentScript({
       }
     };
 
-    const handleKeydownEvent = (e: KeyboardEvent) => {
-      handleKeydown(e, {
+    const handleKeydownEvent = (event: KeyboardEvent) => {
+      handleKeydown(event, {
         getActiveElement: () => document.activeElement,
         session,
       });
     };
 
-    const handleMousemoveEvent = (e: MouseEvent) => {
-      adornment.setHoverTarget(e.target as Element);
+    const handleMousemoveEvent = (event: MouseEvent) => {
+      adornment.setHoverTarget(event.target as Element);
     };
 
     const listenerController = createDocumentListenerController({
-      doc: document,
+      isBlockingAvailable: blockingAvailable,
       onClick: handleClick,
       onKeydown: handleKeydownEvent,
       onMousemove: handleMousemoveEvent,
+      targetDocument: document,
     });
 
     const [snapshot, setSnapshot] = createSignal(session.getSnapshot());

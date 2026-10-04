@@ -281,36 +281,40 @@ describe("createDocumentListenerController", () => {
   }
 
   function setupController() {
-    const doc = document.implementation.createHTMLDocument();
+    const targetDocument = document.implementation.createHTMLDocument();
     const onClick = vi.fn();
     const onKeydown = vi.fn();
     const onMousemove = vi.fn();
 
     const controller = createDocumentListenerController({
-      doc,
       onClick,
       onKeydown,
       onMousemove,
+      targetDocument,
     });
 
     return {
       controller,
-      doc,
       onClick,
       onKeydown,
       onMousemove,
+      targetDocument,
     };
   }
 
   it("does not attach any listeners when initial state is IDLE", () => {
-    const { controller, doc, onClick, onKeydown, onMousemove } =
+    const { controller, onClick, onKeydown, onMousemove, targetDocument } =
       setupController();
 
     controller.update(makeSnapshot({ state: "IDLE" }));
 
-    doc.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    targetDocument.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(
+      new MouseEvent("mousemove", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     expect(onKeydown).not.toHaveBeenCalled();
     expect(onMousemove).not.toHaveBeenCalled();
@@ -318,14 +322,18 @@ describe("createDocumentListenerController", () => {
   });
 
   it("attaches keydown, mousemove, and click in HIGHLIGHTING state", () => {
-    const { controller, doc, onClick, onKeydown, onMousemove } =
+    const { controller, onClick, onKeydown, onMousemove, targetDocument } =
       setupController();
 
     controller.update(makeSnapshot({ state: "HIGHLIGHTING" }));
 
-    doc.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    targetDocument.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(
+      new MouseEvent("mousemove", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     expect(onKeydown).toHaveBeenCalledTimes(1);
     expect(onMousemove).toHaveBeenCalledTimes(1);
@@ -333,7 +341,7 @@ describe("createDocumentListenerController", () => {
   });
 
   it("attaches only keydown in SELECTED state when not in exclusion mode", () => {
-    const { controller, doc, onClick, onKeydown, onMousemove } =
+    const { controller, onClick, onKeydown, onMousemove, targetDocument } =
       setupController();
 
     controller.update(
@@ -343,9 +351,13 @@ describe("createDocumentListenerController", () => {
       })
     );
 
-    doc.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    targetDocument.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(
+      new MouseEvent("mousemove", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     expect(onKeydown).toHaveBeenCalledTimes(1);
     expect(onMousemove).not.toHaveBeenCalled();
@@ -353,7 +365,7 @@ describe("createDocumentListenerController", () => {
   });
 
   it("attaches mousemove and click in exclusion mode during SELECTED", () => {
-    const { controller, doc, onClick, onKeydown, onMousemove } =
+    const { controller, onClick, onKeydown, onMousemove, targetDocument } =
       setupController();
 
     // First transition to SELECTED
@@ -366,9 +378,13 @@ describe("createDocumentListenerController", () => {
       makeSnapshot({ isExclusionMode: true, state: "SELECTED" })
     );
 
-    doc.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    targetDocument.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(
+      new MouseEvent("mousemove", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     expect(onKeydown).toHaveBeenCalledTimes(1);
     expect(onMousemove).toHaveBeenCalledTimes(1);
@@ -376,15 +392,19 @@ describe("createDocumentListenerController", () => {
   });
 
   it("detaches all listeners when transitioning back to IDLE", () => {
-    const { controller, doc, onClick, onKeydown, onMousemove } =
+    const { controller, onClick, onKeydown, onMousemove, targetDocument } =
       setupController();
 
     controller.update(makeSnapshot({ state: "HIGHLIGHTING" }));
     controller.update(makeSnapshot({ state: "IDLE" }));
 
-    doc.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    targetDocument.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(
+      new MouseEvent("mousemove", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     expect(onKeydown).not.toHaveBeenCalled();
     expect(onMousemove).not.toHaveBeenCalled();
@@ -392,15 +412,58 @@ describe("createDocumentListenerController", () => {
   });
 
   it("dispose() removes all attached listeners immediately", () => {
-    const { controller, doc, onClick, onKeydown, onMousemove } =
+    const { controller, onClick, onKeydown, onMousemove, targetDocument } =
       setupController();
 
     controller.update(makeSnapshot({ state: "HIGHLIGHTING" }));
     controller.dispose();
 
-    doc.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    doc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    targetDocument.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(
+      new MouseEvent("mousemove", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(onKeydown).not.toHaveBeenCalled();
+    expect(onMousemove).not.toHaveBeenCalled();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("does not attach listeners when update runs after dispose", () => {
+    const { controller, onClick, onKeydown, onMousemove, targetDocument } =
+      setupController();
+
+    controller.dispose();
+    controller.update(makeSnapshot({ state: "HIGHLIGHTING" }));
+
+    targetDocument.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(
+      new MouseEvent("mousemove", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(onKeydown).not.toHaveBeenCalled();
+    expect(onMousemove).not.toHaveBeenCalled();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("does not attach listeners in IDLE state when isExclusionMode is true", () => {
+    const { controller, onClick, onKeydown, onMousemove, targetDocument } =
+      setupController();
+
+    controller.update(makeSnapshot({ isExclusionMode: true, state: "IDLE" }));
+
+    targetDocument.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(
+      new MouseEvent("mousemove", { bubbles: true })
+    );
+    targetDocument.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     expect(onKeydown).not.toHaveBeenCalled();
     expect(onMousemove).not.toHaveBeenCalled();
