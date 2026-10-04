@@ -1,5 +1,8 @@
 {
   "extends": ["ultracite/biome/core", "ultracite/biome/type-aware"],
+  "files": {
+    "includes": ["!.agents"]
+  },
   "linter": {
     "rules": {
       "correctness": {

@@ -1,121 +1,34 @@
-# Tamiz — Agent Instructions
+# Repository Guide
 
-## Project Overview
+## Monorepo Architecture
 
-Tamiz is a monorepo for a browser extension. This extension selects page content visually. The extension converts the content to markdown or clean HTML. The core conversion logic is in agnostic packages. You can use these packages outside the extension.
+- `apps/extension`: Browser extension built with WXT, SolidJS, and Tailwind CSS v4 (picker UI, entrypoints, background service worker).
+- `packages/html-converter`: Agnostic HTML conversion library built with tsdown (DOM parsing, markdown/clean HTML strategies).
 
-## Monorepo Structure
+## Commands
 
-```text
-tamiz/
-├── apps/
-│   └── extension/          # Browser extension (WXT + SolidJS + Tailwind v4)
-├── packages/
-│   └── html-converter/     # Agnostic HTML conversion library
-├── package.json            # Root — monorepo tools only
-├── turbo.json
-├── biome.jsonc
-└── AGENTS.md
-```
-
-## Root Tools
-
-- Runtime and Package Manager: Bun
-- Build Orchestration: Turborepo
-- Linter and Formatter: Biome with the Ultracite preset
-- Git Hooks: Lefthook
-- Commits: Commitizen
+Run all tasks through `bun` and `turbo` scripts from `package.json`. Do not invoke raw CLI binaries directly:
+- **Validation**: `bun run validate` (runs `lint`, `typecheck`, and `test` across the monorepo)
+- **Individual Checks**: `bun run lint`, `bun run lint:fix`, `bun run typecheck`, `bun run test`
+- **Build & Dev**: `bun run build`, `bun run dev`
+- Always verify changes with `bun run validate` before completing any code task.
 
 ## Conventions
 
-### Naming
+### Code & Documentation
+- Write all code, identifiers, comments, documentation, and git commits in English.
+- Apply the `semantic-code-naming` skill for identifier naming and grammar (A/HC/LC, positive boolean prefixes).
+- Apply the `asd-ste100` skill for technical prose (TSDoc, error messages, documentation, user-facing text).
+- Comments must explain the rationale (*why*), never obvious mechanics (*what*).
+- Provide TSDoc for exported APIs, module contracts, and complex logic only. Skip TSDoc for self-evident code.
+- Annotate intentional public library exports with `/** @public */`.
 
-- Use the `@tamiz/<name>` scope for all packages.
-- Write package names in lowercase letters.
-- Separate words in package names with hyphens.
+### Structure & Modules
+- Import directly from module files; avoid barrel files (`index.ts`).
+- Colocate tests next to the source file using `.test.ts` (e.g. `parser.ts` → `parser.test.ts`).
+- Prefer TypeScript `interface` for public module contracts and component props.
+- Consult the `typescript-advanced-types` skill when designing complex generics, mapped types, or utility types.
+- Install dependencies strictly within the `package.json` of the package that requires them: `bun add --filter @tamiz/<package> <dep>`.
 
-### Language Standard
-
-- Write all code, comments, README files, and documentation in English.
-- Make the code self-documenting.
-- Write comments to explain the reason for the code. Do not explain what the code does.
-- You must use STE-flavored Simplified Technical English for all text.
-- This rule applies to comments, documentation, TSDoc blocks, user interface strings, error messages, and README text.
-- Use the `ste-writing` skill as the standard.
-
-### Dependencies
-
-- Add only necessary dependencies.
-- Use dependencies that decrease code complexity.
-- Use dependencies that decrease maintenance work.
-- Get dependencies from trusted sources.
-- Use this command to install a dependency: `bun add --filter @tamiz/<package> <dep>@latest`
-- Do not install global tool dependencies in the workspace packages.
-- Install global tools in the root directory only.
-
-### Documentation
-
-- Do not write documentation for simple code.
-- Write TSDoc blocks for all methods, interfaces, type aliases, and module exports.
-- Write TSDoc blocks for pure functions that manage complex logic or state mutations.
-- Write TSDoc blocks for custom protocols or parsers.
-
-### Public API Marking
-
-- Add the `@public` tag to the TSDoc block for all exported types, interfaces, and component properties. These items form the public API.
-- For grouped exports, put `/** @public */` directly above the export block.
-- For inline exports with a TSDoc block, put the `@public` tag in the existing block. Do not make a separate block.
-- For inline exports without a TSDoc block, put `/** @public */` directly above the declaration.
-
-### Exports
-
-- Do not use barrel files.
-- Export items directly from the module.
-
-### TypeScript
-
-- Use strict mode: `strict: true`.
-- Do not use the `any` type. Use the `unknown` type instead.
-- Use type inference for local variables.
-- Use `interface` for public APIs and component properties.
-- Type the parameters and return values explicitly to improve clarity.
-- Use `Record<string, unknown>` for generic objects. Do not use `object` or `any`.
-- Do not use enums. Use JavaScript objects or TypeScript unions.
-- Use type narrowing.
-- Use `as const` assertions.
-
-### Modern JavaScript
-
-- Use `for...of` loops.
-- Use optional chaining (`?.`).
-- Use nullish coalescing (`??`).
-- Use `const` as the default. Do not use `var`.
-- Use `async` and `await` instead of promise chains.
-- Always `await` promises.
-
-### Testing
-
-- Use Vitest as the test runner for all workspaces.
-- Put the test files next to the source files.
-- Use the same file name with a `.test` suffix. For example, use `picker.test.ts` for `picker.ts`.
-
-## Workspace Awareness
-
-- Identify the correct app or package before you change it.
-- Add dependencies to the correct workspace `package.json` file.
-- Do not add workspace dependencies to the root `package.json` file.
-- Use the root `package.json` file for monorepo management tools only.
-
-## Validation Protocol
-
-- Run the full validation pipeline after every change.
-- Run this command: `bun run validate`
-- This command runs these steps in order: `lint`, `typecheck`, `test`.
-- Do not skip steps.
-- Do not commit code before the validation passes.
-
-## Scope Discipline
-
-- Do not over-engineer the code.
-- Write agnostic logic.
-- Make sure that the logic runs in any terminal without modifications.
+### Architecture & Local Context
+- Each package and application maintains its domain rules and architecture in its local `AGENTS.md`. Consult the local `AGENTS.md` before making changes within any subpath:
