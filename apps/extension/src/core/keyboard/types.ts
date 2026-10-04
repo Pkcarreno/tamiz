@@ -93,9 +93,8 @@ export function isInputElement(element: Element | null): boolean {
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
     return true;
   }
-  // isContentEditable resolves inheritance (parent → child) in real browsers.
-  // jsdom does not implement it, so fall back to the contentEditable IDL
-  // attribute when the computed value is unavailable.
+  // isContentEditable resolves inheritance (parent → child) in standard DOM environments.
+  // Fall back to the contentEditable IDL attribute when the computed property is unavailable.
   if (element instanceof HTMLElement) {
     if (element.isContentEditable === true) {
       return true;

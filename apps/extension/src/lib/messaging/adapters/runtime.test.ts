@@ -102,6 +102,9 @@ describe("RuntimeChannel", () => {
     });
 
     it("calls sendResponse with __error on handler rejection", async () => {
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockReturnValue(undefined);
       const browser = createMockBrowser();
       const channel = new RuntimeChannel({ browser });
       channel.onMessage(() => {
@@ -113,6 +116,7 @@ describe("RuntimeChannel", () => {
       // Wait for the microtask to settle
       await new Promise((r) => setTimeout(r, 0));
       expect(sendResponse).toHaveBeenCalledWith({ __error: "boom" });
+      consoleErrorSpy.mockRestore();
     });
 
     it("does not register duplicate listeners on re-call", () => {

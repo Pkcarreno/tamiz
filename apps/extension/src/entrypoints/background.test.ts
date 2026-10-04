@@ -151,11 +151,15 @@ describe("copyToClipboard", () => {
   });
 
   it("does not throw when the clipboard API rejects", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockReturnValue(undefined);
     vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(
       new Error("Permission denied")
     );
 
     await expect(copyToClipboard("test")).resolves.not.toThrow();
+    consoleErrorSpy.mockRestore();
   });
 });
 

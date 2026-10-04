@@ -27,7 +27,7 @@ import {
 // Test helpers
 // ---------------------------------------------------------------------------
 
-/** Install a fake `elementFromPoint` on the document (jsdom lacks it). */
+/** Install a fake `elementFromPoint` on the document (simulates coordinate hit-testing in test environments). */
 function installElementFromPoint() {
   const map = new Map<string, Element | null>();
   const spy = vi.fn((x: number, y: number) => map.get(`${x},${y}`) ?? null);
@@ -248,8 +248,8 @@ describe("applyThemePreference", () => {
   it("falls back to system detection when preference is 'auto'", () => {
     const host = document.createElement("div");
     applyThemePreference("auto", host);
-    // In jsdom, matchMedia is not implemented, so the function should
-    // not throw and should not add the dark class by default.
+    // Without system dark mode configured in the test environment, matchMedia defaults
+    // to light theme, so the function should not add the dark class.
     expect(host.classList.contains("dark")).toBe(false);
   });
 
