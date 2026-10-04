@@ -8,11 +8,7 @@ dist/
 
 # AI related
 .opencode/
-.agents/
 sdd/
-
-# Impeccable
-.impeccable/config.local.json
 
 # OS
 .DS_Store
