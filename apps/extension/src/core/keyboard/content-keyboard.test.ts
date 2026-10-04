@@ -34,12 +34,10 @@ function makeDeps(
     },
     sendMessage: vi.fn(),
   });
-  const shadowHost = document.createElement("div");
 
   return {
     getActiveElement: () => null,
     session,
-    shadowHost,
     ...overrides,
   };
 }
@@ -268,7 +266,7 @@ describe("handleKeydown — f → FORMAT_CHANGE in SELECTED", () => {
 
     handleKeydown(event, deps);
 
-    // ctrl+shift+f no longer matches — falls through to shadowHost re-dispatch.
+    // ctrl+shift+f no longer matches — event is ignored.
     expect(dispatchSpy).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(false);
   });
@@ -396,64 +394,88 @@ describe("handleKeydown — R → RESTART in SELECTED", () => {
   });
 });
 
-describe("handleKeydown — unmatched keys re-dispatched via shadowHost", () => {
-  it("re-dispatches unmatched key on shadowHost with bubbles and composed", async () => {
+describe("handleKeydown — unmatched keys", () => {
+  it("leaves unmatched keys unconsumed so native event propagation continues", async () => {
     const deps = makeDeps();
     await selectElement(deps.session);
 
-    let reDispatched: KeyboardEvent | null = null;
-    const listener = vi.fn((dispatchedEvent: Event) => {
-      reDispatched = dispatchedEvent as KeyboardEvent;
-    });
-    deps.shadowHost?.addEventListener("keydown", listener);
+    const dispatchSpy = vi.spyOn(deps.session, "dispatch");
     const event = keyEvent({ key: "x" });
 
     handleKeydown(event, deps);
 
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect(reDispatched).toBeInstanceOf(KeyboardEvent);
-    expect(reDispatched?.bubbles).toBe(true);
-    expect(reDispatched?.composed).toBe(true);
-    expect(reDispatched?.key).toBe("x");
+    expect(dispatchSpy).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it("preserves modifier state on the re-dispatched event", async () => {
-    const deps = makeDeps();
-    await selectElement(deps.session);
+  it("does not cause infinite recursion when typing in an input with mounted shadowHost", () => {
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    input.focus();
 
-    let reDispatched: KeyboardEvent | null = null;
-    const listener = vi.fn((dispatchedEvent: Event) => {
-      reDispatched = dispatchedEvent as KeyboardEvent;
+    const host = document.createElement("tamiz-picker");
+    document.body.appendChild(host);
+
+    const deps = makeDeps({
+      getActiveElement: () => input,
     });
-    deps.shadowHost?.addEventListener("keydown", listener);
-    handleKeydown(
-      keyEvent({ altKey: true, ctrlKey: true, key: "z", shiftKey: true }),
-      deps
-    );
 
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect(reDispatched?.ctrlKey).toBe(true);
-    expect(reDispatched?.altKey).toBe(true);
-    expect(reDispatched?.shiftKey).toBe(true);
-    expect(reDispatched?.metaKey).toBe(false);
+    const keydownListener = (event: KeyboardEvent) => {
+      handleKeydown(event, deps);
+    };
+    document.addEventListener("keydown", keydownListener);
+
+    try {
+      const event = new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "a",
+      });
+
+      // Dispatching a keystroke on the input must not blow call stack
+      expect(() => {
+        input.dispatchEvent(event);
+      }).not.toThrow();
+      expect(event.defaultPrevented).toBe(false);
+    } finally {
+      document.removeEventListener("keydown", keydownListener);
+      input.remove();
+      host.remove();
+    }
   });
 
-  it("does not re-dispatch when shadowHost is null", async () => {
-    const deps = makeDeps({ shadowHost: null });
-    await selectElement(deps.session);
+  it("handles rapid consecutive typing in an input without lag or recursion", () => {
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    input.focus();
 
-    // Should not throw.
-    expect(() => handleKeydown(keyEvent({ key: "x" }), deps)).not.toThrow();
-  });
+    const host = document.createElement("tamiz-picker");
+    document.body.appendChild(host);
 
-  it("does not re-dispatch when a shortcut matches", async () => {
-    const deps = makeDeps();
-    await selectElement(deps.session);
+    const deps = makeDeps({
+      getActiveElement: () => input,
+    });
 
-    const dispatchSpy = vi.spyOn(deps.shadowHost as Element, "dispatchEvent");
-    handleKeydown(keyEvent({ key: "c" }), deps);
+    const keydownListener = (event: KeyboardEvent) => {
+      handleKeydown(event, deps);
+    };
+    document.addEventListener("keydown", keydownListener);
 
-    expect(dispatchSpy).not.toHaveBeenCalled();
+    try {
+      const text = "The quick brown fox jumps over the lazy dog";
+      for (const char of text) {
+        const event = new KeyboardEvent("keydown", {
+          bubbles: true,
+          cancelable: true,
+          key: char,
+        });
+        input.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+      }
+    } finally {
+      document.removeEventListener("keydown", keydownListener);
+      input.remove();
+      host.remove();
+    }
   });
 });

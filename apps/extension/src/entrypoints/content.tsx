@@ -293,7 +293,6 @@ export default defineContentScript({
       handleKeydown(e as KeyboardEvent, {
         getActiveElement: () => document.activeElement,
         session,
-        shadowHost: ui.shadowHost,
       });
     });
 
