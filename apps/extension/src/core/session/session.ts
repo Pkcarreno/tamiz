@@ -6,15 +6,10 @@ import {
 } from "../../lib/build-filename.ts";
 import { isClipboardAvailable } from "../../lib/feature-detection.ts";
 import {
-  createHighlightController,
-  type HighlightController,
-} from "../highlight.ts";
-import {
   createShortcutRegistry,
   type ShortcutRegistry,
 } from "../keyboard/registry.ts";
 import { isSelectable } from "../picker-filter.ts";
-import { createScrimController, type ScrimController } from "../scrim.ts";
 import type {
   OutputFormat,
   PickerAction,
@@ -52,16 +47,10 @@ export class PickerSession {
 
   /** Shortcut registry for resolving keyboard shortcuts and tooltip labels. */
   readonly registry: ShortcutRegistry;
-  /** Controller managing element highlights and hover states. */
-  readonly highlight: HighlightController;
-  /** Controller managing background scrim overlay. */
-  readonly scrim: ScrimController;
 
   constructor(deps: PickerSessionDeps) {
     this.deps = deps;
     this.registry = deps.registry ?? createShortcutRegistry();
-    this.highlight = deps.highlight ?? createHighlightController();
-    this.scrim = deps.scrim ?? createScrimController();
   }
 
   /**
@@ -99,9 +88,6 @@ export class PickerSession {
     switch (action.type) {
       case "INVOKE":
         this.handleInvoke(action.format);
-        break;
-      case "HOVER":
-        this.handleHover(action.target);
         break;
       case "SELECT":
         this.handleSelect(action.target);
@@ -142,18 +128,6 @@ export class PickerSession {
     }
   }
 
-  private clearExcludedClasses(): void {
-    const doc =
-      this.deps.documentRef ??
-      (typeof document === "undefined" ? null : document);
-    if (!doc) {
-      return;
-    }
-    for (const el of doc.querySelectorAll(".tamiz-excluded")) {
-      el.classList.remove("tamiz-excluded");
-    }
-  }
-
   private handleInvoke(format?: OutputFormat): void {
     if (format !== undefined) {
       this.format = format;
@@ -163,17 +137,7 @@ export class PickerSession {
     this.isExclusionMode = false;
     this.excludedElements.clear();
 
-    this.highlight.clearAll();
-    this.clearExcludedClasses();
-    this.scrim.show();
     this.emitSnapshot();
-  }
-
-  private handleHover(target: Element | null): void {
-    if (this.state !== "HIGHLIGHTING") {
-      return;
-    }
-    this.highlight.setHoverTarget(target);
   }
 
   private handleSelect(target: Element): void {
@@ -182,7 +146,6 @@ export class PickerSession {
     }
     this.state = "SELECTED";
     this.selectedElement = target;
-    this.highlight.selectElement(target);
     this.emitSnapshot();
   }
 
@@ -223,10 +186,8 @@ export class PickerSession {
 
     if (this.excludedElements.has(target)) {
       this.excludedElements.delete(target);
-      target.classList.remove("tamiz-excluded");
     } else {
       this.excludedElements.add(target);
-      target.classList.add("tamiz-excluded");
     }
 
     this.isExclusionMode = false;
@@ -247,9 +208,6 @@ export class PickerSession {
     this.isExclusionMode = false;
     this.excludedElements.clear();
 
-    this.highlight.clearAll();
-    this.clearExcludedClasses();
-    this.scrim.show();
     this.emitSnapshot();
   }
 
@@ -259,9 +217,6 @@ export class PickerSession {
     this.isExclusionMode = false;
     this.excludedElements.clear();
 
-    this.highlight.clearAll();
-    this.clearExcludedClasses();
-    this.scrim.hide();
     this.emitSnapshot();
   }
 
