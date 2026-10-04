@@ -7,6 +7,7 @@ import {
   createPickerSession,
   type PickerSession,
 } from "../core/session/session.ts";
+import type { PickerSessionSnapshot } from "../core/session/types.ts";
 import { extractContent } from "../lib/extract-content.ts";
 import { isClipboardAvailable } from "../lib/feature-detection.ts";
 import { PostMessageChannel } from "../lib/messaging/adapters/postmessage.ts";
@@ -135,6 +136,118 @@ export function applyThemePreference(
   host.classList.toggle("dark", preference === "dark");
 }
 
+/**
+ * Callbacks and target document for {@link createDocumentListenerController}.
+ *
+ * @public
+ */
+export interface DocumentListenerDeps {
+  /** Target document to attach listeners to (defaults to global document). */
+  doc?: Document;
+  /** Dispatched when a click occurs during selection or exclusion mode. */
+  onClick: (event: MouseEvent) => void;
+  /** Dispatched when keydown occurs while the picker is active. */
+  onKeydown: (event: KeyboardEvent) => void;
+  /** Dispatched when mousemove occurs during highlighting or exclusion mode. */
+  onMousemove: (event: MouseEvent) => void;
+}
+
+/**
+ * Controller that dynamically attaches and detaches document listeners
+ * based on session state transitions.
+ *
+ * @public
+ */
+export interface DocumentListenerController {
+  /** Remove all currently attached listeners and clean up. */
+  dispose: () => void;
+  /** Synchronize attached document listeners against current session snapshot. */
+  update: (snapshot: PickerSessionSnapshot) => void;
+}
+
+/**
+ * Create a controller that attaches document listeners only when active.
+ *
+ * Keeps the document free from event listeners when the picker is in the IDLE state.
+ *
+ * @param deps - Callbacks and target document.
+ * @returns The controller instance.
+ *
+ * @public
+ */
+export function createDocumentListenerController(
+  deps: DocumentListenerDeps
+): DocumentListenerController {
+  const targetDoc = deps.doc ?? document;
+  let keydownAttached = false;
+  let mousemoveAttached = false;
+  let clickAttached = false;
+
+  function detachAll() {
+    if (keydownAttached) {
+      targetDoc.removeEventListener("keydown", deps.onKeydown as EventListener);
+      keydownAttached = false;
+    }
+    if (mousemoveAttached) {
+      targetDoc.removeEventListener(
+        "mousemove",
+        deps.onMousemove as EventListener
+      );
+      mousemoveAttached = false;
+    }
+    if (clickAttached) {
+      targetDoc.removeEventListener("click", deps.onClick as EventListener);
+      clickAttached = false;
+    }
+  }
+
+  return {
+    dispose() {
+      detachAll();
+    },
+    update(snapshot: PickerSessionSnapshot) {
+      const needsKeydown = snapshot.state !== "IDLE";
+      const needsMousemove =
+        snapshot.state === "HIGHLIGHTING" || snapshot.isExclusionMode;
+      const needsClick =
+        snapshot.isExclusionMode || snapshot.state === "HIGHLIGHTING";
+
+      if (needsKeydown && !keydownAttached) {
+        targetDoc.addEventListener("keydown", deps.onKeydown as EventListener);
+        keydownAttached = true;
+      } else if (!needsKeydown && keydownAttached) {
+        targetDoc.removeEventListener(
+          "keydown",
+          deps.onKeydown as EventListener
+        );
+        keydownAttached = false;
+      }
+
+      if (needsMousemove && !mousemoveAttached) {
+        targetDoc.addEventListener(
+          "mousemove",
+          deps.onMousemove as EventListener
+        );
+        mousemoveAttached = true;
+      } else if (!needsMousemove && mousemoveAttached) {
+        targetDoc.removeEventListener(
+          "mousemove",
+          deps.onMousemove as EventListener
+        );
+        mousemoveAttached = false;
+      }
+
+      if (needsClick && !clickAttached) {
+        targetDoc.addEventListener("click", deps.onClick as EventListener);
+        clickAttached = true;
+      } else if (!needsClick && clickAttached) {
+        targetDoc.removeEventListener("click", deps.onClick as EventListener);
+        clickAttached = false;
+      }
+    },
+  };
+}
+
 export default defineContentScript({
   cssInjectionMode: "ui",
 
@@ -192,13 +305,57 @@ export default defineContentScript({
       },
     });
 
-    // 6. Connect reactive UI signals and adornment from atomic session snapshots.
+    // 6. Connect reactive UI signals, adornment, and dynamic document listeners.
+    const handleClick = (e: MouseEvent) => {
+      const snap = session.getSnapshot();
+      if (snap.isExclusionMode) {
+        e.preventDefault();
+        e.stopPropagation();
+        const target = document.elementFromPoint(e.clientX, e.clientY);
+        if (target) {
+          session.dispatch({ target, type: "TOGGLE_EXCLUSION_ELEMENT" });
+        }
+        return;
+      }
+
+      if (!blockingAvailable && snap.state === "HIGHLIGHTING") {
+        const target = document.elementFromPoint(e.clientX, e.clientY);
+        if (
+          target &&
+          target !== document.documentElement &&
+          isSelectable(target)
+        ) {
+          session.dispatch({ target, type: "SELECT" });
+        }
+      }
+    };
+
+    const handleKeydownEvent = (e: KeyboardEvent) => {
+      handleKeydown(e, {
+        getActiveElement: () => document.activeElement,
+        session,
+      });
+    };
+
+    const handleMousemoveEvent = (e: MouseEvent) => {
+      adornment.setHoverTarget(e.target as Element);
+    };
+
+    const listenerController = createDocumentListenerController({
+      doc: document,
+      onClick: handleClick,
+      onKeydown: handleKeydownEvent,
+      onMousemove: handleMousemoveEvent,
+    });
+
     const [snapshot, setSnapshot] = createSignal(session.getSnapshot());
     session.subscribe((snap) => {
       setSnapshot(snap);
       adornment.update(snap);
+      listenerController.update(snap);
     });
     adornment.update(session.getSnapshot());
+    listenerController.update(session.getSnapshot());
 
     const isExclusionMode = () => snapshot().isExclusionMode;
     const pillVisible = createMemo(
@@ -260,8 +417,9 @@ export default defineContentScript({
     // Mark shadow host so the main-world blocker excludes UI clicks.
     ui.shadowHost?.setAttribute(TAMIZ_UI_MARKER, "");
 
-    // Disable blocking and clean up adornment when the content script unloads.
+    // Disable blocking and clean up adornment and listeners when the content script unloads.
     ctx.onInvalidated(() => {
+      listenerController.dispose();
       adornment.dispose();
       if (blockingAvailable) {
         // Send shutdown to clear the install guard — allows fresh re-injection
@@ -287,45 +445,6 @@ export default defineContentScript({
     } else {
       applyThemePreference(preference, host);
     }
-
-    // 9. Event listeners — thin delegation to session and adornment.
-    ctx.addEventListener(document, "keydown", (e) => {
-      handleKeydown(e as KeyboardEvent, {
-        getActiveElement: () => document.activeElement,
-        session,
-      });
-    });
-
-    ctx.addEventListener(document, "mousemove", (e) => {
-      adornment.setHoverTarget((e as MouseEvent).target as Element);
-    });
-
-    // Exclusion-mode click and fallback selection click.
-    ctx.addEventListener(document, "click", (e) => {
-      const snap = session.getSnapshot();
-      if (snap.isExclusionMode) {
-        e.preventDefault();
-        e.stopPropagation();
-        const mouse = e as MouseEvent;
-        const target = document.elementFromPoint(mouse.clientX, mouse.clientY);
-        if (target) {
-          session.dispatch({ target, type: "TOGGLE_EXCLUSION_ELEMENT" });
-        }
-        return;
-      }
-
-      if (!blockingAvailable && snap.state === "HIGHLIGHTING") {
-        const mouse = e as MouseEvent;
-        const target = document.elementFromPoint(mouse.clientX, mouse.clientY);
-        if (
-          target &&
-          target !== document.documentElement &&
-          isSelectable(target)
-        ) {
-          session.dispatch({ target, type: "SELECT" });
-        }
-      }
-    });
 
     // Relay blocked clicks from the main-world blocker.
     if (blockingAvailable) {

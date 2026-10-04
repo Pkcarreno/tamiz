@@ -20,6 +20,9 @@ export interface KeydownHandlerDeps {
 /**
  * Intercept a `keydown` event and resolve it against the session shortcut registry.
  *
+ * When the picker is in the IDLE state, the handler bails out immediately so
+ * native host-page keyboard events remain untouched.
+ *
  * Resolution follows the registry priority table:
  *
  * 1. Escape -> DISMISS (fires even during input focus).
@@ -31,10 +34,8 @@ export interface KeydownHandlerDeps {
  * When a shortcut matches, the handler consumes the event (`preventDefault`,
  * `stopPropagation`) and dispatches the resolved action to the session.
  *
- * When no shortcut matches, the handler ignores the event. The content script
- * registers this listener on `document`, so unhandled native events continue
- * their natural propagation path to the host page and target elements. We never
- * re-dispatch events here to prevent recursive event dispatch loops.
+ * When no shortcut matches, the handler ignores the event. Unhandled events
+ * continue their natural propagation path to the host page and target elements.
  *
  * @param event - The raw `keydown` event from the content script listener.
  * @param deps - Runtime dependencies (session, optional active element getter).
@@ -46,6 +47,10 @@ export function handleKeydown(
   deps: KeydownHandlerDeps
 ): void {
   const snapshot = deps.session.getSnapshot();
+  if (snapshot.state === "IDLE") {
+    return;
+  }
+
   const getActiveEl = deps.getActiveElement ?? (() => document.activeElement);
 
   const context: ShortcutContext = {

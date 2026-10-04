@@ -83,14 +83,16 @@ describe("handleKeydown — Escape", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("dispatches DISMISS through the session in IDLE state", () => {
+  it("ignores Escape in IDLE state to leave host page hotkeys untouched", () => {
     const deps = makeDeps();
     expect(deps.session.getSnapshot().state).toBe("IDLE");
 
     const dispatchSpy = vi.spyOn(deps.session, "dispatch");
-    handleKeydown(keyEvent({ key: "Escape" }), deps);
+    const event = keyEvent({ key: "Escape" });
+    handleKeydown(event, deps);
 
-    expect(dispatchSpy).toHaveBeenCalledWith({ type: "DISMISS" });
+    expect(dispatchSpy).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("dispatches DISMISS through the session even when an input is focused", async () => {
