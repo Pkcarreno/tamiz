@@ -6,9 +6,11 @@ import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import Settings from "lucide-solid/icons/settings";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createSignal, type JSX, splitProps } from "solid-js";
-
-import type { PickerAction } from "../core/actions/types.ts";
 import type { ShortcutRegistry } from "../core/keyboard/registry.ts";
+import type {
+  PickerAction,
+  PickerSessionSnapshot,
+} from "../core/session/types.ts";
 import { useFloatingPosition } from "../lib/floating-position.ts";
 import { Button } from "./ui/button.tsx";
 import { Kbd } from "./ui/kbd.tsx";
@@ -86,16 +88,12 @@ export function BarTooltip(props: BarTooltipProps) {
  * @public
  */
 export interface FloatingActionBarProps {
-  /** The selected DOM element the bar is anchored to. */
-  element: Accessor<Element | null>;
-  /** Currently selected output format. */
-  format: Accessor<"markdown" | "html">;
-  /** Whether exclusion mode is active. */
-  isExclusionMode: Accessor<boolean>;
   /** Dispatched when the user clicks Copy, Download, Cancel, or changes format. */
   onAction: (action: PickerAction) => void;
   /** Shortcut registry for dynamic label lookup. */
   registry?: ShortcutRegistry;
+  /** Reactive session snapshot accessor. */
+  snapshot: Accessor<PickerSessionSnapshot>;
 }
 
 /**
@@ -111,11 +109,14 @@ export interface FloatingActionBarProps {
 export function FloatingActionBar(props: FloatingActionBarProps) {
   const [barRef, setBarRef] = createSignal<HTMLDivElement | null>(null);
 
-  const { left, top } = useFloatingPosition(props.element, {
-    floatingRef: barRef,
-    placement: "right-start",
-    strategy: "fixed",
-  });
+  const { left, top } = useFloatingPosition(
+    () => props.snapshot().selectedElement,
+    {
+      floatingRef: barRef,
+      placement: "right-start",
+      strategy: "fixed",
+    }
+  );
 
   /** Resolve a shortcut label from the registry, falling back to a static key. */
   function shortcutLabel(
@@ -177,7 +178,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
               // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
               onChange={handleFormatChange}
               options={FORMAT_OPTIONS}
-              value={props.format()}
+              value={props.snapshot().format}
               variant="subtle"
             />
           </BarTooltip>
@@ -213,7 +214,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         >
           <Button
             aria-label="Copy"
-            disabled={props.isExclusionMode()}
+            disabled={props.snapshot().isExclusionMode}
             // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleCopy}
             size="xs"
@@ -229,7 +230,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         >
           <Button
             aria-label="Download"
-            disabled={props.isExclusionMode()}
+            disabled={props.snapshot().isExclusionMode}
             // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleDownload}
             size="xs"
@@ -245,7 +246,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         >
           <Button
             aria-label="Toggle exclusion mode"
-            class={props.isExclusionMode() ? "text-accent" : ""}
+            class={props.snapshot().isExclusionMode ? "text-accent" : ""}
             // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleExcludeToggle}
             size="xs"
@@ -261,7 +262,7 @@ export function FloatingActionBar(props: FloatingActionBarProps) {
         >
           <Button
             aria-label="Restart selection"
-            disabled={props.isExclusionMode()}
+            disabled={props.snapshot().isExclusionMode}
             // biome-ignore lint/performance/noJsxPropsBind: SolidJS component body runs once; handler is stable
             onClick={handleRestart}
             size="xs"

@@ -1,8 +1,11 @@
 import type { Accessor, JSX } from "solid-js";
 import { FloatingActionBar } from "../components/floating-bar.tsx";
 import { ToastProvider, useToast } from "../components/ui/toast.tsx";
-import type { PickerAction } from "../core/actions/types.ts";
 import type { ShortcutRegistry } from "../core/keyboard/registry.ts";
+import type {
+  PickerAction,
+  PickerSessionSnapshot,
+} from "../core/session/types.ts";
 
 /**
  * Props for the ContentApp component.
@@ -10,20 +13,14 @@ import type { ShortcutRegistry } from "../core/keyboard/registry.ts";
  * @public
  */
 export interface ContentAppProps {
-  /** The currently selected DOM element. */
-  element: Accessor<Element | null>;
-  /** Current output format. */
-  format: Accessor<"markdown" | "html">;
-  /** Whether exclusion mode is active. */
-  isExclusionMode: Accessor<boolean>;
   /** Dispatched when the user clicks a bar button or changes format. */
   onAction: (action: PickerAction) => void;
   /** Called when the toast API is ready. */
   onToastReady: (showToast: (msg: string) => void) => void;
   /** Shortcut registry for dynamic label lookup. */
   registry?: ShortcutRegistry;
-  /** Whether the floating bar is visible. */
-  visible: Accessor<boolean>;
+  /** Reactive session snapshot accessor. */
+  snapshot: Accessor<PickerSessionSnapshot>;
 }
 
 /**
@@ -41,11 +38,15 @@ export function ToastMount(props: {
 
 /**
  * Main content app component that renders the floating action bar
- * inside a Shadow DOM.
+ * inside a Shadow DOM based on session snapshot state.
  *
  * @public
  */
 export function ContentApp(props: ContentAppProps): JSX.Element {
+  const isBarVisible = () =>
+    props.snapshot().state === "SELECTED" &&
+    props.snapshot().selectedElement !== null;
+
   return (
     <ToastProvider>
       <ToastMount
@@ -54,13 +55,11 @@ export function ContentApp(props: ContentAppProps): JSX.Element {
           props.onToastReady(api.showToast);
         }}
       />
-      {props.visible() && props.element() && (
+      {isBarVisible() && (
         <FloatingActionBar
-          element={props.element}
-          format={props.format}
-          isExclusionMode={props.isExclusionMode}
           onAction={props.onAction}
           registry={props.registry}
+          snapshot={props.snapshot}
         />
       )}
     </ToastProvider>

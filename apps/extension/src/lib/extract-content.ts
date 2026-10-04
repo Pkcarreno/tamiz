@@ -19,7 +19,7 @@ import { computeIndexPath, resolveIndexPath } from "./index-path.ts";
  */
 export function extractContent(
   element: Element,
-  excludedElements?: Set<Element>
+  excludedElements?: ReadonlySet<Element> | Set<Element>
 ): Element {
   const clone = element.cloneNode(true) as Element;
 

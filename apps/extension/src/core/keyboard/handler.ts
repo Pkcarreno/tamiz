@@ -1,7 +1,5 @@
-import type { ActionDispatcher } from "../actions/dispatcher.ts";
-import type { PickerStateMachine } from "../machine/picker.ts";
-import type { ShortcutRegistry } from "./registry.ts";
-import type { Format, ShortcutContext } from "./types.ts";
+import type { PickerSession } from "../session/session.ts";
+import type { ShortcutContext } from "./types.ts";
 import { isInputElement } from "./types.ts";
 
 /**
@@ -13,24 +11,16 @@ import { isInputElement } from "./types.ts";
  * @public
  */
 export interface KeydownHandlerDeps {
-  /** The centralized dispatcher to route resolved actions through. */
-  dispatcher: ActionDispatcher;
   /** Read the currently focused element (production: `() => document.activeElement`). */
-  getActiveElement: () => Element | null;
-  /** Read the current bar format (the SolidJS signal getter). */
-  getCurrentFormat: () => Format;
-  /** Whether exclusion mode is currently active. */
-  isExclusionMode: () => boolean;
-  /** The picker state machine for reading state context. */
-  machine: PickerStateMachine;
-  /** The shortcut registry for resolving key combos to actions. */
-  registry: ShortcutRegistry;
+  getActiveElement?: () => Element | null;
+  /** The picker session instance managing state transitions and shortcuts. */
+  session: PickerSession;
   /** The shadow host element for re-dispatching unmatched key events. */
   shadowHost: Element | null;
 }
 
 /**
- * Intercept a `keydown` event and resolve it against the shortcut registry.
+ * Intercept a `keydown` event and resolve it against the session's shortcut registry.
  *
  * Resolution follows the registry's priority table:
  *
@@ -41,18 +31,14 @@ export interface KeydownHandlerDeps {
  *    f → FORMAT_CHANGE (cycles markdown↔html).
  *
  * When a shortcut matches, the event is consumed (`preventDefault`,
- * `stopPropagation`) and the resolved {@link PickerAction} is dispatched
- * through the centralized {@link ActionDispatcher}. The handler does NOT
- * dispatch DISMISS after COPY/DOWNLOAD — that responsibility lives in the
- * action handler registered by {@link composeActions}, so both the UI button
- * and keyboard shortcut paths produce identical behavior.
+ * `stopPropagation`) and the resolved action is dispatched to the session.
  *
  * When no shortcut matches, the event is re-dispatched on the shadow host with
  * `bubbles: true` and `composed: true` so it can reach page-level listeners
  * that the content script's `isolateEvents: ["keydown"]` would otherwise hide.
  *
  * @param event - The raw `keydown` event from the content script listener.
- * @param deps  - Runtime dependencies (dispatcher, machine, registry, shadow host).
+ * @param deps  - Runtime dependencies (session, shadow host, optional active element getter).
  *
  * @public
  */
@@ -60,29 +46,30 @@ export function handleKeydown(
   event: KeyboardEvent,
   deps: KeydownHandlerDeps
 ): void {
+  const snapshot = deps.session.getSnapshot();
+  const getActiveEl = deps.getActiveElement ?? (() => document.activeElement);
+
   const context: ShortcutContext = {
-    format: deps.getCurrentFormat(),
-    inputFocused: isInputElement(deps.getActiveElement()),
-    isExclusionMode: deps.isExclusionMode(),
-    state: deps.machine.getState(),
+    format: snapshot.format,
+    inputFocused: isInputElement(getActiveEl()),
+    isExclusionMode: snapshot.isExclusionMode,
+    state: snapshot.state,
   };
 
   // Escape in exclusion mode exits the sub-mode instead of dismissing.
   if (event.key === "Escape" && context.isExclusionMode) {
     event.preventDefault();
     event.stopPropagation();
-    deps.dispatcher.dispatch({ type: "EXCLUDE_TOGGLE" });
+    deps.session.dispatch({ type: "EXCLUDE_TOGGLE" });
     return;
   }
 
-  const command = deps.registry.matchShortcut(event, context);
+  const command = deps.session.registry.matchShortcut(event, context);
 
   if (command) {
     event.preventDefault();
     event.stopPropagation();
-    // Route through the centralized dispatcher so the same action handler
-    // runs for keyboard shortcuts as for UI button clicks.
-    deps.dispatcher.dispatch(command);
+    deps.session.dispatch(command);
     return;
   }
 

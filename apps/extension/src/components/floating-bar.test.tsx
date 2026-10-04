@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
-import { type Accessor, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@floating-ui/dom", () => ({
@@ -13,6 +13,7 @@ vi.mock("@floating-ui/dom", () => ({
 import { autoUpdate, computePosition } from "@floating-ui/dom";
 
 import { createShortcutRegistry } from "../core/keyboard/registry.ts";
+import type { PickerSessionSnapshot } from "../core/session/types.ts";
 import { FloatingActionBar } from "./floating-bar.tsx";
 
 const computePositionMock = vi.mocked(computePosition);
@@ -36,20 +37,20 @@ function makeElement(rect: {
 /** Shared props with sensible defaults for every test. */
 function makeProps(overrides: Record<string, unknown> = {}) {
   const el = makeElement({ height: 50, left: 100, top: 200, width: 200 });
-  const [format] = createSignal<"markdown" | "html">("markdown");
-  const [isExclusionMode] = createSignal(false);
+  const [snapshot] = createSignal<PickerSessionSnapshot>({
+    excludedElements: new Set(),
+    format: "markdown",
+    isExclusionMode: false,
+    selectedElement: el,
+    state: "SELECTED",
+  });
   return {
-    element: (() => el) as Accessor<Element | null>,
-    format,
-    isExclusionMode,
     onAction: vi.fn(),
     registry: createShortcutRegistry(),
+    snapshot,
     ...overrides,
   };
 }
-
-/** Stable accessor for isExclusionMode in inline JSX usage. */
-const falseAccessor = () => false;
 
 describe("FloatingActionBar", () => {
   beforeEach(() => {
@@ -84,9 +85,16 @@ describe("FloatingActionBar", () => {
     });
 
     it("reflects the active format via select value", () => {
-      const [format] = createSignal<"markdown" | "html">("html");
+      const el = makeElement({ height: 50, left: 100, top: 200, width: 200 });
+      const [snapshot] = createSignal<PickerSessionSnapshot>({
+        excludedElements: new Set(),
+        format: "html",
+        isExclusionMode: false,
+        selectedElement: el,
+        state: "SELECTED",
+      });
       const { container } = render(() => (
-        <FloatingActionBar {...makeProps({ format })} />
+        <FloatingActionBar {...makeProps({ snapshot })} />
       ));
 
       const select = container.querySelector(
@@ -170,8 +178,15 @@ describe("FloatingActionBar", () => {
     });
 
     it("dispatches FORMAT_CHANGE with 'markdown' when Markdown is selected (from html)", () => {
-      const [format] = createSignal<"markdown" | "html">("html");
-      const props = makeProps({ format });
+      const el = makeElement({ height: 50, left: 100, top: 200, width: 200 });
+      const [snapshot] = createSignal<PickerSessionSnapshot>({
+        excludedElements: new Set(),
+        format: "html",
+        isExclusionMode: false,
+        selectedElement: el,
+        state: "SELECTED",
+      });
+      const props = makeProps({ snapshot });
       const { container } = render(() => <FloatingActionBar {...props} />);
 
       const select = container.querySelector(
@@ -193,16 +208,16 @@ describe("FloatingActionBar", () => {
         top: 200,
         width: 200,
       });
-      const [elementAccessor] = createSignal<Element | null>(element);
-      const [format] = createSignal<"markdown" | "html">("markdown");
+      const [snapshot] = createSignal<PickerSessionSnapshot>({
+        excludedElements: new Set(),
+        format: "markdown",
+        isExclusionMode: false,
+        selectedElement: element,
+        state: "SELECTED",
+      });
 
       render(() => (
-        <FloatingActionBar
-          element={elementAccessor}
-          format={format}
-          isExclusionMode={falseAccessor}
-          onAction={vi.fn()}
-        />
+        <FloatingActionBar onAction={vi.fn()} snapshot={snapshot} />
       ));
 
       const bar = screen
@@ -228,16 +243,16 @@ describe("FloatingActionBar", () => {
         top: 200,
         width: 200,
       });
-      const [elementAccessor] = createSignal<Element | null>(element);
-      const [format] = createSignal<"markdown" | "html">("markdown");
+      const [snapshot] = createSignal<PickerSessionSnapshot>({
+        excludedElements: new Set(),
+        format: "markdown",
+        isExclusionMode: false,
+        selectedElement: element,
+        state: "SELECTED",
+      });
 
       render(() => (
-        <FloatingActionBar
-          element={elementAccessor}
-          format={format}
-          isExclusionMode={falseAccessor}
-          onAction={vi.fn()}
-        />
+        <FloatingActionBar onAction={vi.fn()} snapshot={snapshot} />
       ));
 
       await vi.waitFor(() => {
@@ -263,16 +278,16 @@ describe("FloatingActionBar", () => {
         top: 500,
         width: 200,
       });
-      const [element, setElement] = createSignal<Element | null>(elementA);
-      const [format] = createSignal<"markdown" | "html">("markdown");
+      const [snapshot, setSnapshot] = createSignal<PickerSessionSnapshot>({
+        excludedElements: new Set(),
+        format: "markdown",
+        isExclusionMode: false,
+        selectedElement: elementA,
+        state: "SELECTED",
+      });
 
       render(() => (
-        <FloatingActionBar
-          element={element}
-          format={format}
-          isExclusionMode={falseAccessor}
-          onAction={vi.fn()}
-        />
+        <FloatingActionBar onAction={vi.fn()} snapshot={snapshot} />
       ));
 
       await vi.waitFor(() => {
@@ -286,7 +301,7 @@ describe("FloatingActionBar", () => {
         );
       });
 
-      setElement(elementB);
+      setSnapshot((prev) => ({ ...prev, selectedElement: elementB }));
 
       await vi.waitFor(() => {
         expect(computePositionMock).toHaveBeenCalledWith(

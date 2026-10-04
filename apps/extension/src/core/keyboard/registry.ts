@@ -1,4 +1,4 @@
-import type { PickerAction, PickerActionType } from "../actions/types.ts";
+import type { PickerAction, PickerActionType } from "../session/types.ts";
 import type { ShortcutContext } from "./types.ts";
 
 /**

@@ -1,11 +1,12 @@
 import { browser } from "wxt/browser";
 import { injectScript } from "wxt/utils/inject-script";
-import { composeActions } from "../core/actions/composer.ts";
-import { createPickerCore } from "../core/index.ts";
 import { handleKeydown } from "../core/keyboard/handler.ts";
-import type { PickerStateMachine } from "../core/machine/picker.ts";
 import { isSelectable } from "../core/picker-filter.ts";
 import type { ScrimController } from "../core/scrim.ts";
+import {
+  createPickerSession,
+  type PickerSession,
+} from "../core/session/session.ts";
 import { extractContent } from "../lib/extract-content.ts";
 import { isClipboardAvailable } from "../lib/feature-detection.ts";
 import { PostMessageChannel } from "../lib/messaging/adapters/postmessage.ts";
@@ -44,19 +45,19 @@ export function clearExcludedClasses(): void {
  * Process a relayed click from the main-world blocker.
  *
  * Resolves the target element via `elementFromPoint` using the coordinates
- * carried by the `tamiz:blocking-click` message, then dispatches a `CLICK`
- * event to the picker state machine.
+ * carried by the `tamiz:blocking-click` message, then dispatches a `SELECT`
+ * action to the picker session.
  *
  * @param event   - The `tamiz:blocking-click` message with `{ clientX, clientY }`.
- * @param machine - The picker state machine instance.
+ * @param session - The picker session instance.
  *
  * @public
  */
 export function handleRelayedClick(
   event: BlockingClickMessage,
-  machine: PickerStateMachine
+  session: PickerSession
 ): void {
-  if (machine.getState() !== "HIGHLIGHTING") {
+  if (session.getSnapshot().state !== "HIGHLIGHTING") {
     return;
   }
 
@@ -72,11 +73,11 @@ export function handleRelayedClick(
     return;
   }
 
-  machine.dispatch({ target, type: "CLICK" });
+  session.dispatch({ target, type: "SELECT" });
 }
 
 /**
- * Synchronize main-world blocking state with the picker state machine.
+ * Synchronize main-world blocking state with the picker session state.
  *
  * Dispatches `tamiz:blocking-enable` on HIGHLIGHTING, `tamiz:blocking-disable`
  * on IDLE, and nothing on SELECTED (blocking stays as-is).
@@ -100,7 +101,7 @@ export function syncBlockingState(
 
 /**
  * Synchronize visual feedback (scrim overlay and instruction pill) with
- * the picker state machine.
+ * the picker session state.
  *
  * HIGHLIGHTING shows both scrim and pill. SELECTED hides the pill but
  * keeps the scrim to maintain visual focus on the selected element.
@@ -129,143 +130,149 @@ export function syncVisualFeedback(
 }
 
 /**
- * Inject highlight and hover CSS into the main document.
+ * Inject the highlight CSS rules into the host document <head>.
  *
- * Shadow DOM styles don't reach the host document, so we need to inject
- * the highlight classes directly into the page's `<head>`.
- *
- * @public
+ * Uses an inline `<style>` element rather than a `<link>` so that styles
+ * apply synchronously without an extra network round-trip.
  */
 export function injectHighlightStyles(): void {
-  if (document.getElementById("tamiz-highlight-styles")) {
+  const STYLE_ID = "tamiz-highlight-styles";
+  if (document.getElementById(STYLE_ID)) {
     return;
   }
+
   const style = document.createElement("style");
-  style.id = "tamiz-highlight-styles";
+  style.id = STYLE_ID;
   style.textContent = `
     .tamiz-highlight {
+      outline: 2px solid #2563eb !important;
+      outline-offset: 2px !important;
+      cursor: crosshair !important;
       z-index: 2147483647 !important;
-      outline: 2px solid var(--tz-accent, #2563eb) !important;
-      outline-offset: 2px;
-      background-color: rgba(37, 99, 235, 0.12) !important;
     }
     .tamiz-hover {
+      outline: 2px dashed #3b82f6 !important;
+      outline-offset: 2px !important;
       z-index: 2147483647 !important;
-      outline: 2px dashed var(--tz-accent-bright, #3b82f6) !important;
-      outline-offset: 2px;
-      background-color: rgba(59, 130, 246, 0.08) !important;
     }
     .tamiz-excluded {
-      outline: 2px solid var(--tz-state-error, #dc2626) !important;
-      outline-offset: 2px;
-      opacity: 0.4 !important;
-      transition:
-        opacity var(--tz-duration-fast, 120ms) var(--tz-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-        outline-color var(--tz-duration-fast, 120ms) var(--tz-ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+      opacity: 0.3 !important;
+      filter: grayscale(100%) !important;
+      outline: 2px dashed #ef4444 !important;
+      outline-offset: 1px !important;
     }
     .tamiz-exclusion-hover {
-      outline: 2px dashed var(--tz-state-error, #dc2626) !important;
-      outline-offset: 2px;
-      opacity: 0.6 !important;
-    }
-    .tamiz-exclusion-cursor,
-    .tamiz-exclusion-cursor *,
-    .tamiz-exclusion-cursor *::before,
-    .tamiz-exclusion-cursor *::after {
-      cursor: crosshair !important;
+      outline: 2px dashed #f97316 !important;
+      outline-offset: 2px !important;
     }
   `;
   document.head.appendChild(style);
 }
 
 /**
- * Synchronize the crosshair cursor class on `document.documentElement`
- * with the current exclusion mode state.
+ * Apply the exclusion cursor (`crosshair`) to the root element.
  *
- * When exclusion mode is active, all elements on the page receive a
- * `crosshair` cursor via the `.tamiz-exclusion-cursor` CSS class.
- * The class is removed when exclusion mode deactivates.
+ * When exclusion mode is active, the cursor changes to a crosshair so the
+ * user understands that clicking elements will exclude them rather than
+ * navigating.
  *
- * @param isExclusion - Whether exclusion mode is currently active.
+ * @param active - Whether exclusion mode is currently active.
  *
  * @public
  */
-export function syncExclusionCursor(isExclusion: boolean): void {
-  if (isExclusion) {
-    document.documentElement.classList.add("tamiz-exclusion-cursor");
+export function syncExclusionCursor(active: boolean): void {
+  const CURSOR_CLASS = "tamiz-exclusion-cursor";
+  const STYLE_ID = "tamiz-cursor-styles";
+
+  if (active) {
+    if (!document.getElementById(STYLE_ID)) {
+      const style = document.createElement("style");
+      style.id = STYLE_ID;
+      style.textContent = `
+        .${CURSOR_CLASS}, .${CURSOR_CLASS} * {
+          cursor: crosshair !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    document.documentElement.classList.add(CURSOR_CLASS);
   } else {
-    document.documentElement.classList.remove("tamiz-exclusion-cursor");
+    document.documentElement.classList.remove(CURSOR_CLASS);
   }
 }
 
 /**
- * Apply the user's theme preference to a shadow host element.
+ * Wait for the main-world blocker to signal ready via postMessage.
  *
- * - `"dark"` — adds the `dark` class to the host.
- * - `"light"` — removes the `dark` class from the host.
- * - `"auto"` — removes the class and relies on the system media query.
+ * Resolves true if `tamiz:blocking-ready` is received within `timeoutMs`.
+ * Resolves false on timeout (e.g. CSP blocked the injected script).
  *
- * @param preference - The stored theme preference.
- * @param host       - The shadow host element to apply the class to.
+ * @param channel   - The postMessage channel to listen on.
+ * @param timeoutMs - Max time to wait in milliseconds.
+ * @returns Whether the blocker signaled readiness.
+ */
+function waitForBlockerReady(
+  channel: PostMessageChannel,
+  timeoutMs = READY_TIMEOUT_MS
+): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    let resolved = false;
+
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(false);
+      }
+    }, timeoutMs);
+
+    channel.onMessage((msg) => {
+      if (msg.type === TAMIZ_BLOCKING_READY && !resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        resolve(true);
+      }
+      return Promise.resolve();
+    });
+  });
+}
+
+/**
+ * Apply user theme preference to the shadow host element.
  *
  * @public
  */
 export function applyThemePreference(
   preference: "auto" | "dark" | "light",
-  host: Element | null
+  host: HTMLElement | undefined
 ): void {
   if (!host) {
     return;
   }
-  if (preference === "dark") {
-    host.classList.add("dark");
-  } else if (preference === "light") {
-    host.classList.remove("dark");
-  } else {
-    // auto: remove class, let media query decide
-    host.classList.remove("dark");
-  }
+  host.classList.toggle("dark", preference === "dark");
 }
 
-/**
- * Content script entry point.
- *
- * Thin shell: transport setup, core creation, shadow root mount, event
- * delegation. All domain logic lives in `core/`.
- */
 export default defineContentScript({
   cssInjectionMode: "ui",
+
   async main(ctx) {
-    // 1. Configure channels.
+    // 1. Set up messaging channels.
     const runtimeChannel = new RuntimeChannel({ browser });
     const blockingChannel = new PostMessageChannel();
 
-    // 2. Inject main-world blocker (fail-open: log and continue if CSP blocks).
+    // 2. Inject main-world click blocker script and wait for readiness.
     let blockingAvailable = false;
     try {
-      await injectScript("/main-world.js");
-      // Wait for ready signal via postMessage; mark unavailable after timeout.
-      const readyPromise = new Promise<boolean>((resolve) => {
-        const handler = (e: MessageEvent) => {
-          if (e.data?.type === TAMIZ_BLOCKING_READY) {
-            window.removeEventListener("message", handler);
-            resolve(true);
-          }
-        };
-        window.addEventListener("message", handler);
-        setTimeout(() => {
-          window.removeEventListener("message", handler);
-          resolve(false);
-        }, READY_TIMEOUT_MS);
-      });
+      const readyPromise = waitForBlockerReady(blockingChannel);
+      await injectScript("/main-world.js", { keepInDom: true });
       blockingAvailable = await readyPromise;
     } catch {
-      console.warn(
-        "[tamiz] main-world script injection failed — operating without event blocking"
-      );
+      // CSP blocked script injection (or another error occurred).
+      // Fallback: blockingAvailable stays false; content-script click listener
+      // handles element selection.
+      blockingAvailable = false;
     }
 
-    // 3. Import SolidJS and UI.
+    // 3. Dynamically import heavy UI libraries in parallel.
     const [
       { createEffect, createMemo, createSignal },
       { render },
@@ -283,99 +290,12 @@ export default defineContentScript({
     // 4. Inject highlight CSS into host document.
     injectHighlightStyles();
 
-    // 5. Create UI signals.
-    const [selectedElement, setSelectedElement] = createSignal<Element | null>(
-      null
-    );
-    const [barFormat, setBarFormat] = createSignal<"markdown" | "html">(
-      "markdown"
-    );
-    const [barVisible, setBarVisible] = createSignal(false);
-    const [indicatorVisible, setIndicatorVisible] = createSignal(false);
-    const [isExclusionMode, setExclusionMode] = createSignal(false);
-    const [excludedElements, setExcludedElements] = createSignal<Set<Element>>(
-      new Set<Element>()
-    );
     let showToastApi: ((message: string) => void) | null = null;
     let exclusionHoverTarget: Element | null = null;
-    const pillVisible = createMemo(
-      () => indicatorVisible() || isExclusionMode()
-    );
 
-    // 5. Create core (domain collaborators wired together).
-    const core = createPickerCore({
-      onElementSelected: (element) => {
-        setSelectedElement(element);
-        setBarVisible(true);
-      },
-      onHover: () => {
-        // Hover feedback handled by highlight controller via machine callbacks.
-      },
-      onStateChange: (state) => {
-        if (state === "IDLE") {
-          setBarVisible(false);
-          setSelectedElement(null);
-          setExclusionMode(false);
-          clearExcludedClasses();
-          setExcludedElements(new Set<Element>());
-          // Clean up exclusion hover feedback.
-          if (exclusionHoverTarget) {
-            exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
-            exclusionHoverTarget = null;
-          }
-        } else if (state === "HIGHLIGHTING") {
-          // RESTART transitions to HIGHLIGHTING — clear the selected element
-          // signal so the bar disappears and the user can hover freely.
-          setSelectedElement(null);
-          setExclusionMode(false);
-          clearExcludedClasses();
-          setExcludedElements(new Set<Element>());
-          // Clean up exclusion hover feedback.
-          if (exclusionHoverTarget) {
-            exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
-            exclusionHoverTarget = null;
-          }
-        }
-        // Synchronize visual feedback with picker state.
-        syncVisualFeedback(state, core.scrim, setIndicatorVisible);
-        // Synchronize main-world blocking with picker state.
-        if (blockingAvailable) {
-          syncBlockingState(state, blockingChannel);
-        }
-      },
-    });
-
-    // Disable the main-world blocker while exclusion mode is active so
-    // clicks reach the content-script click handler instead of being
-    // intercepted. Re-enable when exclusion mode is turned off.
-    if (blockingAvailable) {
-      createEffect(() => {
-        if (isExclusionMode()) {
-          blockingChannel.send({ type: TAMIZ_BLOCKING_DISABLE });
-        } else {
-          // Clean up exclusion hover feedback when exiting exclusion mode.
-          if (exclusionHoverTarget) {
-            exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
-            exclusionHoverTarget = null;
-          }
-          if (core.machine.getState() === "SELECTED") {
-            blockingChannel.send({ type: TAMIZ_BLOCKING_ENABLE });
-          }
-        }
-      });
-    }
-
-    // Apply crosshair cursor during exclusion mode.
-    createEffect(() => {
-      syncExclusionCursor(isExclusionMode());
-    });
-
-    // 6. Compose action handlers (wires SolidJS signal setters).
-    const { dispatcher } = composeActions({
+    // 5. Create deep session module.
+    const session = createPickerSession({
       clipboardAvailable: isClipboardAvailable,
-      format: barFormat,
-      getExcludedElements: excludedElements,
-      getExclusionMode: isExclusionMode,
       htmlConverter: {
         convert: async (source, options) => {
           const { convert } = await import("@tamiz/html-converter");
@@ -383,20 +303,51 @@ export default defineContentScript({
         },
         extractContent,
       },
-      machine: core.machine,
       sendMessage: (msg) => runtimeChannel.send(msg),
-      setBarVisible,
-      setExcludedElements,
-      setExclusionMode,
-      setFormat: setBarFormat,
-      setSelectedElement,
       get showToast() {
         return showToastApi;
       },
     });
 
+    // 6. Connect reactive UI signals from atomic session snapshots.
+    const [snapshot, setSnapshot] = createSignal(session.getSnapshot());
+    session.subscribe(setSnapshot);
+
+    const isExclusionMode = () => snapshot().isExclusionMode;
+    const pillVisible = createMemo(
+      () => snapshot().state === "HIGHLIGHTING" || snapshot().isExclusionMode
+    );
+
+    // Synchronize main-world blocker state with session.
+    if (blockingAvailable) {
+      createEffect(() => {
+        const snap = snapshot();
+        if (snap.isExclusionMode) {
+          blockingChannel.send({ type: TAMIZ_BLOCKING_DISABLE });
+        } else {
+          // Clean up exclusion hover feedback when exiting exclusion mode.
+          if (exclusionHoverTarget) {
+            exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
+            exclusionHoverTarget = null;
+          }
+          if (snap.state === "SELECTED" || snap.state === "HIGHLIGHTING") {
+            blockingChannel.send({ type: TAMIZ_BLOCKING_ENABLE });
+          } else if (snap.state === "IDLE") {
+            blockingChannel.send({ type: TAMIZ_BLOCKING_DISABLE });
+          }
+        }
+      });
+    }
+
+    // Apply crosshair cursor during exclusion mode.
+    createEffect(() => {
+      syncExclusionCursor(snapshot().isExclusionMode);
+    });
+
     // 7. Mount shadow root UI.
-    const handleDismiss = () => dispatcher.dispatch({ type: "DISMISS" });
+    const handleDismiss = () => {
+      session.dispatch({ type: "DISMISS" });
+    };
     const ui = await createShadowRootUi(ctx, {
       isolateEvents: ["mousemove", "keydown"],
       name: "tamiz-picker",
@@ -405,15 +356,14 @@ export default defineContentScript({
           () => (
             <>
               {ContentApp({
-                element: selectedElement,
-                format: barFormat,
-                isExclusionMode,
-                onAction: (action) => dispatcher.dispatch(action),
+                onAction: (action) => {
+                  session.dispatch(action);
+                },
                 onToastReady: (api) => {
                   showToastApi = api;
                 },
-                registry: core.registry,
-                visible: barVisible,
+                registry: session.registry,
+                snapshot,
               })}
               <SelectionIndicator
                 isExclusionMode={isExclusionMode}
@@ -437,7 +387,7 @@ export default defineContentScript({
 
     // Disable blocking and clean up scrim when the content script unloads.
     ctx.onInvalidated(() => {
-      core.scrim.dispose();
+      session.scrim.dispose();
       if (blockingAvailable) {
         // Send shutdown to clear the install guard — allows fresh re-injection
         // when the extension is reloaded without a page refresh.
@@ -463,36 +413,31 @@ export default defineContentScript({
       applyThemePreference(preference, host);
     }
 
-    // 9. Event listeners — thin delegation to core.
+    // 9. Event listeners — thin delegation to session.
     ctx.addEventListener(document, "keydown", (e) => {
       handleKeydown(e as KeyboardEvent, {
-        dispatcher,
         getActiveElement: () => document.activeElement,
-        getCurrentFormat: barFormat,
-        isExclusionMode,
-        machine: core.machine,
-        registry: core.registry,
+        session,
         shadowHost: ui.shadowHost,
       });
     });
 
     ctx.addEventListener(document, "mousemove", (e) => {
-      const state = core.machine.getState();
+      const snap = session.getSnapshot();
       const target = (e as MouseEvent).target as Element;
       const selectable =
         target && target !== document.documentElement && isSelectable(target);
 
-      if (selectable && state === "HIGHLIGHTING") {
-        core.machine.dispatch({ target, type: "MOUSEMOVE" });
+      if (selectable && snap.state === "HIGHLIGHTING") {
+        session.dispatch({ target, type: "HOVER" });
       } else if (
         selectable &&
-        state === "SELECTED" &&
-        isExclusionMode() &&
-        target !== selectedElement() &&
-        selectedElement()?.contains(target)
+        snap.state === "SELECTED" &&
+        snap.isExclusionMode &&
+        target !== snap.selectedElement &&
+        snap.selectedElement?.contains(target)
       ) {
-        // Track hover directly during exclusion mode since the machine
-        // ignores MOUSEMOVE in SELECTED state.
+        // Track hover directly during exclusion mode.
         if (exclusionHoverTarget !== target && exclusionHoverTarget) {
           exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
         }
@@ -506,10 +451,10 @@ export default defineContentScript({
       if (exclusionHoverTarget) {
         const isExcludable =
           selectable &&
-          state === "SELECTED" &&
-          isExclusionMode() &&
-          target !== selectedElement() &&
-          selectedElement()?.contains(target);
+          snap.state === "SELECTED" &&
+          snap.isExclusionMode &&
+          target !== snap.selectedElement &&
+          snap.selectedElement?.contains(target);
 
         if (!isExcludable) {
           exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
@@ -518,55 +463,21 @@ export default defineContentScript({
       }
     });
 
-    // Exclusion-mode click: when in exclusion mode, clicks toggle elements.
+    // Exclusion-mode click and fallback selection click.
     ctx.addEventListener(document, "click", (e) => {
-      if (!isExclusionMode()) {
+      const snap = session.getSnapshot();
+      if (snap.isExclusionMode) {
+        e.preventDefault();
+        e.stopPropagation();
+        const mouse = e as MouseEvent;
+        const target = document.elementFromPoint(mouse.clientX, mouse.clientY);
+        if (target) {
+          session.dispatch({ target, type: "TOGGLE_EXCLUSION_ELEMENT" });
+        }
         return;
       }
-      e.preventDefault();
-      e.stopPropagation();
-      const mouse = e as MouseEvent;
-      const target = document.elementFromPoint(mouse.clientX, mouse.clientY);
-      if (
-        target &&
-        target !== document.documentElement &&
-        target !== selectedElement() &&
-        isSelectable(target) &&
-        selectedElement()?.contains(target)
-      ) {
-        const prev = excludedElements();
-        const next = new Set(prev);
-        if (next.has(target)) {
-          next.delete(target);
-          target.classList.remove("tamiz-excluded");
-        } else {
-          next.add(target);
-          target.classList.add("tamiz-excluded");
-        }
-        setExcludedElements(next);
-        setExclusionMode(false);
-      }
-    });
 
-    // Relay blocked clicks from the main-world blocker. The main-world script
-    // intercepts clicks during HIGHLIGHTING and posts coordinate payloads;
-    // we resolve the target via elementFromPoint and dispatch CLICK to the machine.
-    if (blockingAvailable) {
-      blockingChannel.onMessage((msg) => {
-        if (msg.type === TAMIZ_BLOCKING_CLICK) {
-          handleRelayedClick(msg as BlockingClickMessage, core.machine);
-        }
-        return Promise.resolve();
-      });
-    } else {
-      // Fallback: when the main-world blocker is unavailable (e.g. CSP blocks
-      // script injection), intercept clicks directly from the content script.
-      // This does NOT block page interactions (links still navigate), but
-      // allows the picker to function for element selection.
-      ctx.addEventListener(document, "click", (e) => {
-        if (core.machine.getState() !== "HIGHLIGHTING") {
-          return;
-        }
+      if (!blockingAvailable && snap.state === "HIGHLIGHTING") {
         const mouse = e as MouseEvent;
         const target = document.elementFromPoint(mouse.clientX, mouse.clientY);
         if (
@@ -574,15 +485,25 @@ export default defineContentScript({
           target !== document.documentElement &&
           isSelectable(target)
         ) {
-          core.machine.dispatch({ target, type: "CLICK" });
+          session.dispatch({ target, type: "SELECT" });
         }
+      }
+    });
+
+    // Relay blocked clicks from the main-world blocker.
+    if (blockingAvailable) {
+      blockingChannel.onMessage((msg) => {
+        if (msg.type === TAMIZ_BLOCKING_CLICK) {
+          handleRelayedClick(msg as BlockingClickMessage, session);
+        }
+        return Promise.resolve();
       });
     }
 
     // 10. Runtime messages.
     runtimeChannel.onMessage((message) => {
       if (message.type === "INVOKE_PICKER") {
-        dispatcher.dispatch(
+        session.dispatch(
           message.format
             ? { format: message.format, type: "INVOKE" }
             : { type: "INVOKE" }
