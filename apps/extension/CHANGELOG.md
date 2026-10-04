@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.2.0...@tamiz/extension-v1.3.0) (2026-10-04)
+
+
+### Features
+
+* **extension:** dynamic document listener lifecycle ([a55d212](https://github.com/Pkcarreno/tamiz/commit/a55d212b338a8721d0e201a789cc1d04ed095d8f))
+
+
+### Bug Fixes
+
+* **extension:** address code review feedback ([471c5d8](https://github.com/Pkcarreno/tamiz/commit/471c5d82b3cf7793c08f803e3b8e544c74ae1f2c))
+* **extension:** eliminate keydown recursion and introduce dynamic listener lifecycle ([8398625](https://github.com/Pkcarreno/tamiz/commit/839862517b496fe02dba4c18b5396afe770595d8))
+* **extension:** eliminate recursive keydown event dispatch ([b16bd80](https://github.com/Pkcarreno/tamiz/commit/b16bd80cef898bcd2769f3e67ab7ad7914e98ed0))
+
 ## [1.2.0](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.1.0...@tamiz/extension-v1.2.0) (2026-09-10)
 
 
