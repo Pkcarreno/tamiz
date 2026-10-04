@@ -33,7 +33,7 @@
     "@wxt-dev/auto-icons": "^1.1.2",
     "@wxt-dev/module-solid": "^1.1.4",
     "fake-indexeddb": "^6.2.5",
-    "jsdom": "^30.0.1",
+    "happy-dom": "^20.14.5",
     "linkedom": "^0.18.13",
     "solid-js": "^1.9.15",
     "tailwindcss": "^4.3.3",

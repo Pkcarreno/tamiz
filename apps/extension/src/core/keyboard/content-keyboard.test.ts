@@ -401,18 +401,20 @@ describe("handleKeydown — unmatched keys re-dispatched via shadowHost", () => 
     const deps = makeDeps();
     await selectElement(deps.session);
 
-    const dispatchSpy = vi.spyOn(deps.shadowHost as Element, "dispatchEvent");
+    let reDispatched: KeyboardEvent | null = null;
+    const listener = vi.fn((dispatchedEvent: Event) => {
+      reDispatched = dispatchedEvent as KeyboardEvent;
+    });
+    deps.shadowHost?.addEventListener("keydown", listener);
     const event = keyEvent({ key: "x" });
 
     handleKeydown(event, deps);
 
-    expect(dispatchSpy).toHaveBeenCalledTimes(1);
-    const reDispatched = dispatchSpy.mock
-      .calls[0]?.[0] as unknown as KeyboardEvent;
+    expect(listener).toHaveBeenCalledTimes(1);
     expect(reDispatched).toBeInstanceOf(KeyboardEvent);
-    expect(reDispatched.bubbles).toBe(true);
-    expect(reDispatched.composed).toBe(true);
-    expect(reDispatched.key).toBe("x");
+    expect(reDispatched?.bubbles).toBe(true);
+    expect(reDispatched?.composed).toBe(true);
+    expect(reDispatched?.key).toBe("x");
     expect(event.defaultPrevented).toBe(false);
   });
 
@@ -420,18 +422,21 @@ describe("handleKeydown — unmatched keys re-dispatched via shadowHost", () => 
     const deps = makeDeps();
     await selectElement(deps.session);
 
-    const dispatchSpy = vi.spyOn(deps.shadowHost as Element, "dispatchEvent");
+    let reDispatched: KeyboardEvent | null = null;
+    const listener = vi.fn((dispatchedEvent: Event) => {
+      reDispatched = dispatchedEvent as KeyboardEvent;
+    });
+    deps.shadowHost?.addEventListener("keydown", listener);
     handleKeydown(
       keyEvent({ altKey: true, ctrlKey: true, key: "z", shiftKey: true }),
       deps
     );
 
-    const reDispatched = dispatchSpy.mock
-      .calls[0]?.[0] as unknown as KeyboardEvent;
-    expect(reDispatched.ctrlKey).toBe(true);
-    expect(reDispatched.altKey).toBe(true);
-    expect(reDispatched.shiftKey).toBe(true);
-    expect(reDispatched.metaKey).toBe(false);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(reDispatched?.ctrlKey).toBe(true);
+    expect(reDispatched?.altKey).toBe(true);
+    expect(reDispatched?.shiftKey).toBe(true);
+    expect(reDispatched?.metaKey).toBe(false);
   });
 
   it("does not re-dispatch when shadowHost is null", async () => {

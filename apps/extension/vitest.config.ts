@@ -5,7 +5,7 @@ import { WxtVitest } from "wxt/testing/vitest-plugin";
 /**
  * Vitest configuration for the Tamiz browser extension.
  *
- * jsdom supplies DOM globals (DOMRect, document) used by content-logic tests.
+ * happy-dom supplies DOM globals (DOMRect, document) used by content-logic tests.
  * `WxtVitest()` is async — it boots WXT's config and returns Vite plugins that
  * alias `wxt/browser` to `@webext-core/fake-browser`, stub the `browser`/`chrome`
  * globals, wire up tsconfig path aliases, and enable auto-imports.
@@ -18,7 +18,7 @@ import { WxtVitest } from "wxt/testing/vitest-plugin";
 export default defineConfig({
   plugins: [solid(), WxtVitest()],
   test: {
-    environment: "jsdom",
+    environment: "happy-dom",
     globals: true,
     setupFiles: ["./vitest-setup.ts"],
   },
