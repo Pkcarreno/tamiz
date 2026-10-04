@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Message } from "../../lib/messaging/types.ts";
-import type { HighlightController } from "../highlight.ts";
-import type { ScrimController } from "../scrim.ts";
 import { createPickerSession } from "./session.ts";
 import type { HtmlConverterAdapter, PickerSessionDeps } from "./types.ts";
 
@@ -14,8 +12,6 @@ function requireElement(id: string): HTMLElement {
 }
 
 describe("PickerSession", () => {
-  let mockHighlight: HighlightController;
-  let mockScrim: ScrimController;
   let mockConverter: HtmlConverterAdapter;
   let mockSendMessage: (msg: Message) => Promise<void>;
   let mockShowToast: (msg: string) => void;
@@ -32,19 +28,6 @@ describe("PickerSession", () => {
       </div>
     `;
 
-    mockHighlight = {
-      clearAll: vi.fn(),
-      highlightElement: vi.fn(),
-      selectElement: vi.fn(),
-      setHoverTarget: vi.fn(),
-    };
-
-    mockScrim = {
-      dispose: vi.fn(),
-      hide: vi.fn(),
-      show: vi.fn(),
-    };
-
     mockConverter = {
       convert: vi.fn().mockResolvedValue("# Article\n\nSome text"),
       extractContent: vi.fn((el: Element) => el.cloneNode(true) as Element),
@@ -57,9 +40,7 @@ describe("PickerSession", () => {
     deps = {
       clipboardAvailable: () => true,
       documentRef: document,
-      highlight: mockHighlight,
       htmlConverter: mockConverter,
-      scrim: mockScrim,
       sendMessage: mockSendMessage,
       showToast: mockShowToast,
       writeClipboard: mockWriteClipboard,
@@ -85,26 +66,6 @@ describe("PickerSession", () => {
       const snapshot = session.getSnapshot();
       expect(snapshot.state).toBe("HIGHLIGHTING");
       expect(snapshot.format).toBe("html");
-      expect(mockHighlight.clearAll).toHaveBeenCalled();
-      expect(mockScrim.show).toHaveBeenCalled();
-    });
-
-    it("updates hover target during HIGHLIGHTING", async () => {
-      const session = createPickerSession(deps);
-      await session.dispatch({ type: "INVOKE" });
-
-      const target = requireElement("article");
-      await session.dispatch({ target, type: "HOVER" });
-
-      expect(mockHighlight.setHoverTarget).toHaveBeenCalledWith(target);
-    });
-
-    it("ignores HOVER when not in HIGHLIGHTING state", async () => {
-      const session = createPickerSession(deps);
-      const target = requireElement("article");
-      await session.dispatch({ target, type: "HOVER" });
-
-      expect(mockHighlight.setHoverTarget).not.toHaveBeenCalled();
     });
 
     it("transitions to SELECTED on SELECT during HIGHLIGHTING", async () => {
@@ -117,10 +78,9 @@ describe("PickerSession", () => {
       const snapshot = session.getSnapshot();
       expect(snapshot.state).toBe("SELECTED");
       expect(snapshot.selectedElement).toBe(target);
-      expect(mockHighlight.selectElement).toHaveBeenCalledWith(target);
     });
 
-    it("transitions to IDLE on DISMISS and cleans up visual effects", async () => {
+    it("transitions to IDLE on DISMISS", async () => {
       const session = createPickerSession(deps);
       await session.dispatch({ type: "INVOKE" });
 
@@ -131,8 +91,6 @@ describe("PickerSession", () => {
       const snapshot = session.getSnapshot();
       expect(snapshot.state).toBe("IDLE");
       expect(snapshot.selectedElement).toBeNull();
-      expect(mockHighlight.clearAll).toHaveBeenCalled();
-      expect(mockScrim.hide).toHaveBeenCalled();
     });
 
     it("resets to HIGHLIGHTING on RESTART", async () => {
@@ -146,8 +104,6 @@ describe("PickerSession", () => {
       const snapshot = session.getSnapshot();
       expect(snapshot.state).toBe("HIGHLIGHTING");
       expect(snapshot.selectedElement).toBeNull();
-      expect(mockHighlight.clearAll).toHaveBeenCalled();
-      expect(mockScrim.show).toHaveBeenCalled();
     });
 
     it("ignores RESTART while in exclusion mode", async () => {
@@ -193,7 +149,6 @@ describe("PickerSession", () => {
       const snapshot = session.getSnapshot();
       expect(snapshot.isExclusionMode).toBe(false);
       expect(snapshot.excludedElements.has(ad)).toBe(true);
-      expect(ad.classList.contains("tamiz-excluded")).toBe(true);
     });
 
     it("un-excludes an already excluded element when toggled again", async () => {
@@ -213,7 +168,6 @@ describe("PickerSession", () => {
 
       const snapshot = session.getSnapshot();
       expect(snapshot.excludedElements.has(ad)).toBe(false);
-      expect(ad.classList.contains("tamiz-excluded")).toBe(false);
     });
 
     it("does not exclude the selected element itself", async () => {

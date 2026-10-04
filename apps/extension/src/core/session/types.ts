@@ -1,7 +1,5 @@
 import type { Message } from "../../lib/messaging/types.ts";
-import type { HighlightController } from "../highlight.ts";
 import type { ShortcutRegistry } from "../keyboard/registry.ts";
-import type { ScrimController } from "../scrim.ts";
 
 /**
  * Lifecycle states of a picker session.
@@ -25,13 +23,12 @@ export type OutputFormat = "markdown" | "html";
  * Discriminated union of all actions dispatched to a {@link PickerSession}.
  *
  * Consolidates user commands (copy, download, format change, dismiss)
- * and DOM interaction events (hover, select, exclude toggle).
+ * and selection interaction events (select, exclude toggle).
  *
  * @public
  */
 export type PickerAction =
   | { type: "INVOKE"; format?: OutputFormat }
-  | { type: "HOVER"; target: Element | null }
   | { type: "SELECT"; target: Element }
   | { type: "EXCLUDE_TOGGLE" }
   | { type: "TOGGLE_EXCLUSION_ELEMENT"; target: Element }
@@ -98,14 +95,10 @@ export interface PickerSessionDeps {
   clipboardAvailable?: () => boolean;
   /** Custom document reference for title resolution and element queries. */
   documentRef?: Document;
-  /** Controller managing hover and selection visual highlights. */
-  highlight?: HighlightController;
   /** HTML converter adapter. */
   htmlConverter: HtmlConverterAdapter;
   /** Shortcut registry for keyboard matching and tooltips. */
   registry?: ShortcutRegistry;
-  /** Controller managing page scrim overlay. */
-  scrim?: ScrimController;
   /** Send a message to the background service worker. */
   sendMessage: (message: Message) => Promise<void>;
   /** Toast notification callback, or null if toasts are unavailable. */

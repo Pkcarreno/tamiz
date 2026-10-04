@@ -1,8 +1,8 @@
 import { browser } from "wxt/browser";
 import { injectScript } from "wxt/utils/inject-script";
+import { createPageAdornment } from "../core/adornment/adornment.ts";
 import { handleKeydown } from "../core/keyboard/handler.ts";
 import { isSelectable } from "../core/picker-filter.ts";
-import type { ScrimController } from "../core/scrim.ts";
 import {
   createPickerSession,
   type PickerSession,
@@ -26,20 +26,6 @@ import { readThemePreference } from "../lib/storage.ts";
 // ---------------------------------------------------------------------------
 // Content-script helpers (exported for unit testing)
 // ---------------------------------------------------------------------------
-
-/**
- * Remove `.tamiz-excluded` CSS class from all elements that carry it.
- *
- * Called when the picker flow ends or exclusion mode is deactivated to
- * prevent stale visual artifacts on the page.
- *
- * @public
- */
-export function clearExcludedClasses(): void {
-  for (const el of document.querySelectorAll(".tamiz-excluded")) {
-    el.classList.remove("tamiz-excluded");
-  }
-}
 
 /**
  * Process a relayed click from the main-world blocker.
@@ -97,108 +83,6 @@ export function syncBlockingState(
     channel.send({ type: TAMIZ_BLOCKING_DISABLE });
   }
   // SELECTED: no-op — blocking remains active through selection.
-}
-
-/**
- * Synchronize visual feedback (scrim overlay and instruction pill) with
- * the picker session state.
- *
- * HIGHLIGHTING shows both scrim and pill. SELECTED hides the pill but
- * keeps the scrim to maintain visual focus on the selected element.
- * IDLE hides both.
- *
- * @param state              - The new picker state.
- * @param scrim              - The scrim controller for the overlay.
- * @param setIndicatorVisible - Signal setter for the instruction pill.
- *
- * @public
- */
-export function syncVisualFeedback(
-  state: string,
-  scrim: ScrimController,
-  setIndicatorVisible: (value: boolean) => void
-): void {
-  if (state === "HIGHLIGHTING") {
-    scrim.show();
-    setIndicatorVisible(true);
-  } else if (state === "SELECTED") {
-    setIndicatorVisible(false);
-  } else if (state === "IDLE") {
-    scrim.hide();
-    setIndicatorVisible(false);
-  }
-}
-
-/**
- * Inject the highlight CSS rules into the host document <head>.
- *
- * Uses an inline `<style>` element rather than a `<link>` so that styles
- * apply synchronously without an extra network round-trip.
- */
-export function injectHighlightStyles(): void {
-  const STYLE_ID = "tamiz-highlight-styles";
-  if (document.getElementById(STYLE_ID)) {
-    return;
-  }
-
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    .tamiz-highlight {
-      outline: 2px solid #2563eb !important;
-      outline-offset: 2px !important;
-      cursor: crosshair !important;
-      z-index: 2147483647 !important;
-    }
-    .tamiz-hover {
-      outline: 2px dashed #3b82f6 !important;
-      outline-offset: 2px !important;
-      z-index: 2147483647 !important;
-    }
-    .tamiz-excluded {
-      opacity: 0.3 !important;
-      filter: grayscale(100%) !important;
-      outline: 2px dashed #ef4444 !important;
-      outline-offset: 1px !important;
-    }
-    .tamiz-exclusion-hover {
-      outline: 2px dashed #f97316 !important;
-      outline-offset: 2px !important;
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-/**
- * Apply the exclusion cursor (`crosshair`) to the root element.
- *
- * When exclusion mode is active, the cursor changes to a crosshair so the
- * user understands that clicking elements will exclude them rather than
- * navigating.
- *
- * @param active - Whether exclusion mode is currently active.
- *
- * @public
- */
-export function syncExclusionCursor(active: boolean): void {
-  const CURSOR_CLASS = "tamiz-exclusion-cursor";
-  const STYLE_ID = "tamiz-cursor-styles";
-
-  if (active) {
-    if (!document.getElementById(STYLE_ID)) {
-      const style = document.createElement("style");
-      style.id = STYLE_ID;
-      style.textContent = `
-        .${CURSOR_CLASS}, .${CURSOR_CLASS} * {
-          cursor: crosshair !important;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-    document.documentElement.classList.add(CURSOR_CLASS);
-  } else {
-    document.documentElement.classList.remove(CURSOR_CLASS);
-  }
 }
 
 /**
@@ -287,11 +171,10 @@ export default defineContentScript({
 
     await import("../styles/content.css");
 
-    // 4. Inject highlight CSS into host document.
-    injectHighlightStyles();
+    // 4. Create host page adornment module.
+    const adornment = createPageAdornment();
 
     let showToastApi: ((message: string) => void) | null = null;
-    let exclusionHoverTarget: Element | null = null;
 
     // 5. Create deep session module.
     const session = createPickerSession({
@@ -309,9 +192,13 @@ export default defineContentScript({
       },
     });
 
-    // 6. Connect reactive UI signals from atomic session snapshots.
+    // 6. Connect reactive UI signals and adornment from atomic session snapshots.
     const [snapshot, setSnapshot] = createSignal(session.getSnapshot());
-    session.subscribe(setSnapshot);
+    session.subscribe((snap) => {
+      setSnapshot(snap);
+      adornment.update(snap);
+    });
+    adornment.update(session.getSnapshot());
 
     const isExclusionMode = () => snapshot().isExclusionMode;
     const pillVisible = createMemo(
@@ -324,25 +211,13 @@ export default defineContentScript({
         const snap = snapshot();
         if (snap.isExclusionMode) {
           blockingChannel.send({ type: TAMIZ_BLOCKING_DISABLE });
-        } else {
-          // Clean up exclusion hover feedback when exiting exclusion mode.
-          if (exclusionHoverTarget) {
-            exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
-            exclusionHoverTarget = null;
-          }
-          if (snap.state === "SELECTED" || snap.state === "HIGHLIGHTING") {
-            blockingChannel.send({ type: TAMIZ_BLOCKING_ENABLE });
-          } else if (snap.state === "IDLE") {
-            blockingChannel.send({ type: TAMIZ_BLOCKING_DISABLE });
-          }
+        } else if (snap.state === "SELECTED" || snap.state === "HIGHLIGHTING") {
+          blockingChannel.send({ type: TAMIZ_BLOCKING_ENABLE });
+        } else if (snap.state === "IDLE") {
+          blockingChannel.send({ type: TAMIZ_BLOCKING_DISABLE });
         }
       });
     }
-
-    // Apply crosshair cursor during exclusion mode.
-    createEffect(() => {
-      syncExclusionCursor(snapshot().isExclusionMode);
-    });
 
     // 7. Mount shadow root UI.
     const handleDismiss = () => {
@@ -385,9 +260,9 @@ export default defineContentScript({
     // Mark shadow host so the main-world blocker excludes UI clicks.
     ui.shadowHost?.setAttribute(TAMIZ_UI_MARKER, "");
 
-    // Disable blocking and clean up scrim when the content script unloads.
+    // Disable blocking and clean up adornment when the content script unloads.
     ctx.onInvalidated(() => {
-      session.scrim.dispose();
+      adornment.dispose();
       if (blockingAvailable) {
         // Send shutdown to clear the install guard — allows fresh re-injection
         // when the extension is reloaded without a page refresh.
@@ -413,7 +288,7 @@ export default defineContentScript({
       applyThemePreference(preference, host);
     }
 
-    // 9. Event listeners — thin delegation to session.
+    // 9. Event listeners — thin delegation to session and adornment.
     ctx.addEventListener(document, "keydown", (e) => {
       handleKeydown(e as KeyboardEvent, {
         getActiveElement: () => document.activeElement,
@@ -423,44 +298,7 @@ export default defineContentScript({
     });
 
     ctx.addEventListener(document, "mousemove", (e) => {
-      const snap = session.getSnapshot();
-      const target = (e as MouseEvent).target as Element;
-      const selectable =
-        target && target !== document.documentElement && isSelectable(target);
-
-      if (selectable && snap.state === "HIGHLIGHTING") {
-        session.dispatch({ target, type: "HOVER" });
-      } else if (
-        selectable &&
-        snap.state === "SELECTED" &&
-        snap.isExclusionMode &&
-        target !== snap.selectedElement &&
-        snap.selectedElement?.contains(target)
-      ) {
-        // Track hover directly during exclusion mode.
-        if (exclusionHoverTarget !== target && exclusionHoverTarget) {
-          exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
-        }
-        if (exclusionHoverTarget !== target) {
-          exclusionHoverTarget = target;
-          target.classList.add("tamiz-exclusion-hover");
-        }
-      }
-
-      // Clear exclusion hover when the mouse is not over a valid excludable element.
-      if (exclusionHoverTarget) {
-        const isExcludable =
-          selectable &&
-          snap.state === "SELECTED" &&
-          snap.isExclusionMode &&
-          target !== snap.selectedElement &&
-          snap.selectedElement?.contains(target);
-
-        if (!isExcludable) {
-          exclusionHoverTarget.classList.remove("tamiz-exclusion-hover");
-          exclusionHoverTarget = null;
-        }
-      }
+      adornment.setHoverTarget((e as MouseEvent).target as Element);
     });
 
     // Exclusion-mode click and fallback selection click.

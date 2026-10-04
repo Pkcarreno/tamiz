@@ -20,10 +20,7 @@ import type { BlockingClickMessage } from "../lib/messaging/types.ts";
 import {
   applyThemePreference,
   handleRelayedClick,
-  injectHighlightStyles,
   syncBlockingState,
-  syncExclusionCursor,
-  syncVisualFeedback,
 } from "./content.tsx";
 
 // ---------------------------------------------------------------------------
@@ -52,14 +49,6 @@ function createMockSession(state: string): PickerSession {
     dispatch: vi.fn(),
     getSnapshot: vi.fn().mockReturnValue({ state }),
   } as unknown as PickerSession;
-}
-
-function createMockScrim() {
-  return {
-    dispose: vi.fn(),
-    hide: vi.fn(),
-    show: vi.fn(),
-  };
 }
 
 function createRelayEvent(
@@ -224,96 +213,6 @@ describe("shutdown lifecycle", () => {
   it("shutdown message has correct shape", () => {
     const message = { type: TAMIZ_BLOCKING_SHUTDOWN };
     expect(message).toEqual({ type: "tamiz:blocking-shutdown" });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// injectHighlightStyles — z-index
-// ---------------------------------------------------------------------------
-
-describe("injectHighlightStyles", () => {
-  afterEach(() => {
-    document.getElementById("tamiz-highlight-styles")?.remove();
-  });
-
-  it("injects a style element into document.head", () => {
-    injectHighlightStyles();
-    expect(document.getElementById("tamiz-highlight-styles")).not.toBeNull();
-  });
-
-  it("does not duplicate the style element on re-invoke", () => {
-    injectHighlightStyles();
-    injectHighlightStyles();
-    expect(document.querySelectorAll("#tamiz-highlight-styles").length).toBe(1);
-  });
-
-  it("applies z-index: 2147483647 to .tamiz-highlight", () => {
-    injectHighlightStyles();
-    const style = document.getElementById("tamiz-highlight-styles");
-    expect(style?.textContent).toContain("z-index: 2147483647");
-  });
-
-  it("applies z-index: 2147483647 to .tamiz-hover", () => {
-    injectHighlightStyles();
-    const style = document.getElementById("tamiz-highlight-styles");
-    expect(style?.textContent).toContain(".tamiz-hover");
-    expect(style?.textContent).toContain("z-index: 2147483647");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// syncVisualFeedback
-// ---------------------------------------------------------------------------
-
-describe("syncVisualFeedback", () => {
-  it("shows scrim and indicator on HIGHLIGHTING", () => {
-    const scrim = createMockScrim();
-    const setIndicatorVisible = vi.fn();
-    syncVisualFeedback("HIGHLIGHTING", scrim as never, setIndicatorVisible);
-    expect(scrim.show).toHaveBeenCalledOnce();
-    expect(setIndicatorVisible).toHaveBeenCalledWith(true);
-  });
-
-  it("hides indicator but keeps scrim on SELECTED", () => {
-    const scrim = createMockScrim();
-    const setIndicatorVisible = vi.fn();
-    syncVisualFeedback("SELECTED", scrim as never, setIndicatorVisible);
-    expect(scrim.show).not.toHaveBeenCalled();
-    expect(scrim.hide).not.toHaveBeenCalled();
-    expect(setIndicatorVisible).toHaveBeenCalledWith(false);
-  });
-
-  it("hides scrim and indicator on IDLE", () => {
-    const scrim = createMockScrim();
-    const setIndicatorVisible = vi.fn();
-    syncVisualFeedback("IDLE", scrim as never, setIndicatorVisible);
-    expect(scrim.hide).toHaveBeenCalledOnce();
-    expect(setIndicatorVisible).toHaveBeenCalledWith(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// syncExclusionCursor
-// ---------------------------------------------------------------------------
-
-describe("exclusion mode crosshair cursor", () => {
-  afterEach(() => {
-    document.documentElement.classList.remove("tamiz-exclusion-cursor");
-  });
-
-  it("adds tamiz-exclusion-cursor class to document.documentElement when exclusion mode activates", () => {
-    syncExclusionCursor(true);
-    expect(
-      document.documentElement.classList.contains("tamiz-exclusion-cursor")
-    ).toBe(true);
-  });
-
-  it("removes tamiz-exclusion-cursor class from document.documentElement when exclusion mode deactivates", () => {
-    document.documentElement.classList.add("tamiz-exclusion-cursor");
-    syncExclusionCursor(false);
-    expect(
-      document.documentElement.classList.contains("tamiz-exclusion-cursor")
-    ).toBe(false);
   });
 });
 
