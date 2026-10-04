@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PickerStateMachine } from "../core/machine/picker.ts";
+import type { PickerSession } from "../core/session/session.ts";
 import {
   READY_TIMEOUT_MS,
   TAMIZ_BLOCKING_CLICK,
@@ -32,7 +32,7 @@ import {
 
 /** Install a fake `elementFromPoint` on the document (jsdom lacks it). */
 function installElementFromPoint() {
-  const map = new Map<number, Element | null>();
+  const map = new Map<string, Element | null>();
   const spy = vi.fn((x: number, y: number) => map.get(`${x},${y}`) ?? null);
   Object.defineProperty(document, "elementFromPoint", {
     configurable: true,
@@ -47,11 +47,11 @@ function installElementFromPoint() {
   };
 }
 
-function createMockMachine(state: string): PickerStateMachine {
+function createMockSession(state: string): PickerSession {
   return {
     dispatch: vi.fn(),
-    getState: vi.fn().mockReturnValue(state),
-  } as unknown as PickerStateMachine;
+    getSnapshot: vi.fn().mockReturnValue({ state }),
+  } as unknown as PickerSession;
 }
 
 function createMockScrim() {
@@ -84,72 +84,72 @@ describe("handleRelayedClick", () => {
     vi.restoreAllMocks();
   });
 
-  it("dispatches CLICK to machine when state is HIGHLIGHTING", () => {
-    const machine = createMockMachine("HIGHLIGHTING");
+  it("dispatches SELECT to session when state is HIGHLIGHTING", () => {
+    const session = createMockSession("HIGHLIGHTING");
     const target = document.createElement("div");
     efp.set(100, 200, target);
 
     const event = createRelayEvent(100, 200);
-    handleRelayedClick(event, machine);
+    handleRelayedClick(event, session);
 
     expect(efp.spy).toHaveBeenCalledWith(100, 200);
-    expect(machine.dispatch).toHaveBeenCalledWith({
+    expect(session.dispatch).toHaveBeenCalledWith({
       target,
-      type: "CLICK",
+      type: "SELECT",
     });
   });
 
   it("ignores relayed click when state is not HIGHLIGHTING", () => {
-    const machine = createMockMachine("IDLE");
+    const session = createMockSession("IDLE");
 
     const event = createRelayEvent(100, 200);
-    handleRelayedClick(event, machine);
+    handleRelayedClick(event, session);
 
-    expect(machine.dispatch).not.toHaveBeenCalled();
+    expect(session.dispatch).not.toHaveBeenCalled();
   });
 
   it("ignores relayed click when state is SELECTED", () => {
-    const machine = createMockMachine("SELECTED");
+    const session = createMockSession("SELECTED");
 
     const event = createRelayEvent(100, 200);
-    handleRelayedClick(event, machine);
+    handleRelayedClick(event, session);
 
-    expect(machine.dispatch).not.toHaveBeenCalled();
+    expect(session.dispatch).not.toHaveBeenCalled();
   });
 
   it("does not dispatch when elementFromPoint returns null", () => {
-    const machine = createMockMachine("HIGHLIGHTING");
+    const session = createMockSession("HIGHLIGHTING");
     // Default: elementFromPoint returns null for all coords
 
     const event = createRelayEvent(999, 999);
-    handleRelayedClick(event, machine);
+    handleRelayedClick(event, session);
 
     expect(efp.spy).toHaveBeenCalledWith(999, 999);
-    expect(machine.dispatch).not.toHaveBeenCalled();
+    expect(session.dispatch).not.toHaveBeenCalled();
   });
 
   it("does not dispatch when elementFromPoint returns the document element", () => {
-    const machine = createMockMachine("HIGHLIGHTING");
+    const session = createMockSession("HIGHLIGHTING");
     efp.set(50, 50, document.documentElement);
 
     const event = createRelayEvent(50, 50);
-    handleRelayedClick(event, machine);
+    handleRelayedClick(event, session);
 
-    expect(machine.dispatch).not.toHaveBeenCalled();
+    expect(session.dispatch).not.toHaveBeenCalled();
   });
 
   it("uses correct coordinates from event detail", () => {
-    const machine = createMockMachine("HIGHLIGHTING");
+    const session = createMockSession("HIGHLIGHTING");
     const target = document.createElement("button");
     efp.set(350, 420, target);
 
     const event = createRelayEvent(350, 420);
-    handleRelayedClick(event, machine);
+    handleRelayedClick(event, session);
 
     expect(efp.spy).toHaveBeenCalledWith(350, 420);
-    expect(machine.dispatch).toHaveBeenCalledWith({
+    expect(session.dispatch).toHaveBeenCalledWith({
       target,
-      type: "CLICK",
+      type: "SELECT",
     });
   });
 });

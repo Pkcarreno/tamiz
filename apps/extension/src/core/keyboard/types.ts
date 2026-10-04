@@ -1,4 +1,4 @@
-import type { PickerState } from "../machine/picker.ts";
+import type { PickerSessionState } from "../session/types.ts";
 
 /**
  * Output format for converted content.
@@ -35,7 +35,7 @@ export interface ShortcutContext {
   format: Format;
   inputFocused: boolean;
   isExclusionMode: boolean;
-  state: PickerState;
+  state: PickerSessionState;
 }
 
 /**
