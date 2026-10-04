@@ -38,13 +38,16 @@ export interface ActionHandlerDeps {
   getExclusionMode: () => boolean;
   /** HTML converter with extract and convert capabilities. */
   htmlConverter: {
-    /** Convert HTML string to target format. */
-    convert: (html: string, options: { strategy: unknown }) => Promise<string>;
-    /** Extract clean HTML from a DOM element. */
+    /** Convert DOM element or HTML string to target format. */
+    convert: (
+      source: Element | string,
+      options?: { format?: "markdown" | "html" }
+    ) => Promise<string>;
+    /** Extract clean Element from a DOM element. */
     extractContent: (
       element: Element,
       excludedElements?: Set<Element>
-    ) => string;
+    ) => Element;
   };
   /** The picker state machine for reading state and dispatching transitions. */
   machine: PickerStateMachine;
@@ -102,19 +105,13 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
       return;
     }
     try {
-      const html = deps.htmlConverter.extractContent(
+      const cleanElement = deps.htmlConverter.extractContent(
         element,
         deps.getExcludedElements()
       );
-      const strategy =
-        deps.format() === "markdown"
-          ? await import("@tamiz/html-converter/strategies/markdown").then(
-              (m) => m.markdownStrategy
-            )
-          : await import("@tamiz/html-converter/strategies/html").then(
-              (m) => m.htmlStrategy
-            );
-      const content = await deps.htmlConverter.convert(html, { strategy });
+      const content = await deps.htmlConverter.convert(cleanElement, {
+        format: deps.format(),
+      });
       if (deps.clipboardAvailable()) {
         await navigator.clipboard.writeText(content);
       } else {
@@ -136,19 +133,13 @@ export function composeActions(deps: ActionHandlerDeps): ComposedActions {
       return;
     }
     try {
-      const html = deps.htmlConverter.extractContent(
+      const cleanElement = deps.htmlConverter.extractContent(
         element,
         deps.getExcludedElements()
       );
-      const strategy =
-        deps.format() === "markdown"
-          ? await import("@tamiz/html-converter/strategies/markdown").then(
-              (m) => m.markdownStrategy
-            )
-          : await import("@tamiz/html-converter/strategies/html").then(
-              (m) => m.htmlStrategy
-            );
-      const content = await deps.htmlConverter.convert(html, { strategy });
+      const content = await deps.htmlConverter.convert(cleanElement, {
+        format: deps.format(),
+      });
       const extension = FORMAT_EXTENSION[deps.format()];
       const source: FilenameSource = {
         articleName: extractArticleName(document) ?? undefined,

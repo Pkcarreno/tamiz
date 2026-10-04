@@ -4,13 +4,14 @@ import { describe, expect, it } from "vitest";
 import { extractContent } from "./extract-content.ts";
 
 describe("extractContent", () => {
-  it("returns the HTML of a clean element", () => {
+  it("returns the cloned Element of a clean element", () => {
     const { document } = parseHTML("<div><p>Hello <b>world</b></p></div>");
     const element = document.querySelector("div") as Element;
 
-    expect(extractContent(element)).toBe(
-      "<div><p>Hello <b>world</b></p></div>"
-    );
+    const result = extractContent(element);
+
+    expect(result).toBeInstanceOf(element.constructor);
+    expect(result.outerHTML).toBe("<div><p>Hello <b>world</b></p></div>");
   });
 
   it("strips a tamiz bar host from the cloned output", () => {
@@ -21,9 +22,9 @@ describe("extractContent", () => {
 
     const result = extractContent(element);
 
-    expect(result).not.toContain("data-tamiz-bar");
-    expect(result).toContain("before");
-    expect(result).toContain("after");
+    expect(result.outerHTML).not.toContain("data-tamiz-bar");
+    expect(result.outerHTML).toContain("before");
+    expect(result.outerHTML).toContain("after");
   });
 
   it("strips all nested tamiz bar hosts", () => {
@@ -34,7 +35,8 @@ describe("extractContent", () => {
 
     const result = extractContent(element);
 
-    expect(result).not.toContain("data-tamiz-bar");
+    expect(result.outerHTML).not.toContain("data-tamiz-bar");
+    expect(result.querySelectorAll("[data-tamiz-bar]").length).toBe(0);
   });
 
   it("does not mutate the source element", () => {
@@ -49,11 +51,11 @@ describe("extractContent", () => {
     expect(element.querySelectorAll("[data-tamiz-bar]").length).toBe(1);
   });
 
-  it("returns the HTML of an empty element", () => {
+  it("returns the cloned Element of an empty element", () => {
     const { document } = parseHTML("<p></p>");
     const element = document.querySelector("p") as Element;
 
-    expect(extractContent(element)).toBe("<p></p>");
+    expect(extractContent(element).outerHTML).toBe("<p></p>");
   });
 });
 
@@ -68,9 +70,9 @@ describe("extractContent — exclusion", () => {
 
     const result = extractContent(element, excluded);
 
-    expect(result).toContain("keep");
-    expect(result).toContain("keep too");
-    expect(result).not.toContain("exclude me");
+    expect(result.outerHTML).toContain("keep");
+    expect(result.outerHTML).toContain("keep too");
+    expect(result.outerHTML).not.toContain("exclude me");
   });
 
   it("does not mutate the source element when excluding", () => {
@@ -92,7 +94,7 @@ describe("extractContent — exclusion", () => {
 
     const result = extractContent(element, excluded);
 
-    expect(result).toContain("content");
+    expect(result.outerHTML).toContain("content");
   });
 
   it("returns full content when excludedElements is not provided", () => {
@@ -101,6 +103,6 @@ describe("extractContent — exclusion", () => {
 
     const result = extractContent(element);
 
-    expect(result).toContain("content");
+    expect(result.outerHTML).toContain("content");
   });
 });

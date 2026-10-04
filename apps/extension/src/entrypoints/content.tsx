@@ -377,9 +377,9 @@ export default defineContentScript({
       getExcludedElements: excludedElements,
       getExclusionMode: isExclusionMode,
       htmlConverter: {
-        convert: async (html, { strategy }) => {
+        convert: async (source, options) => {
           const { convert } = await import("@tamiz/html-converter");
-          return convert(html, { strategy: strategy as never });
+          return convert(source, options);
         },
         extractContent,
       },
