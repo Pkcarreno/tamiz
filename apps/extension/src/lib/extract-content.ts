@@ -1,12 +1,12 @@
 import { computeIndexPath, resolveIndexPath } from "./index-path.ts";
 
 /**
- * Clone an element and remove any tamiz floating-bar hosts, returning clean HTML
+ * Clone an element and remove any tamiz floating-bar hosts, returning a clean Element
  * suitable for conversion.
  *
  * The element is cloned first so the source is never mutated, then every node
  * carrying the `data-tamiz-bar` attribute (the floating bar's shadow host or any
- * nested UI node) is stripped from the clone before serialization.
+ * nested UI node) is stripped from the clone.
  *
  * When `excludedElements` is provided, matching source elements are stamped with
  * `data-tamiz-excluded` on the clone and then removed — the source DOM is never
@@ -14,12 +14,13 @@ import { computeIndexPath, resolveIndexPath } from "./index-path.ts";
  *
  * @param element          - The DOM element to extract content from.
  * @param excludedElements - Optional set of source elements to exclude from output.
+ * @returns The detached and sanitized DOM Element clone.
  * @public
  */
 export function extractContent(
   element: Element,
   excludedElements?: Set<Element>
-): string {
+): Element {
   const clone = element.cloneNode(true) as Element;
 
   // Strip floating bar hosts.
@@ -44,5 +45,5 @@ export function extractContent(
     }
   }
 
-  return clone.outerHTML;
+  return clone;
 }

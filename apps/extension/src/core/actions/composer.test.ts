@@ -43,7 +43,9 @@ function makeDeps(
     getExclusionMode: () => exclusionMode,
     htmlConverter: {
       convert: vi.fn().mockResolvedValue("converted-content"),
-      extractContent: vi.fn().mockReturnValue("<div>test</div>"),
+      extractContent: vi
+        .fn()
+        .mockImplementation(() => document.createElement("div")),
     },
     machine,
     sendMessage: vi.fn().mockResolvedValue(undefined),
@@ -170,7 +172,9 @@ describe("COPY handler", () => {
     const deps = makeDeps({
       htmlConverter: {
         convert: vi.fn().mockRejectedValue(new Error("boom")),
-        extractContent: vi.fn().mockReturnValue("<div>test</div>"),
+        extractContent: vi
+          .fn()
+          .mockImplementation(() => document.createElement("div")),
       },
     });
     selectElement(deps.machine);

@@ -127,6 +127,87 @@ describe("convert", () => {
     const result = await convert(html, { strategy: markdownStrategy });
     expect(result).toBe("Hello **world**!\n");
   });
+
+  test("converts using format option name without explicit strategy", async () => {
+    const html = "<h1>Heading</h1><p>Paragraph</p>";
+    const mdResult = await convert(html, { format: "markdown" });
+    expect(mdResult).toContain("# Heading");
+
+    const htmlResult = await convert(html, { format: "html" });
+    expect(htmlResult).toContain("<h1>");
+    expect(htmlResult).toContain("Heading");
+  });
+
+  test("defaults to markdown format when options are omitted", async () => {
+    const html = "<h2>Default Heading</h2>";
+    const result = await convert(html);
+    expect(result).toBe("## Default Heading\n");
+  });
+
+  test("converts DOM Element directly without string serialization", async () => {
+    const parser = getDomParser();
+    const doc = parser.parse(
+      '<div id="container"><article><h1>Article</h1><p>Body text</p><script>bad()</script></article></div>'
+    );
+    const element = doc.querySelector("article") as Element;
+
+    const result = await convert(element, { format: "markdown" });
+
+    expect(result).toContain("# Article");
+    expect(result).toContain("Body text");
+    expect(result).not.toContain("bad()");
+  });
+
+  test("does not mutate the source Element when converting", async () => {
+    const parser = getDomParser();
+    const doc = parser.parse(
+      '<div class="keep-class"><script>console.log(1)</script><p>Text</p></div>'
+    );
+    const element = doc.querySelector("div") as Element;
+
+    await convert(element, { format: "markdown" });
+
+    // Original element retains its class and script children
+    expect(element.getAttribute("class")).toBe("keep-class");
+    expect(element.querySelector("script")).not.toBeNull();
+  });
+
+  test("skips cleaning for Element input when clean: false", async () => {
+    const parser = getDomParser();
+    const doc = parser.parse(
+      '<div><script>alert("preserve-me")</script><p>Text</p></div>'
+    );
+    const element = doc.querySelector("div") as Element;
+
+    const result = await convert(element, {
+      clean: false,
+      format: "markdown",
+    });
+
+    expect(result).toContain("preserve-me");
+  });
+
+  test("excludes specified elements without mutating the source tree", async () => {
+    const parser = getDomParser();
+    const doc = parser.parse(
+      '<section><p>First</p><p id="remove-me">Second</p><p>Third</p></section>'
+    );
+    const root = doc.querySelector("section") as Element;
+    const toExclude = doc.querySelector("#remove-me") as Element;
+
+    const result = await convert(root, {
+      exclude: new Set([toExclude]),
+      format: "markdown",
+    });
+
+    expect(result).toContain("First");
+    expect(result).toContain("Third");
+    expect(result).not.toContain("Second");
+
+    // Source tree in caller DOM is completely untouched
+    expect(root.children.length).toBe(3);
+    expect(root.querySelector("#remove-me")).not.toBeNull();
+  });
 });
 
 describe("convert with getDomParser integration", () => {

@@ -227,6 +227,47 @@ function safeGetBody(doc: Document): Element | null {
 }
 
 /**
+ * Sanitize an in-memory DOM Document or Element in-place.
+ *
+ * Removes non-content elements (scripts, styles, navs, ads, sidebars),
+ * filters out low-density boilerplate content, strips non-semantic
+ * attributes, and optionally removes excluded elements.
+ *
+ * @param doc     - The Document or Element to sanitize in-place.
+ * @param exclude - Optional elements to remove from the tree.
+ *
+ * @public
+ */
+export function cleanDocument(
+  doc: Document | Element,
+  exclude?: Element[] | Set<Element>
+): void {
+  // Strip caller-specified excluded elements first
+  if (exclude) {
+    const excludedSet = exclude instanceof Set ? exclude : new Set(exclude);
+    for (const el of excludedSet) {
+      removeNode(el);
+    }
+  }
+
+  // Remove unwanted elements everywhere in the document or element subtree
+  removeUnwantedElements(doc);
+
+  // Score remaining candidates and drop low-quality ones
+  if (doc.nodeType === NODE_TYPE.DOCUMENT) {
+    const body = safeGetBody(doc as Document);
+    if (body && body.children.length > 0) {
+      filterByContentScore(body);
+    }
+  } else {
+    filterByContentScore(doc);
+  }
+
+  // Strip classes, data-*, event handlers, and other non-semantic attrs
+  stripNonSemanticAttributes(doc);
+}
+
+/**
  * Readability-style content extraction.
  *
  * Removes non-content elements (scripts, styles, navs, ads, sidebars),
@@ -240,21 +281,12 @@ export function cleanHtml(html: string): string {
   const parser: DomParser = getDomParser();
   const doc = parser.parse(html);
 
-  // Remove unwanted elements everywhere in the document
-  removeUnwantedElements(doc);
-
-  // Score remaining candidates and drop low-quality ones
-  const body = safeGetBody(doc);
-  if (body && body.children.length > 0) {
-    filterByContentScore(body);
-  }
-
-  // Strip classes, data-*, event handlers, and other non-semantic attrs
-  stripNonSemanticAttributes(doc);
+  cleanDocument(doc);
 
   // Serialize — prefer body innerHTML for full documents,
   // fall back to serialising individual content nodes for fragments.
   // serializeContent skips the structural tags linkedom injects.
+  const body = safeGetBody(doc);
   if (body && body.children.length > 0) {
     return body.innerHTML;
   }
