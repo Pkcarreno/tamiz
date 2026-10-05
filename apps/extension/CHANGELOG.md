@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.3](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.3.2...@tamiz/extension-v1.3.3) (2026-10-05)
+
+
+### Bug Fixes
+
+* **extension:** add package homepage metadata ([#43](https://github.com/Pkcarreno/tamiz/issues/43)) ([127c30c](https://github.com/Pkcarreno/tamiz/commit/127c30c39c1a62e6ec370f0212aee994a7a80dee))
+
 ## [1.3.2](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.3.1...@tamiz/extension-v1.3.2) (2026-10-05)
 
 
