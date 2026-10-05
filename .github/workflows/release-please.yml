@@ -73,6 +73,8 @@ jobs:
         with:
           name: tamiz-chrome-v${{ steps.version.outputs.chrome }}
           path: apps/extension/.output/tamiz-chrome-v*.zip
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 30
 
       - name: Upload Firefox artifact
@@ -82,6 +84,8 @@ jobs:
           path: |
             apps/extension/.output/tamiz-firefox-v*.zip
             apps/extension/.output/*-sources.zip
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 30
 
       - name: Attach zips to draft release
@@ -96,6 +100,7 @@ jobs:
           gh release upload "$TAG_NAME" \
             "apps/extension/.output/tamiz-chrome-v${{ steps.version.outputs.version }}.zip" \
             "apps/extension/.output/tamiz-firefox-v${{ steps.version.outputs.version }}.zip" \
+            apps/extension/.output/*-sources.zip \
             --clobber
 
       - name: Publish release
