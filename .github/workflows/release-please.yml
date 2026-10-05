@@ -136,8 +136,8 @@ jobs:
 
       - name: Submit to Chrome Web Store
         run: |
-          CHROME_ZIP=$(find apps/extension/.output -name "tamiz-chrome-v*.zip" | head -n 1)
-          if [ -z "$CHROME_ZIP" ]; then
+          CHROME_ZIP=$(realpath "$(find apps/extension/.output -name "tamiz-chrome-v*.zip" | head -n 1)")
+          if [ -z "$CHROME_ZIP" ] || [ ! -f "$CHROME_ZIP" ]; then
             echo "Error: Chrome extension zip not found in apps/extension/.output" >&2
             exit 1
           fi
@@ -170,13 +170,13 @@ jobs:
 
       - name: Submit to Firefox Add-ons
         run: |
-          FIREFOX_ZIP=$(find apps/extension/.output -name "tamiz-firefox-v*.zip" | head -n 1)
-          SOURCES_ZIP=$(find apps/extension/.output -name "*-sources.zip" | head -n 1)
-          if [ -z "$FIREFOX_ZIP" ]; then
+          FIREFOX_ZIP=$(realpath "$(find apps/extension/.output -name "tamiz-firefox-v*.zip" | head -n 1)")
+          SOURCES_ZIP=$(realpath "$(find apps/extension/.output -name "*-sources.zip" | head -n 1)")
+          if [ -z "$FIREFOX_ZIP" ] || [ ! -f "$FIREFOX_ZIP" ]; then
             echo "Error: Firefox extension zip not found in apps/extension/.output" >&2
             exit 1
           fi
-          if [ -z "$SOURCES_ZIP" ]; then
+          if [ -z "$SOURCES_ZIP" ] || [ ! -f "$SOURCES_ZIP" ]; then
             echo "Error: Firefox sources zip not found in apps/extension/.output" >&2
             exit 1
           fi
