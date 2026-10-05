@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.1](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.3.0...@tamiz/extension-v1.3.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **extension:** add package description and trigger store release ([2872c1a](https://github.com/Pkcarreno/tamiz/commit/2872c1a0ccf459dc5ec2c02960855b35990295f0))
+* **extension:** add package description and trigger store release ([57ee152](https://github.com/Pkcarreno/tamiz/commit/57ee152c39c8c5b1c9c6dd2d4fd4c4119e2b97f5))
+
 ## [1.3.0](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.2.0...@tamiz/extension-v1.3.0) (2026-10-04)
 
 
