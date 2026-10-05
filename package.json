@@ -15,6 +15,8 @@
     "lint:fix": "ultracite check --write",
     "nuke": "bun run clean && rm -rf node_modules .turbo bun.lock",
     "prepare": "lefthook install",
+    "submit:chrome": "bun --filter='@tamiz/extension' run submit:chrome",
+    "submit:firefox": "bun --filter='@tamiz/extension' run submit:firefox",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "validate": "turbo run --continue lint typecheck test",

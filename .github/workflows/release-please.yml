@@ -41,6 +41,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       chrome-version: ${{ steps.version.outputs.chrome }}
       firefox-version: ${{ steps.version.outputs.firefox }}
+      tag-name: ${{ needs.release-please.outputs['apps/extension--tag_name'] }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -78,7 +79,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: tamiz-firefox-v${{ steps.version.outputs.firefox }}
-          path: apps/extension/.output/tamiz-firefox-v*.zip
+          path: |
+            apps/extension/.output/tamiz-firefox-v*.zip
+            apps/extension/.output/*-sources.zip
           retention-days: 30
 
       - name: Attach zips to draft release
@@ -108,44 +111,78 @@ jobs:
 
   deploy-chrome:
     name: Deploy to Chrome Web Store
-    needs: build
+    needs: [release-please, build]
     concurrency:
-      group: deploy-chrome-${{ needs.release-please.outputs['apps/extension--tag_name'] }}
+      group: deploy-chrome-${{ needs.release-please.outputs['apps/extension--tag_name'] || needs.build.outputs.tag-name }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun-install
+
       - name: Download Chrome artifact
         uses: actions/download-artifact@v8
         with:
           name: tamiz-chrome-v${{ needs.build.outputs.chrome-version }}
+          path: apps/extension/.output
 
-      - name: Upload to Chrome Web Store
-        uses: fregante/chrome-webstore-upload@v3
-        with:
-          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
-          client-id: ${{ secrets.CHROME_CLIENT_ID }}
-          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
-          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          zip-file: ./*.zip
-          publish: true
+      - name: Submit to Chrome Web Store
+        run: |
+          CHROME_ZIP=$(find apps/extension/.output -name "tamiz-chrome-v*.zip" | head -n 1)
+          if [ -z "$CHROME_ZIP" ]; then
+            echo "Error: Chrome extension zip not found in apps/extension/.output" >&2
+            exit 1
+          fi
+          bun run submit:chrome -- --chrome-zip "$CHROME_ZIP"
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
 
   deploy-firefox:
     name: Deploy to Firefox Add-ons
-    needs: build
+    needs: [release-please, build]
     concurrency:
-      group: deploy-firefox-${{ needs.release-please.outputs['apps/extension--tag_name'] }}
+      group: deploy-firefox-${{ needs.release-please.outputs['apps/extension--tag_name'] || needs.build.outputs.tag-name }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun-install
+
       - name: Download Firefox artifact
         uses: actions/download-artifact@v8
         with:
           name: tamiz-firefox-v${{ needs.build.outputs.firefox-version }}
+          path: apps/extension/.output
 
-      - name: Upload to Firefox Add-ons
-        uses: trmcnvn/firefox-addon@v1
-        with:
-          guid: ${{ secrets.FIREFOX_EXTENSION_ID }}
-          api-key: ${{ secrets.FIREFOX_API_KEY }}
-          api-secret: ${{ secrets.FIREFOX_API_SECRET }}
-          package: ./*.zip
+      - name: Submit to Firefox Add-ons
+        run: |
+          FIREFOX_ZIP=$(find apps/extension/.output -name "tamiz-firefox-v*.zip" | head -n 1)
+          SOURCES_ZIP=$(find apps/extension/.output -name "*-sources.zip" | head -n 1)
+          if [ -z "$FIREFOX_ZIP" ]; then
+            echo "Error: Firefox extension zip not found in apps/extension/.output" >&2
+            exit 1
+          fi
+          if [ -z "$SOURCES_ZIP" ]; then
+            echo "Error: Firefox sources zip not found in apps/extension/.output" >&2
+            exit 1
+          fi
+          export FIREFOX_JWT_ISSUER="${FIREFOX_JWT_ISSUER:-$FIREFOX_API_KEY}"
+          export FIREFOX_JWT_SECRET="${FIREFOX_JWT_SECRET:-$FIREFOX_API_SECRET}"
+          bun run submit:firefox -- \
+            --firefox-zip "$FIREFOX_ZIP" \
+            --firefox-sources-zip "$SOURCES_ZIP"
+        env:
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER || secrets.FIREFOX_API_KEY }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET || secrets.FIREFOX_API_SECRET }}
+          FIREFOX_API_KEY: ${{ secrets.FIREFOX_API_KEY }}
+          FIREFOX_API_SECRET: ${{ secrets.FIREFOX_API_SECRET }}
