@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.3.1...@tamiz/extension-v1.3.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* **extension:** add repository metadata ([#39](https://github.com/Pkcarreno/tamiz/issues/39)) ([2c449f0](https://github.com/Pkcarreno/tamiz/commit/2c449f054a2a18b015f8daeab510db253730074d))
+
 ## [1.3.1](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.3.0...@tamiz/extension-v1.3.1) (2026-10-05)
 
 
