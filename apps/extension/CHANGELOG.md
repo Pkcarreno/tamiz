@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.4](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.3.3...@tamiz/extension-v1.3.4) (2026-10-05)
+
+
+### Bug Fixes
+
+* **extension:** add package bugs metadata ([#47](https://github.com/Pkcarreno/tamiz/issues/47)) ([ca35fac](https://github.com/Pkcarreno/tamiz/commit/ca35facb9c633b85821fb1289b0e6ddb1febb86e))
+
 ## [1.3.3](https://github.com/Pkcarreno/tamiz/compare/@tamiz/extension-v1.3.2...@tamiz/extension-v1.3.3) (2026-10-05)
 
 
