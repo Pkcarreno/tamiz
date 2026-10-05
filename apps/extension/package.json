@@ -4,6 +4,9 @@
   "private": true,
   "description": "Tamiz browser extension for clean web content extraction",
   "homepage": "https://github.com/Pkcarreno/tamiz",
+  "bugs": {
+    "url": "https://github.com/Pkcarreno/tamiz/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Pkcarreno/tamiz.git",
