@@ -2,14 +2,17 @@
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "packages": {
     "apps/extension": {
-      "component": "@tamiz/extension"
+      "component": "@tamiz/extension",
+      "draft": true
     },
     "packages/html-converter": {
       "component": "@tamiz/html-converter",
-      "release-type": "node"
+      "release-type": "node",
+      "draft": true
     }
   },
   "plugins": ["node-workspace"],
   "include-component-in-tag": true,
-  "include-v-in-tag": true
+  "include-v-in-tag": true,
+  "draft": true
 }
