@@ -38,6 +38,7 @@ jobs:
     if: needs.release-please.outputs.releases_created == 'true' && contains(fromJSON(needs.release-please.outputs.paths_released), 'apps/extension')
     runs-on: ubuntu-latest
     outputs:
+      version: ${{ steps.version.outputs.version }}
       chrome-version: ${{ steps.version.outputs.chrome }}
       firefox-version: ${{ steps.version.outputs.firefox }}
     steps:
@@ -47,22 +48,24 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun-install
 
-      - name: Zip Chrome extension
-        run: turbo run zip:chrome
-
-      - name: Zip Firefox extension
-        run: turbo run zip:firefox
+      - name: Package extension archives
+        run: bun run zip
 
       - name: Get version
         id: version
         run: |
-          echo "chrome=$(jq -r '.version' apps/extension/package.json)" >> $GITHUB_OUTPUT
-          echo "firefox=$(jq -r '.version' apps/extension/package.json)" >> $GITHUB_OUTPUT
+          VERSION="${{ needs.release-please.outputs['apps/extension--version'] }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(jq -r '.version' apps/extension/package.json)
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "chrome=${VERSION}" >> $GITHUB_OUTPUT
+          echo "firefox=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Rename zips for release
         run: |
-          mv apps/extension/.output/*-chrome.zip "apps/extension/.output/tamiz-chrome-v${{ steps.version.outputs.chrome }}.zip"
-          mv apps/extension/.output/*-firefox.zip "apps/extension/.output/tamiz-firefox-v${{ steps.version.outputs.firefox }}.zip"
+          mv apps/extension/.output/*-chrome.zip "apps/extension/.output/tamiz-chrome-v${{ steps.version.outputs.version }}.zip"
+          mv apps/extension/.output/*-firefox.zip "apps/extension/.output/tamiz-firefox-v${{ steps.version.outputs.version }}.zip"
 
       - name: Upload Chrome artifact
         uses: actions/upload-artifact@v7
@@ -78,13 +81,30 @@ jobs:
           path: apps/extension/.output/tamiz-firefox-v*.zip
           retention-days: 30
 
-      - name: Attach zips to release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ needs.release-please.outputs['apps/extension--tag_name'] }}
-          files: |
-            apps/extension/.output/tamiz-chrome-v*.zip
-            apps/extension/.output/tamiz-firefox-v*.zip
+      - name: Attach zips to draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ needs.release-please.outputs['apps/extension--tag_name'] }}
+        run: |
+          if [ -z "$TAG_NAME" ]; then
+            echo "Error: Release tag name is missing" >&2
+            exit 1
+          fi
+          gh release upload "$TAG_NAME" \
+            "apps/extension/.output/tamiz-chrome-v${{ steps.version.outputs.version }}.zip" \
+            "apps/extension/.output/tamiz-firefox-v${{ steps.version.outputs.version }}.zip" \
+            --clobber
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ needs.release-please.outputs['apps/extension--tag_name'] }}
+        run: |
+          if [ -z "$TAG_NAME" ]; then
+            echo "Error: Release tag name is missing" >&2
+            exit 1
+          fi
+          gh release edit "$TAG_NAME" --draft=false
 
   deploy-chrome:
     name: Deploy to Chrome Web Store
