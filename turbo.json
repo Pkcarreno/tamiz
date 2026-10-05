@@ -41,7 +41,7 @@
     },
     "zip:firefox": {
       "dependsOn": ["^build"],
-      "outputs": [".output/*-firefox.zip"]
+      "outputs": [".output/*-firefox.zip", ".output/*-sources.zip"]
     },
     "clean": {
       "cache": false

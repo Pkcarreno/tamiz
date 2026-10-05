@@ -18,7 +18,9 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "validate": "turbo run --continue lint typecheck test",
-    "zip": "turbo run zip:chrome zip:firefox"
+    "zip": "turbo run zip:chrome zip:firefox",
+    "zip:chrome": "turbo run zip:chrome",
+    "zip:firefox": "turbo run zip:firefox"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.11",
